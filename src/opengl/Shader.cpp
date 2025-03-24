@@ -52,6 +52,20 @@ void opengl::ShaderProgram::deallocate()
     }   
 }
 
+opengl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
+{
+    if(!collectShaders(directory)) {
+        m_log.insert(0, "failed to collect shaders in directory \"" + directory + "\"\n");
+        if(showLog) std::cout << getLog();
+        throw std::runtime_error{"failed to init shader program"};
+    }
+    if(!compileShaders()) {
+        m_log.insert(0, "failed to collect shaders in directory \"" + directory + "\"\n");
+        if(showLog) std::cout << getLog();
+        throw std::runtime_error{"failed to init shader program"};
+    }
+}
+
 bool opengl::ShaderProgram::collectShaders(std::string const &directory)
 {
     assert(std::filesystem::exists(directory));

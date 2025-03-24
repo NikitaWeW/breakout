@@ -12,6 +12,7 @@ public:
     Resource(Resource const &other);
     Resource(Resource &&other);
     void operator=(Resource const &other);
+    void operator=(Resource &&other);
 
     bool canDeallocate() const;
     ~Resource() = default;

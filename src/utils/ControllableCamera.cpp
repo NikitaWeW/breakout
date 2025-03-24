@@ -2,17 +2,17 @@
 
 const float sensitivitySlow = 0.05f;
 
-ControllableCamera::ControllableCamera(GLFWwindow *window, glm::vec3 const &position, glm::vec3 const &rotation) :
+ControllableCamera::ControllableCamera(GLFWwindow *window, glm::vec3 const &position, glm::vec3 const &rotation) noexcept :
     Camera(position, rotation), 
     window(window) 
 {}
-ControllableCamera::~ControllableCamera() = default;
+ControllableCamera::~ControllableCamera() noexcept = default;
 
-ControllableCamera::ControllableCamera() : Camera{}
+ControllableCamera::ControllableCamera() noexcept : Camera{}
 {
 }
 
-void ControllableCamera::update(double deltatime) {
+void ControllableCamera::update(double deltatime) noexcept {
     Camera::update(deltatime);
     processPosition(deltatime);
     double xpos, ypos;
@@ -20,7 +20,7 @@ void ControllableCamera::update(double deltatime) {
     processRotation(xpos, ypos);
 }
 
-void ControllableCamera::processPosition(double deltatime) {
+void ControllableCamera::processPosition(double deltatime) noexcept {
     if(locked) {
         float cameraspeed = speed * (float) deltatime;
         if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -43,7 +43,7 @@ void ControllableCamera::processPosition(double deltatime) {
         }
     }
 }
-void ControllableCamera::processRotation(double xpos, double ypos) {
+void ControllableCamera::processRotation(double xpos, double ypos) noexcept {
     if(!locked) return;
 
     if (firstCursorMove) {
@@ -69,7 +69,7 @@ void ControllableCamera::processRotation(double xpos, double ypos) {
     if (rotation.y < -89.99f)
         rotation.y = -89.99f;
 }
-void ControllableCamera::processScroll(int yoffset) {
+void ControllableCamera::processScroll(int yoffset) noexcept {
     fov -= (float) yoffset;
     if(fov < 1.0f) fov = 1.0f; 
     if(fov > 45.0f) fov = 45.0f; 

@@ -20,7 +20,10 @@ namespace opengl
         std::string m_log;
         std::string m_dirPath;
         void deallocate();
-    public:
+        
+        public:
+        ShaderProgram() = default;
+        ShaderProgram(std::string const &directory, bool showLog = false);
         bool collectShaders(std::string const &directory);
         bool compileShaders();
         int getUniform(std::string const &name) const;

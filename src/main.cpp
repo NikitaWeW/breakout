@@ -144,31 +144,9 @@ bool init(GLFWwindow** window) {
 }
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-    ControllableCamera &camera = *static_cast<ControllableCamera *>(glfwGetWindowUserPointer(window));
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) camera.locked = !camera.locked;
-    if (camera.locked) {
-        camera.firstCursorMove = true;
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    } else glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-    if(key == GLFW_KEY_LEFT_CONTROL && action == GLFW_RELEASE) {
-        // evaluate fov
-        if (camera.fov < 1.0f)
-            camera.fov = 1.0f;
-        if (camera.fov > 45.0f)
-            camera.fov = 45.0f;
-    }
 }
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
-    ControllableCamera &cam = *static_cast<ControllableCamera *>(glfwGetWindowUserPointer(window));
-    if(cam.locked) {
-        cam.fov -= (float)yoffset * 4.0f;
-        if (cam.fov < 1.0f)
-            cam.fov = 1.0f;
-        if (cam.fov > 45.0f)
-            cam.fov = 45.0f;
-    }
 }
 
 int main(int argc, char **argv) {
@@ -179,15 +157,11 @@ int main(int argc, char **argv) {
         std::cout << "failed to init!\n";
         return -1;
     };
-    opengl::ShaderProgram shader;
-    if(!shader.collectShaders("shaders/basic")) {
-        std::cout << "failed to collect shaders:\n" << shader.getLog();
-        return -1;
-    }
-    if(!shader.compileShaders()) {
-        std::cout << "failed to compile shaders:\n" << shader.getLog();
-        return -1;
-    }
+    Camera camera{{0, 0, -1}, {-90, 0, 0}, Camera::ProjectionType::ORTHO};
+    camera.near = -1; camera.far = 1;
+    glfwSetWindowUserPointer(window, &camera);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     float vertices[] = {
         -1,  1, 0,
@@ -200,14 +174,11 @@ int main(int argc, char **argv) {
         0, 2, 3
     };
     opengl::VertexBuffer vbo{sizeof(vertices), vertices};
-    opengl::InterleavedVertexBufferLayout layout;
-    layout.push({3, GL_FLOAT});
+    opengl::VertexBufferLayout layout;
+    layout.push({3, GL_FLOAT, 0});
     opengl::VertexArray vao{vbo, layout};
     opengl::IndexBuffer ibo{sizeof(indices), indices};
-    ControllableCamera camera{window, {0, 0, -1}, {0, -90, 0}};
-    glfwSetWindowUserPointer(window, &camera);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetScrollCallback(window, scroll_callback);
+    opengl::ShaderProgram shader("shaders/basic");
 
     double deltatime = 0;
     while (!glfwWindowShouldClose(window))
@@ -221,7 +192,7 @@ int main(int argc, char **argv) {
         vao.bind();
         ibo.bind();
         glm::mat4 modelMat{1.0f};
-        modelMat = glm::rotate(modelMat, 1.0f, {15, 35, 45});
+        modelMat = glm::scale(modelMat, glm::vec3{0.5});
         shader.bind();
         glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
         glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
