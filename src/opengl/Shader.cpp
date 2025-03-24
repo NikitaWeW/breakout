@@ -122,4 +122,3 @@ int opengl::ShaderProgram::getUniform(std::string const &name) const
 }
 
 void opengl::ShaderProgram::bind(unsigned slot) const { glUseProgram(m_renderID); }
-void opengl::ShaderProgram::unbind(unsigned slot) const { glUseProgram(0); }

@@ -25,7 +25,6 @@ namespace opengl
         bool compileShaders();
         int getUniform(std::string const &name) const;
         void bind(unsigned slot = 0) const;
-        void unbind(unsigned slot = 0) const;
 
         inline std::vector<Shader> const &getShaders() const { return m_shaders; }
         inline std::vector<Shader> &getShaders() { return m_shaders; }

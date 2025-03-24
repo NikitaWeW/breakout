@@ -1,10 +1,14 @@
 #include <iostream>
 #include <memory>
 #include <cassert>
+#include <chrono>
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
 #include "opengl/Shader.hpp"
 #include "opengl/VertexBuffer.hpp"
+#include "opengl/IndexBuffer.hpp"
+#include "utils/ControllableCamera.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
@@ -138,6 +142,34 @@ bool init(GLFWwindow** window) {
     glDebugMessageCallback(debugCallback, nullptr);
     return true;
 }
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    ControllableCamera &camera = *static_cast<ControllableCamera *>(glfwGetWindowUserPointer(window));
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) camera.locked = !camera.locked;
+    if (camera.locked) {
+        camera.firstCursorMove = true;
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    } else glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+    if(key == GLFW_KEY_LEFT_CONTROL && action == GLFW_RELEASE) {
+        // evaluate fov
+        if (camera.fov < 1.0f)
+            camera.fov = 1.0f;
+        if (camera.fov > 45.0f)
+            camera.fov = 45.0f;
+    }
+}
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
+    ControllableCamera &cam = *static_cast<ControllableCamera *>(glfwGetWindowUserPointer(window));
+    if(cam.locked) {
+        cam.fov -= (float)yoffset * 4.0f;
+        if (cam.fov < 1.0f)
+            cam.fov = 1.0f;
+        if (cam.fov > 45.0f)
+            cam.fov = 45.0f;
+    }
+}
 
 int main(int argc, char **argv) {
     Deallocator deallocator;
@@ -161,26 +193,44 @@ int main(int argc, char **argv) {
         -1,  1, 0,
          1,  1, 0,
          1, -1, 0,
-         
-         1, -1, 0,
-        -1, -1, 0,
-        -1,  1, 0,
+        -1, -1, 0
+    };
+    unsigned indices[] = {
+        0, 1, 2,
+        0, 2, 3
     };
     opengl::VertexBuffer vbo{sizeof(vertices), vertices};
     opengl::InterleavedVertexBufferLayout layout;
     layout.push({3, GL_FLOAT});
     opengl::VertexArray vao{vbo, layout};
+    opengl::IndexBuffer ibo{sizeof(indices), indices};
+    ControllableCamera camera{window, {0, 0, -1}, {0, -90, 0}};
+    glfwSetWindowUserPointer(window, &camera);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
+    double deltatime = 0;
     while (!glfwWindowShouldClose(window))
     {
+        auto start = std::chrono::high_resolution_clock::now();
+        glfwGetWindowSize(window, &camera.width, &camera.height);
+        camera.update(deltatime);
+        glViewport(0, 0, camera.width, camera.height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         vao.bind();
-        vbo.bind();
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        ibo.bind();
+        glm::mat4 modelMat{1.0f};
+        modelMat = glm::rotate(modelMat, 1.0f, {15, 35, 45});
+        shader.bind();
+        glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
+        glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
+        glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+        deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
     }
 }
 

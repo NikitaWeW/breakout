@@ -17,11 +17,11 @@ opengl::VertexBuffer::VertexBuffer(size_t size, void *data, GLenum usage)
 
 opengl::VertexBuffer::~VertexBuffer()
 {
-    if(canDeallocate()) glDeleteBuffers(1, &m_renderID);
+    if(canDeallocate()) 
+        glDeleteBuffers(1, &m_renderID);
 }
 
 void opengl::VertexBuffer::bind(unsigned) const { glBindBuffer(GL_ARRAY_BUFFER, m_renderID); }
-void opengl::VertexBuffer::unbind(unsigned) const { glBindBuffer(GL_ARRAY_BUFFER, 0); }
 
 size_t opengl::getSizeOfGLType(GLenum type)
 {
@@ -75,7 +75,6 @@ void opengl::VertexArray::addBuffer(VertexBuffer const &buffer, InstancingVertex
 }
 
 void opengl::VertexArray::bind(unsigned) const { glBindVertexArray(m_renderID); }
-void opengl::VertexArray::unbind(unsigned) const { glBindVertexArray(0); }
 
 opengl::VertexArray::~VertexArray()
 {
