@@ -9,6 +9,7 @@
 #include "opengl/IndexBuffer.hpp"
 #include "utils/ControllableCamera.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "opengl/Texture.hpp"
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
@@ -167,7 +168,12 @@ int main(int argc, char **argv) {
         -1,  1, 0,
          1,  1, 0,
          1, -1, 0,
-        -1, -1, 0
+        -1, -1, 0,
+
+        -1,  1,
+         1,  1,
+         1, -1,
+        -1, -1 
     };
     unsigned indices[] = {
         0, 1, 2,
@@ -176,9 +182,11 @@ int main(int argc, char **argv) {
     opengl::VertexBuffer vbo{sizeof(vertices), vertices};
     opengl::VertexBufferLayout layout;
     layout.push({3, GL_FLOAT, 0});
+    layout.push({2, GL_FLOAT, 12 * sizeof(float)});
     opengl::VertexArray vao{vbo, layout};
     opengl::IndexBuffer ibo{sizeof(indices), indices};
-    opengl::ShaderProgram shader("shaders/basic");
+    opengl::ShaderProgram shader{"shaders/basic"};
+    opengl::Texture ballTexture{"res/ball.png", true, true};
 
     double deltatime = 0;
     while (!glfwWindowShouldClose(window))

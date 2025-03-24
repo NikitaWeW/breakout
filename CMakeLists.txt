@@ -13,19 +13,15 @@ if(WIN32)
 elseif(UNIX AND NOT APPLE) # linux
     file(GLOB_RECURSE LIBRARIES "dependencies/lib/linux/*")
 else()
-    find_package(GLFW REQUIRED)
-    find_package(GLAD REQUIRED)
-    find_package(GLM  REQUIRED)
+    find_package(glfw3 REQUIRED)
 
-    target_include_directories(main PRIVATE ${GLFW_INCLUDE_DIRECTORIES} ${GLAD_INCLUDE_DIRECTORIES} ${GLM_INCLUDE_DIRECTORIES})
-    target_link_libraries(main PRIVATE ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} ${GLM_LIBRARIES})
+    target_link_libraries(main PRIVATE ${GLFW_LIBRARIES})
 endif()
 
-
-
-message(STATUS "SOURCES: ${SOURCES} ${DEPENDENCIES_SOURCES}")
-message(STATUS "LIBRARIES: ${LIBRARIES}")
 add_executable(main ${SOURCES} ${DEPENDENCIES_SOURCES})
 
 target_link_libraries(main PRIVATE ${LIBRARIES})
 target_include_directories(main PRIVATE dependencies/include src)
+
+install(DIRECTORY res DESTINATION res)
+install(TARGETS main DESTINATION .)

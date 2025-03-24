@@ -33,7 +33,7 @@ glm::mat4 Camera::getProjectionMatrix() const noexcept
             float aspect = (float) width / height;
             projectionMat = glm::ortho<float>(-aspect, aspect, -1, 1, near, far);
         } else {
-            std::cout << "unknown projection type\n";
+            std::cout << "src/utils/Camera.cpp: unknown projection type\n";
         }
         lastparams = params;
     }
