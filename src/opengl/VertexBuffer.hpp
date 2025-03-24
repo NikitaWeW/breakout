@@ -79,7 +79,7 @@ namespace opengl
     public:
         VertexArray() = default;
         ~VertexArray();
-        template<typename Layout_t> VertexArray(VertexBuffer buffer, Layout_t layout);
+        template <typename Layout_t> VertexArray(VertexBuffer const &buffer, Layout_t const &layout);
         void addBuffer(VertexBuffer const &buffer, InterleavedVertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, VertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, InstancingVertexBufferLayout const &layout);
@@ -87,7 +87,7 @@ namespace opengl
         void bind(unsigned slot = 0) const;
         void unbind(unsigned slot = 0) const;
     };
-    template <typename Layout_t> inline VertexArray::VertexArray(VertexBuffer buffer, Layout_t layout) { 
+    template <typename Layout_t> inline VertexArray::VertexArray(VertexBuffer const &buffer, Layout_t const &layout) { 
         glGenVertexArrays(1, &m_renderID);
         addBuffer(buffer, layout); 
     }
