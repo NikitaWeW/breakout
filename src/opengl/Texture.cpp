@@ -1,7 +1,8 @@
 #include "Texture.hpp"
 #include "stb_image.h"
+#include <stdexcept>
 
-opengl::Texture::Texture(unsigned width, unsigned height, GLenum format, GLenum wrap, GLenum filter)
+opengl::Texture::Texture(unsigned width, unsigned height, GLenum format, GLenum wrap, GLenum filter) noexcept
 {
     glGenTextures(1, &m_renderID);
     bind();
@@ -20,6 +21,7 @@ opengl::Texture::Texture(std::string const &filepath, bool flip, bool srgb, GLen
     int width = 0, height = 0;
     unsigned char *buffer = nullptr;
     buffer = stbi_load(filepath.c_str(), &width, &height, nullptr, 4);
+    if(!buffer) throw std::runtime_error{"failed to load a texture"};
 
     glGenTextures(1, &m_renderID);
     bind();
@@ -41,7 +43,7 @@ opengl::Texture::~Texture()
     }
 }
 
-void opengl::Texture::bind(unsigned slot) const {
+void opengl::Texture::bind(unsigned slot) const noexcept {
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, m_renderID);
 }

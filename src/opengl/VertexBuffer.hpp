@@ -15,7 +15,7 @@ namespace opengl
         VertexBuffer(size_t size, GLenum usage = GL_DYNAMIC_DRAW);
         VertexBuffer(size_t size, void *data, GLenum usage = GL_DYNAMIC_DRAW);
         ~VertexBuffer();    
-        void bind(unsigned slot = 0) const;
+        void bind(unsigned slot = 0) const noexcept;
     };
 
     class InterleavedVertexBufferLayout 
@@ -83,7 +83,7 @@ namespace opengl
         void addBuffer(VertexBuffer const &buffer, VertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, InstancingVertexBufferLayout const &layout);
 
-        void bind(unsigned slot = 0) const;
+        void bind(unsigned slot = 0) const noexcept;
     };
     template <typename Layout_t> inline VertexArray::VertexArray(VertexBuffer const &buffer, Layout_t const &layout) { 
         glGenVertexArrays(1, &m_renderID);

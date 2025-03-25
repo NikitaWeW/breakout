@@ -8,7 +8,7 @@ namespace opengl
     protected:
         unsigned m_renderID = 0;
     public:
-        inline unsigned getRenderID() { return m_renderID; }
-        virtual void bind(unsigned slot = 0) const = 0;
+        inline unsigned getRenderID() noexcept { return m_renderID; }
+        virtual void bind(unsigned slot = 0) const noexcept = 0;
     };
 }; // namespace opengl

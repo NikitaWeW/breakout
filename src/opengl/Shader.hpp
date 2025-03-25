@@ -19,20 +19,20 @@ namespace opengl
         std::vector<Shader> m_shaders;
         std::string m_log;
         std::string m_dirPath;
-        void deallocate();
+        void deallocate() noexcept;
         
         public:
-        ShaderProgram() = default;
+        ShaderProgram() noexcept = default;
         ShaderProgram(std::string const &directory, bool showLog = false);
-        bool collectShaders(std::string const &directory);
-        bool compileShaders();
-        int getUniform(std::string const &name) const;
-        void bind(unsigned slot = 0) const;
+        bool collectShaders(std::string const &directory) noexcept;
+        bool compileShaders() noexcept;
+        int getUniform(std::string const &name) const noexcept;
+        void bind(unsigned slot = 0) const noexcept;
 
-        inline std::vector<Shader> const &getShaders() const { return m_shaders; }
-        inline std::vector<Shader> &getShaders() { return m_shaders; }
-        inline std::string const &getPath() const { return m_dirPath; }
-        inline std::string &getPath() { return m_dirPath; }
-        inline std::string const &getLog() { return m_log; }
+        inline std::vector<Shader> const &getShaders() const noexcept { return m_shaders; }
+        inline std::vector<Shader> &getShaders() noexcept { return m_shaders; }
+        inline std::string const &getPath() const noexcept { return m_dirPath; }
+        inline std::string &getPath() noexcept { return m_dirPath; }
+        inline std::string const &getLog() const noexcept { return m_log; }
     };
 } // namespace opengl

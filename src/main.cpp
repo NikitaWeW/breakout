@@ -10,6 +10,7 @@
 #include "utils/ControllableCamera.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "opengl/Texture.hpp"
+#include "utils/Text.hpp"
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
@@ -128,7 +129,7 @@ bool init(GLFWwindow** window) {
 
     *window = glfwCreateWindow(640, 480, "breakout", NULL, NULL);
     if (!*window) {
-        std::cout << "failed to init the window!\n";
+        std::cout << "ERROR: failed to init the window!\n";
         return false;
     }
 
@@ -136,11 +137,17 @@ bool init(GLFWwindow** window) {
 
     int version = gladLoadGL(glfwGetProcAddress);
     if (version == 0) {
-        std::cout << "Failed to initialize OpenGL context\n";
+        std::cout << "ERROR: Failed to initialize OpenGL context\n";
         return false;
     }
     std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << '.' << GLAD_VERSION_MINOR(version) << " (compatibility)\n";
     glDebugMessageCallback(debugCallback, nullptr);
+
+    if(FT_Init_FreeType(&text::Font::ftLibrary) != 0) {
+        std::cout << "ERROR: failed to init free type library!\n";
+        return false;
+    }
+
     return true;
 }
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -170,10 +177,10 @@ int main(int argc, char **argv) {
          1, -1, 0,
         -1, -1, 0,
 
-        -1,  1,
-         1,  1,
-         1, -1,
-        -1, -1 
+        0, 1,
+        1, 1,
+        1, 0,
+        0, 0 
     };
     unsigned indices[] = {
         0, 1, 2,
@@ -181,35 +188,37 @@ int main(int argc, char **argv) {
     };
     opengl::VertexBuffer vbo{sizeof(vertices), vertices};
     opengl::VertexBufferLayout layout;
-    layout.push({3, GL_FLOAT, 0});
+    layout.push({3, GL_FLOAT, 0}); // TODO: construct layouts from initializer lists
     layout.push({2, GL_FLOAT, 12 * sizeof(float)});
     opengl::VertexArray vao{vbo, layout};
     opengl::IndexBuffer ibo{sizeof(indices), indices};
-    opengl::ShaderProgram shader{"shaders/basic"};
+    opengl::ShaderProgram shader{"shaders/colorTexture"};
     opengl::Texture ballTexture{"res/ball.png", true, true};
 
-    double deltatime = 0;
-    while (!glfwWindowShouldClose(window))
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-        glfwGetWindowSize(window, &camera.width, &camera.height);
-        camera.update(deltatime);
-        glViewport(0, 0, camera.width, camera.height);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        vao.bind();
-        ibo.bind();
-        glm::mat4 modelMat{1.0f};
-        modelMat = glm::scale(modelMat, glm::vec3{0.5});
-        shader.bind();
-        glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
-        glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
-        glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    // double deltatime = 0;
+    // while (!glfwWindowShouldClose(window))
+    // {
+    //     auto start = std::chrono::high_resolution_clock::now();
+    //     glfwGetWindowSize(window, &camera.width, &camera.height);
+    //     camera.update(deltatime);
+    //     glViewport(0, 0, camera.width, camera.height);
+    //     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-        deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
-    }
+    //     vao.bind();
+    //     ibo.bind();
+    //     glm::mat4 modelMat{1.0f};
+    //     modelMat = glm::scale(modelMat, glm::vec3{0.5});
+    //     shader.bind();
+    //     glUniform3f(shader.getUniform("u_color"), 0.1, 1, 0.1);
+    //     glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
+    //     glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
+    //     glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
+    //     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+
+    //     glfwSwapBuffers(window);
+    //     glfwPollEvents();
+    //     deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
+    // }
 }
 

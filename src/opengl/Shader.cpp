@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <iostream>
 
-bool compileShader(opengl::ShaderProgram::Shader &shader, std::string &log) {
+bool compileShader(opengl::ShaderProgram::Shader &shader, std::string &log) noexcept {
     shader.renderID = glCreateShader(shader.type);
     char *source = &*shader.source.begin();
     glShaderSource(shader.renderID, 1, &source, nullptr);
@@ -23,7 +23,7 @@ bool compileShader(opengl::ShaderProgram::Shader &shader, std::string &log) {
     return true;
 }
 
-bool linkProgram(unsigned &program, std::vector<opengl::ShaderProgram::Shader> shaders, std::string &log) {
+bool linkProgram(unsigned &program, std::vector<opengl::ShaderProgram::Shader> shaders, std::string &log) noexcept {
     program = glCreateProgram();
     for(auto const &shader : shaders) {
         glAttachShader(program, shader.renderID);
@@ -44,7 +44,7 @@ bool linkProgram(unsigned &program, std::vector<opengl::ShaderProgram::Shader> s
     return true;
 }
 
-void opengl::ShaderProgram::deallocate()
+void opengl::ShaderProgram::deallocate() noexcept
 {
     if(m_renderID) glDeleteProgram(m_renderID);
     for(Shader const &shader : m_shaders) {
@@ -66,7 +66,7 @@ opengl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
     }
 }
 
-bool opengl::ShaderProgram::collectShaders(std::string const &directory)
+bool opengl::ShaderProgram::collectShaders(std::string const &directory) noexcept
 {
     assert(std::filesystem::exists(directory));
     m_log = "";
@@ -92,7 +92,7 @@ bool opengl::ShaderProgram::collectShaders(std::string const &directory)
     return true;
 }
 
-std::string shaderTypeToString(unsigned type) {
+std::string shaderTypeToString(unsigned type) noexcept {
     switch (type)
     {
     case GL_VERTEX_SHADER:   return "vertex";
@@ -102,7 +102,7 @@ std::string shaderTypeToString(unsigned type) {
     default:                 return "unknown type";
     }
 }
-bool opengl::ShaderProgram::compileShaders()
+bool opengl::ShaderProgram::compileShaders() noexcept
 {
     if(canDeallocate()) deallocate();
 
@@ -124,7 +124,7 @@ bool opengl::ShaderProgram::compileShaders()
     return true;
 }
 
-int opengl::ShaderProgram::getUniform(std::string const &name) const
+int opengl::ShaderProgram::getUniform(std::string const &name) const noexcept
 {
     if(m_UniformLocationCache.find(name) != m_UniformLocationCache.end()) return m_UniformLocationCache[name];
     int location = glGetUniformLocation(m_renderID, name.c_str());
@@ -135,4 +135,4 @@ int opengl::ShaderProgram::getUniform(std::string const &name) const
     return location;
 }
 
-void opengl::ShaderProgram::bind(unsigned slot) const { glUseProgram(m_renderID); }
+void opengl::ShaderProgram::bind(unsigned slot) const noexcept { glUseProgram(m_renderID); }
