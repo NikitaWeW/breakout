@@ -143,11 +143,6 @@ bool init(GLFWwindow** window) {
     std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << '.' << GLAD_VERSION_MINOR(version) << " (compatibility)\n";
     glDebugMessageCallback(debugCallback, nullptr);
 
-    if(FT_Init_FreeType(&text::Font::ftLibrary) != 0) {
-        std::cout << "ERROR: failed to init free type library!\n";
-        return false;
-    }
-
     return true;
 }
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -195,30 +190,34 @@ int main(int argc, char **argv) {
     opengl::ShaderProgram shader{"shaders/colorTexture"};
     opengl::Texture ballTexture{"res/ball.png", true, true};
 
+    text::Font font = text::loadFont("res/JetBrainsMono-Bold.ttf");
+    // font.loadCharacters(32, 127);
+    // font.drawCharacters("Hello, World!", {0, 0}, {1, 1});
 
-    // double deltatime = 0;
-    // while (!glfwWindowShouldClose(window))
-    // {
-    //     auto start = std::chrono::high_resolution_clock::now();
-    //     glfwGetWindowSize(window, &camera.width, &camera.height);
-    //     camera.update(deltatime);
-    //     glViewport(0, 0, camera.width, camera.height);
-    //     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    double deltatime = 0;
+    while (!glfwWindowShouldClose(window))
+    {
+        break;
+        auto start = std::chrono::high_resolution_clock::now();
+        glfwGetWindowSize(window, &camera.width, &camera.height);
+        camera.update(deltatime);
+        glViewport(0, 0, camera.width, camera.height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    //     vao.bind();
-    //     ibo.bind();
-    //     glm::mat4 modelMat{1.0f};
-    //     modelMat = glm::scale(modelMat, glm::vec3{0.5});
-    //     shader.bind();
-    //     glUniform3f(shader.getUniform("u_color"), 0.1, 1, 0.1);
-    //     glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
-    //     glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
-    //     glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
-    //     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        vao.bind();
+        ibo.bind();
+        glm::mat4 modelMat{1.0f};
+        modelMat = glm::scale(modelMat, glm::vec3{0.5});
+        shader.bind();
+        glUniform3f(shader.getUniform("u_color"), 0.1, 1, 0.1);
+        glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
+        glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
+        glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
-    //     glfwSwapBuffers(window);
-    //     glfwPollEvents();
-    //     deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
-    // }
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+        deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
+    }
 }
 
