@@ -11,6 +11,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "opengl/Texture.hpp"
 #include "opengl/Framebuffer.hpp"
+#include "utils/AABB.hpp"
 #include "ttf2mesh.h"
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
@@ -221,15 +222,15 @@ int main(int argc, char **argv) {
                 std::cout << "WARNING: failed to convert glyph \'" << (char) currentChar << "\' to mesh!\n";
                 continue;
             }
-    
+
             // draw the mesh to the atlas
             atlasShader.bind();
             glViewport(currentPos.x, currentPos.y, stepSize, stepSize);
-            opengl::VertexBuffer meshVBO{mesh->nvert * sizeof(float) * 2, mesh->vert};
-            opengl::IndexBuffer meshIBO{mesh->nfaces * 3 * sizeof(int), mesh->faces};
+            opengl::VertexBuffer meshVBO{mesh->nvert * sizeof(mesh->vert[0]), mesh->vert};
+            opengl::IndexBuffer meshIBO{mesh->nfaces * sizeof(mesh->faces[0]), mesh->faces};
             glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), reinterpret_cast<void const *>(0));
             glEnableVertexAttribArray(0);
-            glDrawElements(GL_TRIANGLES, mesh->nfaces, GL_UNSIGNED_INT, nullptr);
+            glDrawElements(GL_TRIANGLES, mesh->nfaces * 3, GL_UNSIGNED_INT, nullptr);
 
             currentPos.x += stepSize;
             if(currentPos.x + stepSize > atlasSize) {
