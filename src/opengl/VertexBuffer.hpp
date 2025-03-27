@@ -13,7 +13,7 @@ namespace opengl
     public:
         VertexBuffer() = default;
         VertexBuffer(size_t size, GLenum usage = GL_DYNAMIC_DRAW);
-        VertexBuffer(size_t size, void *data, GLenum usage = GL_DYNAMIC_DRAW);
+        VertexBuffer(size_t size, void const *data, GLenum usage = GL_DYNAMIC_DRAW);
         ~VertexBuffer();    
         void bind(unsigned slot = 0) const noexcept;
     };

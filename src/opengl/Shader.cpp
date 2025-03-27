@@ -69,6 +69,7 @@ opengl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
 bool opengl::ShaderProgram::collectShaders(std::string const &directory) noexcept
 {
     assert(std::filesystem::exists(directory));
+    m_dirPath = directory;
     m_log = "";
     for(auto const &directoryEntry : std::filesystem::recursive_directory_iterator{directory}) {
         if(!std::filesystem::is_regular_file(directoryEntry.path())) continue; 

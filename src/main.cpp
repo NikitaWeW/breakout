@@ -10,7 +10,8 @@
 #include "utils/ControllableCamera.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "opengl/Texture.hpp"
-#include "utils/Text.hpp"
+#include "opengl/Framebuffer.hpp"
+#include "ttf2mesh.h"
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
@@ -155,6 +156,7 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 int main(int argc, char **argv) {
     Deallocator deallocator;
     std::unique_ptr<Deallocator, Deallocator> cleanup{&deallocator};
+    // std::unique_ptr<void, Deallocator> cleanup{nullptr};
     GLFWwindow* window;
     if(!init(&window)) {
         std::cout << "failed to init!\n";
@@ -190,14 +192,63 @@ int main(int argc, char **argv) {
     opengl::ShaderProgram shader{"shaders/colorTexture"};
     opengl::Texture ballTexture{"res/ball.png", true, true};
 
-    text::Font font = text::loadFont("res/JetBrainsMono-Bold.ttf");
-    // font.loadCharacters(32, 127);
-    // font.drawCharacters("Hello, World!", {0, 0}, {1, 1});
+    constexpr unsigned atlasSize = 2048;
+    constexpr unsigned glyfCount = L'~' - L' '; // !
+    opengl::Texture atlas{atlasSize, atlasSize, GL_RED};
+    
+    { // TODO: export atlas using stb image write
+        unsigned stepSize = atlasSize / glm::ceil(glm::sqrt(glyfCount));
+        glm::vec2 currentPos = {0, 0};
+        opengl::ShaderProgram atlasShader{"shaders/fontAtlas"};
+        opengl::Framebuffer atlasFBO;
+        atlasFBO.bind();
+        atlasFBO.attach(atlas, GL_COLOR_ATTACHMENT0);
+        assert(atlasFBO.isComplete());
+        glBindVertexArray(0);
+        
+        ttf_t *font;
+        ttf_load_from_file("res/JetBrainsMono-Bold.ttf", &font, false);
+        assert(font);
+        for(uint16_t currentChar = L' '; currentChar <= L'~'; ++currentChar) {
+            // get the glyph mesh
+            int index = ttf_find_glyph(font, currentChar);
+            if(index < 0) {
+                std::cout << "WARNING: failed to find \'" << currentChar << "\' glyph!\n";
+                continue;
+            }
+            ttf_mesh_t *mesh;
+            if(ttf_glyph2mesh(&font->glyphs[index], &mesh, TTF_QUALITY_NORMAL, TTF_FEATURES_DFLT) != TTF_DONE) {
+                std::cout << "WARNING: failed to convert glyph \'" << (char) currentChar << "\' to mesh!\n";
+                continue;
+            }
+    
+            // draw the mesh to the atlas
+            atlasShader.bind();
+            glViewport(currentPos.x, currentPos.y, stepSize, stepSize);
+            opengl::VertexBuffer meshVBO{mesh->nvert * sizeof(float) * 2, mesh->vert};
+            opengl::IndexBuffer meshIBO{mesh->nfaces * 3 * sizeof(int), mesh->faces};
+            glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), reinterpret_cast<void const *>(0));
+            glEnableVertexAttribArray(0);
+            glDrawElements(GL_TRIANGLES, mesh->nfaces, GL_UNSIGNED_INT, nullptr);
+
+            currentPos.x += stepSize;
+            if(currentPos.x + stepSize > atlasSize) {
+                currentPos.x = 0;
+                currentPos.y += stepSize;
+                assert(currentPos.y + stepSize < atlasSize);
+            }
+    
+            ttf_free_mesh(mesh);
+        }
+
+        ttf_free(font);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    
 
     double deltatime = 0;
     while (!glfwWindowShouldClose(window))
     {
-        break;
         auto start = std::chrono::high_resolution_clock::now();
         glfwGetWindowSize(window, &camera.width, &camera.height);
         camera.update(deltatime);
@@ -208,8 +259,11 @@ int main(int argc, char **argv) {
         ibo.bind();
         glm::mat4 modelMat{1.0f};
         modelMat = glm::scale(modelMat, glm::vec3{0.5});
+        atlas.bind();
         shader.bind();
-        glUniform3f(shader.getUniform("u_color"), 0.1, 1, 0.1);
+        // ballTexture.bind();
+        glUniform1i(shader.getUniform("u_texture"), 0);
+        glUniform3f(shader.getUniform("u_color"), 1, 1, 1);
         glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
         glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
         glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);

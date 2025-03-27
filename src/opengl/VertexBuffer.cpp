@@ -8,7 +8,7 @@ opengl::VertexBuffer::VertexBuffer(size_t size, GLenum usage)
     glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
 }
 
-opengl::VertexBuffer::VertexBuffer(size_t size, void *data, GLenum usage)
+opengl::VertexBuffer::VertexBuffer(size_t size, void const *data, GLenum usage)
 {
     glGenBuffers(1, &m_renderID);
     bind();

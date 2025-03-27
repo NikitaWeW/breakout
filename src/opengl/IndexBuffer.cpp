@@ -7,7 +7,7 @@ opengl::IndexBuffer::IndexBuffer(size_t size, GLenum usage) noexcept
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, usage);
 }
 
-opengl::IndexBuffer::IndexBuffer(size_t size, unsigned const *data, GLenum usage) noexcept
+opengl::IndexBuffer::IndexBuffer(size_t size, void const *data, GLenum usage) noexcept
 {
     glGenBuffers(1, &m_renderID);
     bind();
