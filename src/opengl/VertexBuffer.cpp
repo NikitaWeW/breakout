@@ -7,14 +7,12 @@ opengl::VertexBuffer::VertexBuffer(size_t size, GLenum usage)
     bind();
     glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
 }
-
 opengl::VertexBuffer::VertexBuffer(size_t size, void const *data, GLenum usage)
 {
     glGenBuffers(1, &m_renderID);
     bind();
     glBufferData(GL_ARRAY_BUFFER, size, data, usage);
 }
-
 opengl::VertexBuffer::~VertexBuffer()
 {
     if(canDeallocate()) 
@@ -80,6 +78,29 @@ opengl::VertexArray::~VertexArray()
 {
     if(canDeallocate()) {
         glDeleteVertexArrays(1, &m_renderID);
+    }
+}
+
+opengl::InterleavedVertexBufferLayout::InterleavedVertexBufferLayout(std::initializer_list<Element> const &elements) : InterleavedVertexBufferLayout(std::vector(elements)) {}
+opengl::VertexBufferLayout::VertexBufferLayout(std::initializer_list<Element> const &elements) : VertexBufferLayout(std::vector(elements)) {}
+opengl::InstancingVertexBufferLayout::InstancingVertexBufferLayout(std::initializer_list<Element> const &elements) : InstancingVertexBufferLayout(std::vector(elements)) {}
+
+opengl::InterleavedVertexBufferLayout::InterleavedVertexBufferLayout(std::vector<Element> const &elements)
+{
+    for(Element const &element : elements) {
+        push(element);
+    }
+}
+opengl::VertexBufferLayout::VertexBufferLayout(std::vector<Element> const &elements)
+{
+    for(Element const &element : elements) {
+        push(element);
+    }
+}
+opengl::InstancingVertexBufferLayout::InstancingVertexBufferLayout(std::vector<Element> const &elements)
+{
+    for(Element const &element : elements) {
+        push(element);
     }
 }
 

@@ -31,6 +31,8 @@ namespace opengl
         unsigned m_stride = 0;
     public:
         InterleavedVertexBufferLayout() = default;
+        InterleavedVertexBufferLayout(std::initializer_list<Element> const &elements);
+        InterleavedVertexBufferLayout(std::vector<Element> const &elements);
         ~InterleavedVertexBufferLayout() = default;
         void push(Element const &element);
         inline unsigned getStride() const { return m_stride; }
@@ -48,6 +50,8 @@ namespace opengl
         std::vector<Element> m_elements;
     public:
         VertexBufferLayout() = default;
+        VertexBufferLayout(std::initializer_list<Element> const &elements);
+        VertexBufferLayout(std::vector<Element> const &elements);
         ~VertexBufferLayout() = default;
         void push(Element const &element);
         inline std::vector<Element> const &getElements() const { return m_elements; }
@@ -65,6 +69,8 @@ namespace opengl
         unsigned m_stride = 0;
     public:
         InstancingVertexBufferLayout() = default;
+        InstancingVertexBufferLayout(std::initializer_list<Element> const &elements);
+        InstancingVertexBufferLayout(std::vector<Element> const &elements);
         ~InstancingVertexBufferLayout() = default;
         void push(Element const &element);
         inline std::vector<Element> const &getElements() const { return m_elements; }

@@ -1,0 +1,138 @@
+#include <iostream>
+
+#include "Text.hpp"
+#include "ttf2mesh.h"
+
+void text::Font::drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec3 const &color)
+{
+    // TODO: instance text quads
+    textShader.bind();
+    quadVAO.bind();
+    atlas.texture.bind(0);
+    glm::vec2 currentPosition = {position.x, position.y};
+    for(auto it = text.begin(); it != text.end(); ++it) { // fuck that shit
+        if(*it == L' ') {
+            currentPosition.x += size * spaceSize;
+            continue;
+        } else if(*it == L'\n') {
+            currentPosition.x = position.x;
+            currentPosition.y -= 0.1;
+            continue;
+        }
+        GlyphData const &data = atlas.glyphs.at(*it);
+
+        glUniform2fv(textShader.getUniform("u_position"), 1, &currentPosition.x);
+        glUniform2f (textShader.getUniform("u_size"), data.size.x * size, data.size.y * size);
+        glUniform2fv(textShader.getUniform("u_glyphSize"), 1, &data.size.x);
+        glUniform2fv(textShader.getUniform("u_glyphOffset"), 1, &data.offset.x);
+        glUniform3fv(textShader.getUniform("u_color"), 1, &color.r);
+        glUniform1i (textShader.getUniform("u_atlas"), 0);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        currentPosition.x += data.size.x * size;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, unsigned atlasSize)
+{
+    // TODO: export and cache atlas using stb image write
+    // TODO: nuke this shit and use free type or stb_truetype
+
+    float vertices[] = {
+        0, 1, 0,  0, 1,
+        1, 1, 0,  1, 1,
+        1, 0, 0,  1, 0,
+        0, 0, 0,  0, 0 
+    };
+    quadVBO = opengl::VertexBuffer{sizeof(vertices), vertices};
+    quadVAO = opengl::VertexArray{quadVBO, opengl::InterleavedVertexBufferLayout {
+        {3, GL_FLOAT},
+        {2, GL_FLOAT} 
+    }};
+
+    textShader = opengl::ShaderProgram{"shaders/drawText", true};
+    atlasShader = opengl::ShaderProgram{"shaders/fontAtlas", true};
+    blurShader = opengl::ShaderProgram{"shaders/blur", true};
+    
+    // ========================================================
+
+    atlas.size = atlasSize;
+    atlas.texture = opengl::Texture{atlasSize, atlasSize, GL_RED};
+
+    unsigned numRows = glm::ceil(glm::sqrt(chars.size()));
+    unsigned numCols = glm::ceil((float)chars.size() / numRows);
+    unsigned cellWidth = glm::ceil((float) atlasSize / numRows);
+    unsigned cellHeight = glm::ceil((float) atlasSize / numCols);
+
+    glm::vec2 currentPos = {0, 0};
+    
+    opengl::Framebuffer atlasFBO;
+    atlasFBO.bind();
+    atlasFBO.attach(atlas.texture, GL_COLOR_ATTACHMENT0);
+    assert(atlasFBO.isComplete());
+
+    ttf_t *font;
+    ttf_load_from_file(filepath.c_str(), &font, false);
+    assert(font);
+    unsigned largestHeightInCurrentRow = 0;
+    for(uint16_t currentChar : chars) {
+        // get the glyph mesh
+        int index = ttf_find_glyph(font, currentChar);
+        if(index < 0) {
+            std::cout << "WARNING: failed to find \'" << currentChar << "\' glyph!\n";
+            continue;
+        }
+        ttf_glyph_t *glyph = &font->glyphs[index];
+        ttf_mesh_t *mesh;
+        if(ttf_glyph2mesh(glyph, &mesh, TTF_QUALITY_NORMAL, TTF_FEATURES_DFLT) != TTF_DONE) {
+            std::cout << "WARNING: failed to convert glyph \'" << (char) currentChar << "\' to mesh!\n";
+            continue;
+        }
+
+        // draw the mesh to the atlas
+        glBindVertexArray(0);
+        atlasFBO.bind();
+        atlasShader.bind();
+
+        // setup cell dimensions
+        float glyphWidth = glm::abs(glyph->xbounds[0]) + glm::abs(glyph->xbounds[1]);
+        float glyphHeight = glm::abs(glyph->ybounds[0]) + glm::abs(glyph->ybounds[1]);
+        unsigned glyphCellWidth = glm::ceil(glm::min<float>(cellWidth, glyphWidth * cellWidth));
+        unsigned glyphCellHeight = glm::ceil(glm::min<float>(cellHeight, glyphHeight * cellWidth));
+        largestHeightInCurrentRow = glm::max(largestHeightInCurrentRow, glyphCellHeight);
+        glViewport(currentPos.x, currentPos.y, glyphCellWidth, glyphCellHeight);
+
+        // draw the (stupid) mesh 
+        opengl::VertexBuffer meshVBO{mesh->nvert * sizeof(mesh->vert[0]), mesh->vert};
+        opengl::IndexBuffer meshIBO{mesh->nfaces * sizeof(mesh->faces[0]), mesh->faces};
+        glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), reinterpret_cast<void const *>(0));
+        glEnableVertexAttribArray(0);
+        glUniform2f(atlasShader.getUniform("u_glyphMin"), glyph->xbounds[0], glyph->ybounds[0]);
+        glUniform2f(atlasShader.getUniform("u_glyphMax"), glyph->xbounds[1], glyph->ybounds[1]);
+        glDrawElements(GL_TRIANGLES, mesh->nfaces * 3, GL_UNSIGNED_INT, nullptr);
+
+        // make an entry in the glyph lookup map
+        atlas.glyphs[currentChar] = {
+            currentPos / (float) atlasSize,
+            { (float) glyphCellWidth /  atlasSize, (float) largestHeightInCurrentRow / atlasSize },
+            glyph->advance
+        };
+
+        // process current position
+        currentPos.x += glyphCellWidth + 1;
+        if(currentPos.x + cellWidth > atlasSize) {
+            currentPos.x = 0;
+            currentPos.y += largestHeightInCurrentRow + 1;
+            assert(currentPos.y + largestHeightInCurrentRow < atlasSize);
+        }
+
+        ttf_free_mesh(mesh);
+    }
+    ttf_free(font);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}

@@ -12,7 +12,8 @@
 #include "opengl/Texture.hpp"
 #include "opengl/Framebuffer.hpp"
 #include "utils/AABB.hpp"
-#include "ttf2mesh.h"
+#include "utils/Text.hpp"
+#define basicLatin text::charRange(L'!', L'~')
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
@@ -115,6 +116,7 @@ void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsiz
 }
 class Deallocator {public: inline void operator()(void *) {
     glfwTerminate();
+    this->~Deallocator(); // just in case
 }};
 bool init(GLFWwindow** window) {
     assert(window);
@@ -155,9 +157,7 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 }
 
 int main(int argc, char **argv) {
-    Deallocator deallocator;
-    std::unique_ptr<Deallocator, Deallocator> cleanup{&deallocator};
-    // std::unique_ptr<void, Deallocator> cleanup{nullptr};
+    std::unique_ptr<Deallocator, Deallocator> cleanup{new Deallocator};
     GLFWwindow* window;
     if(!init(&window)) {
         std::cout << "failed to init!\n";
@@ -184,68 +184,16 @@ int main(int argc, char **argv) {
         0, 1, 2,
         0, 2, 3
     };
-    opengl::VertexBuffer vbo{sizeof(vertices), vertices};
-    opengl::VertexBufferLayout layout;
-    layout.push({3, GL_FLOAT, 0}); // TODO: construct layouts from initializer lists
-    layout.push({2, GL_FLOAT, 12 * sizeof(float)});
-    opengl::VertexArray vao{vbo, layout};
-    opengl::IndexBuffer ibo{sizeof(indices), indices};
+    opengl::VertexBuffer quadVBO{sizeof(vertices), vertices};
+    opengl::VertexArray quadVAO{quadVBO, opengl::VertexBufferLayout{
+        {3, GL_FLOAT, 0},
+        {2, GL_FLOAT, 12 * sizeof(float)}
+    }};
+    opengl::IndexBuffer quadIBO{sizeof(indices), indices};
     opengl::ShaderProgram shader{"shaders/colorTexture"};
     opengl::Texture ballTexture{"res/ball.png", true, true};
 
-    constexpr unsigned atlasSize = 2048;
-    constexpr unsigned glyfCount = L'~' - L' '; // !
-    opengl::Texture atlas{atlasSize, atlasSize, GL_RED};
-    
-    { // TODO: export atlas using stb image write
-        unsigned stepSize = atlasSize / glm::ceil(glm::sqrt(glyfCount));
-        glm::vec2 currentPos = {0, 0};
-        opengl::ShaderProgram atlasShader{"shaders/fontAtlas"};
-        opengl::Framebuffer atlasFBO;
-        atlasFBO.bind();
-        atlasFBO.attach(atlas, GL_COLOR_ATTACHMENT0);
-        assert(atlasFBO.isComplete());
-        glBindVertexArray(0);
-        
-        ttf_t *font;
-        ttf_load_from_file("res/JetBrainsMono-Bold.ttf", &font, false);
-        assert(font);
-        for(uint16_t currentChar = L' '; currentChar <= L'~'; ++currentChar) {
-            // get the glyph mesh
-            int index = ttf_find_glyph(font, currentChar);
-            if(index < 0) {
-                std::cout << "WARNING: failed to find \'" << currentChar << "\' glyph!\n";
-                continue;
-            }
-            ttf_mesh_t *mesh;
-            if(ttf_glyph2mesh(&font->glyphs[index], &mesh, TTF_QUALITY_NORMAL, TTF_FEATURES_DFLT) != TTF_DONE) {
-                std::cout << "WARNING: failed to convert glyph \'" << (char) currentChar << "\' to mesh!\n";
-                continue;
-            }
-
-            // draw the mesh to the atlas
-            atlasShader.bind();
-            glViewport(currentPos.x, currentPos.y, stepSize, stepSize);
-            opengl::VertexBuffer meshVBO{mesh->nvert * sizeof(mesh->vert[0]), mesh->vert};
-            opengl::IndexBuffer meshIBO{mesh->nfaces * sizeof(mesh->faces[0]), mesh->faces};
-            glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), reinterpret_cast<void const *>(0));
-            glEnableVertexAttribArray(0);
-            glDrawElements(GL_TRIANGLES, mesh->nfaces * 3, GL_UNSIGNED_INT, nullptr);
-
-            currentPos.x += stepSize;
-            if(currentPos.x + stepSize > atlasSize) {
-                currentPos.x = 0;
-                currentPos.y += stepSize;
-                assert(currentPos.y + stepSize < atlasSize);
-            }
-    
-            ttf_free_mesh(mesh);
-        }
-
-        ttf_free(font);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-    
+    text::Font font = text::Font("res/JetBrainsMono-Bold.ttf", basicLatin);
 
     double deltatime = 0;
     while (!glfwWindowShouldClose(window))
@@ -256,19 +204,7 @@ int main(int argc, char **argv) {
         glViewport(0, 0, camera.width, camera.height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        vao.bind();
-        ibo.bind();
-        glm::mat4 modelMat{1.0f};
-        modelMat = glm::scale(modelMat, glm::vec3{0.5});
-        atlas.bind();
-        shader.bind();
-        // ballTexture.bind();
-        glUniform1i(shader.getUniform("u_texture"), 0);
-        glUniform3f(shader.getUniform("u_color"), 1, 1, 1);
-        glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
-        glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
-        glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        font.drawText("I\nhate\ntext rendering", {0, 0}, 1);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
