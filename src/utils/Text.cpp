@@ -3,10 +3,15 @@
 #include "Text.hpp"
 #include "ttf2mesh.h"
 
-void text::Font::drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec3 const &color)
+void text::Font::drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &color, glm::mat4 const &projectionMatrix)
 {
     // TODO: instance text quads
     textShader.bind();
+    glUniform4fv(textShader.getUniform("u_color"), 1, &color.r);
+    glUniform1i (textShader.getUniform("u_atlas"), 0);
+    glUniformMatrix4fv(textShader.getUniform("u_projMat"), 1, GL_FALSE, &projectionMatrix[0][0]);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
     quadVAO.bind();
     atlas.texture.bind(0);
     glm::vec2 currentPosition = {position.x, position.y};
@@ -21,15 +26,13 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
         }
         GlyphData const &data = atlas.glyphs.at(*it);
 
-        glUniform2fv(textShader.getUniform("u_position"), 1, &currentPosition.x);
+        glUniform2f (textShader.getUniform("u_position"), currentPosition.x, currentPosition.y + data.verticalOffset);
         glUniform2f (textShader.getUniform("u_size"), data.size.x * size, data.size.y * size);
         glUniform2fv(textShader.getUniform("u_glyphSize"), 1, &data.size.x);
         glUniform2fv(textShader.getUniform("u_glyphOffset"), 1, &data.offset.x);
-        glUniform3fv(textShader.getUniform("u_color"), 1, &color.r);
-        glUniform1i (textShader.getUniform("u_atlas"), 0);
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-        currentPosition.x += data.size.x * size;
+        currentPosition.x += data.size.x * size + spacing;
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -93,7 +96,7 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
             continue;
         }
 
-        // draw the mesh to the atlas
+        // draw the mesh to the atlas. that's the stupidest aproach ever.
         glBindVertexArray(0);
         atlasFBO.bind();
         atlasShader.bind();
@@ -101,8 +104,8 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
         // setup cell dimensions
         float glyphWidth = glm::abs(glyph->xbounds[0]) + glm::abs(glyph->xbounds[1]);
         float glyphHeight = glm::abs(glyph->ybounds[0]) + glm::abs(glyph->ybounds[1]);
-        unsigned glyphCellWidth = glm::ceil(glm::min<float>(cellWidth, glyphWidth * cellWidth));
-        unsigned glyphCellHeight = glm::ceil(glm::min<float>(cellHeight, glyphHeight * cellWidth));
+        unsigned glyphCellWidth = glm::floor(glm::min<float>(cellWidth, glyphWidth * cellWidth));
+        unsigned glyphCellHeight = glm::floor(glm::min<float>(cellHeight, glyphHeight * cellWidth));
         largestHeightInCurrentRow = glm::max(largestHeightInCurrentRow, glyphCellHeight);
         glViewport(currentPos.x, currentPos.y, glyphCellWidth, glyphCellHeight);
 
@@ -118,8 +121,11 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
         // make an entry in the glyph lookup map
         atlas.glyphs[currentChar] = {
             currentPos / (float) atlasSize,
-            { (float) glyphCellWidth /  atlasSize, (float) largestHeightInCurrentRow / atlasSize },
-            glyph->advance
+            {
+                (float) glyphCellWidth / atlasSize, 
+                (float) largestHeightInCurrentRow / atlasSize
+            },
+            glyph->ybounds[0] / 10
         };
 
         // process current position
