@@ -169,6 +169,7 @@ int main(int argc, char **argv) {
     glfwSetWindowUserPointer(window, &camera);
     glfwSetKeyCallback(window, key_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSwapInterval(0);
 
     float vertices[] = {
         -1,  1, 0,
@@ -196,9 +197,11 @@ int main(int argc, char **argv) {
 
     text::Font font = text::Font("res/JetBrainsMono-Bold.ttf", basicLatin);
 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
     
     double deltatime = 1;
-    std::thread fpsShower{[&deltatime, &window](){while(!glfwWindowShouldClose(window)) {glfwSetWindowTitle(window, ("lopengl -- " + std::to_string((int) glm::round(1 / deltatime)) + " FPS").c_str()); std::this_thread::sleep_for(std::chrono::milliseconds{500}); }}}; fpsShower.detach();
+    std::thread fpsShower{[&deltatime, &window](){while(!glfwWindowShouldClose(window)) {glfwSetWindowTitle(window, ("breakout -- " + std::to_string((int) glm::round(1 / deltatime)) + " FPS").c_str()); std::this_thread::sleep_for(std::chrono::milliseconds{500}); }}}; fpsShower.detach();
     while (!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
@@ -207,7 +210,9 @@ int main(int argc, char **argv) {
         glViewport(0, 0, camera.width, camera.height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        font.drawText("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK\nLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}", {0, 0}, 1, glm::vec4{1, 1, 0, 0.5}, camera.getProjectionMatrix());
+        font.drawText("!\"#$%&'()*+,-./01234\n56789:;<=>?@ABCDEFGHIJK\nLMNOPQRSTUVW\nXYZ[\\]^_`abcdefghijkl\nmnopqrstuvwxyz{|}", {-0.9, 0.9}, 1, glm::vec4{1, 1, 0, 1}, camera.getProjectionMatrix());
+        font.drawText("I hate text\nrendering", {-0.5, -0.5}, 1, glm::vec4{0, 1, 1, 1}, camera.getProjectionMatrix());
+        font.drawText("It's such a mess", {0, 0}, 1, glm::vec4{1, 1, 1, 1}, camera.getProjectionMatrix());
 
         // quadVAO.bind();
         // quadIBO.bind();

@@ -5,35 +5,56 @@
 
 void text::Font::drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &color, glm::mat4 const &projectionMatrix)
 {
-    // TODO: instance text quads
+    struct GlyphRenderData {
+        glm::vec2 quadPosition;
+        glm::vec2 quadSize;
+        glm::vec2 glyphOffset;
+        glm::vec2 glyphSize;
+    };
+    std::vector<GlyphRenderData> renderData;
+    {
+        glm::vec2 currentPosition = {position.x, position.y};
+        for(auto it = text.begin(); it != text.end(); ++it) { // fuck that shit
+            if(*it == L' ') {
+                currentPosition.x += size * spaceSize;
+                continue;
+            } else if(*it == L'\n') {
+                currentPosition.x = position.x;
+                currentPosition.y -= 0.1;
+                continue;
+            }
+            GlyphData const &data = atlas.glyphs.at(*it);
+
+            GlyphRenderData currentRenderData{};
+            currentRenderData.quadPosition = { currentPosition.x, currentPosition.y + data.verticalOffset };
+            currentRenderData.quadSize = { data.size.x * size, data.size.y * size };
+            currentRenderData.glyphOffset = data.offset;
+            currentRenderData.glyphSize = data.size;
+            
+            renderData.push_back(currentRenderData);
+    
+            currentPosition.x += data.size.x * size + spacing;
+        }
+    }
+
     textShader.bind();
     glUniform4fv(textShader.getUniform("u_color"), 1, &color.r);
     glUniform1i (textShader.getUniform("u_atlas"), 0);
     glUniformMatrix4fv(textShader.getUniform("u_projMat"), 1, GL_FALSE, &projectionMatrix[0][0]);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-    quadVAO.bind();
     atlas.texture.bind(0);
-    glm::vec2 currentPosition = {position.x, position.y};
-    for(auto it = text.begin(); it != text.end(); ++it) { // fuck that shit
-        if(*it == L' ') {
-            currentPosition.x += size * spaceSize;
-            continue;
-        } else if(*it == L'\n') {
-            currentPosition.x = position.x;
-            currentPosition.y -= 0.1;
-            continue;
-        }
-        GlyphData const &data = atlas.glyphs.at(*it);
-
-        glUniform2f (textShader.getUniform("u_position"), currentPosition.x, currentPosition.y + data.verticalOffset);
-        glUniform2f (textShader.getUniform("u_size"), data.size.x * size, data.size.y * size);
-        glUniform2fv(textShader.getUniform("u_glyphSize"), 1, &data.size.x);
-        glUniform2fv(textShader.getUniform("u_glyphOffset"), 1, &data.offset.x);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-        currentPosition.x += data.size.x * size + spacing;
-    }
+    opengl::VertexArray quadVAO{quadVBO, opengl::InterleavedVertexBufferLayout {
+        {3, GL_FLOAT},
+        {2, GL_FLOAT} 
+    }};
+    quadVAO.bind();
+    opengl::VertexBuffer renderDataBuffer{renderData.size() * sizeof(GlyphRenderData), renderData.data()};
+    quadVAO.addBuffer(renderDataBuffer, opengl::InstancingVertexBufferLayout{
+        {2, GL_FLOAT, 1},
+        {2, GL_FLOAT, 1},
+        {2, GL_FLOAT, 1},
+        {2, GL_FLOAT, 1}
+    });
+    glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, renderData.size());
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
@@ -52,10 +73,6 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
         0, 0, 0,  0, 0 
     };
     quadVBO = opengl::VertexBuffer{sizeof(vertices), vertices};
-    quadVAO = opengl::VertexArray{quadVBO, opengl::InterleavedVertexBufferLayout {
-        {3, GL_FLOAT},
-        {2, GL_FLOAT} 
-    }};
 
     textShader = opengl::ShaderProgram{"shaders/drawText", true};
     atlasShader = opengl::ShaderProgram{"shaders/fontAtlas", true};
@@ -102,8 +119,8 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
         atlasShader.bind();
 
         // setup cell dimensions
-        float glyphWidth = glm::abs(glyph->xbounds[0]) + glm::abs(glyph->xbounds[1]);
-        float glyphHeight = glm::abs(glyph->ybounds[0]) + glm::abs(glyph->ybounds[1]);
+        float glyphWidth = glyph->xbounds[1] - glyph->xbounds[0];
+        float glyphHeight = glyph->ybounds[1] - glyph->ybounds[0];
         unsigned glyphCellWidth = glm::floor(glm::min<float>(cellWidth, glyphWidth * cellWidth));
         unsigned glyphCellHeight = glm::floor(glm::min<float>(cellHeight, glyphHeight * cellWidth));
         largestHeightInCurrentRow = glm::max(largestHeightInCurrentRow, glyphCellHeight);

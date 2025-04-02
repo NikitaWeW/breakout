@@ -31,7 +31,6 @@ namespace text
     private:
         opengl::ShaderProgram textShader;
         opengl::VertexBuffer quadVBO;
-        opengl::VertexArray quadVAO;
         opengl::ShaderProgram atlasShader;
         opengl::ShaderProgram blurShader;
         Atlas atlas;
