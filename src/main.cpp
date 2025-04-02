@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     opengl::ShaderProgram shader{"shaders/colorTexture"};
     opengl::Texture ballTexture{"res/ball.png", true, true};
 
-    text::Font font = text::Font("res/JetBrainsMono-Bold.ttf", basicLatin);
+    text::Font font = text::Font("res/Consolas-Regular.ttf", basicLatin);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
