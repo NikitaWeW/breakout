@@ -59,7 +59,7 @@ void opengl::VertexArray::addBuffer(VertexBuffer const &buffer, VertexBufferLayo
         ++m_vertexAttribIndex;
     }
 }
-void opengl::VertexArray::addBuffer(VertexBuffer const &buffer, InstancingVertexBufferLayout const &layout)
+void opengl::VertexArray::addBuffer(VertexBuffer const &buffer, InterleavedInstancingVertexBufferLayout const &layout)
 {
     bind(); buffer.bind();
     unsigned offset = 0;
@@ -68,6 +68,16 @@ void opengl::VertexArray::addBuffer(VertexBuffer const &buffer, InstancingVertex
         glVertexAttribDivisor(m_vertexAttribIndex, element.divisor);
         glEnableVertexAttribArray(m_vertexAttribIndex);
         offset += element.count * getSizeOfGLType(element.type);
+        ++m_vertexAttribIndex;
+    }
+}
+void opengl::VertexArray::addBuffer(VertexBuffer const &buffer, InstancingVertexBufferLayout const &layout)
+{
+    bind(); buffer.bind();
+    for(InstancingVertexBufferLayout::Element const &element : layout.getElements()) {
+        glVertexAttribPointer(m_vertexAttribIndex, element.count, element.type, false, element.count * getSizeOfGLType(element.type), reinterpret_cast<void const *>(element.offset));
+        glEnableVertexAttribArray(m_vertexAttribIndex);
+        glVertexAttribDivisor(m_vertexAttribIndex, element.divisor);
         ++m_vertexAttribIndex;
     }
 }
@@ -83,6 +93,7 @@ opengl::VertexArray::~VertexArray()
 
 opengl::InterleavedVertexBufferLayout::InterleavedVertexBufferLayout(std::initializer_list<Element> const &elements) : InterleavedVertexBufferLayout(std::vector(elements)) {}
 opengl::VertexBufferLayout::VertexBufferLayout(std::initializer_list<Element> const &elements) : VertexBufferLayout(std::vector(elements)) {}
+opengl::InterleavedInstancingVertexBufferLayout::InterleavedInstancingVertexBufferLayout(std::initializer_list<Element> const &elements) : InterleavedInstancingVertexBufferLayout(std::vector(elements)) {}
 opengl::InstancingVertexBufferLayout::InstancingVertexBufferLayout(std::initializer_list<Element> const &elements) : InstancingVertexBufferLayout(std::vector(elements)) {}
 
 opengl::InterleavedVertexBufferLayout::InterleavedVertexBufferLayout(std::vector<Element> const &elements)
@@ -92,6 +103,12 @@ opengl::InterleavedVertexBufferLayout::InterleavedVertexBufferLayout(std::vector
     }
 }
 opengl::VertexBufferLayout::VertexBufferLayout(std::vector<Element> const &elements)
+{
+    for(Element const &element : elements) {
+        push(element);
+    }
+}
+opengl::InterleavedInstancingVertexBufferLayout::InterleavedInstancingVertexBufferLayout(std::vector<Element> const &elements)
 {
     for(Element const &element : elements) {
         push(element);
@@ -113,8 +130,12 @@ void opengl::VertexBufferLayout::push(Element const &element)
 {
     m_elements.push_back(element);
 }
-void opengl::InstancingVertexBufferLayout::push(Element const &element)
+void opengl::InterleavedInstancingVertexBufferLayout::push(Element const &element)
 {
     m_elements.push_back(element);
     m_stride += element.count * getSizeOfGLType(element.type);
+}
+void opengl::InstancingVertexBufferLayout::push(Element const &element)
+{
+    m_elements.push_back(element);
 }

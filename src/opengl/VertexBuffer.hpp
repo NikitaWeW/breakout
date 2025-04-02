@@ -58,6 +58,25 @@ namespace opengl
     };
     class InstancingVertexBufferLayout
     {
+    public: 
+        struct Element {
+            unsigned count;
+            GLenum type;
+            unsigned offset;
+            unsigned divisor;
+        };
+    private:
+        std::vector<Element> m_elements;
+    public:
+        InstancingVertexBufferLayout() = default;
+        InstancingVertexBufferLayout(std::initializer_list<Element> const &elements);
+        InstancingVertexBufferLayout(std::vector<Element> const &elements);
+        ~InstancingVertexBufferLayout() = default;
+        void push(Element const &element);
+        inline std::vector<Element> const &getElements() const { return m_elements; }
+    };
+    class InterleavedInstancingVertexBufferLayout
+    {
     public:
         struct Element {
             unsigned count;
@@ -68,10 +87,10 @@ namespace opengl
         std::vector<Element> m_elements;
         unsigned m_stride = 0;
     public:
-        InstancingVertexBufferLayout() = default;
-        InstancingVertexBufferLayout(std::initializer_list<Element> const &elements);
-        InstancingVertexBufferLayout(std::vector<Element> const &elements);
-        ~InstancingVertexBufferLayout() = default;
+        InterleavedInstancingVertexBufferLayout() = default;
+        InterleavedInstancingVertexBufferLayout(std::initializer_list<Element> const &elements);
+        InterleavedInstancingVertexBufferLayout(std::vector<Element> const &elements);
+        ~InterleavedInstancingVertexBufferLayout() = default;
         void push(Element const &element);
         inline std::vector<Element> const &getElements() const { return m_elements; }
         inline unsigned const &getStride() const { return m_stride; }
@@ -87,6 +106,7 @@ namespace opengl
         template <typename Layout_t> VertexArray(VertexBuffer const &buffer, Layout_t const &layout);
         void addBuffer(VertexBuffer const &buffer, InterleavedVertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, VertexBufferLayout const &layout);
+        void addBuffer(VertexBuffer const &buffer, InterleavedInstancingVertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, InstancingVertexBufferLayout const &layout);
 
         void bind(unsigned slot = 0) const noexcept;

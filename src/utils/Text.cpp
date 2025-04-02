@@ -48,7 +48,7 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
     }};
     quadVAO.bind();
     opengl::VertexBuffer renderDataBuffer{renderData.size() * sizeof(GlyphRenderData), renderData.data()};
-    quadVAO.addBuffer(renderDataBuffer, opengl::InstancingVertexBufferLayout{
+    quadVAO.addBuffer(renderDataBuffer, opengl::InterleavedInstancingVertexBufferLayout{
         {2, GL_FLOAT, 1},
         {2, GL_FLOAT, 1},
         {2, GL_FLOAT, 1},
