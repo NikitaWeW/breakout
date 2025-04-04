@@ -47,3 +47,24 @@ void opengl::Texture::bind(unsigned slot) const noexcept {
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, m_renderID);
 }
+
+opengl::TextureMS::TextureMS(unsigned width, unsigned height, unsigned samples, GLenum format, GLenum wrap, GLenum filter) noexcept
+{
+    glGenTextures(1, &m_renderID);
+    bind();
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, format, width, height, GL_TRUE);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
+}
+
+opengl::TextureMS::~TextureMS()
+{
+    if(canDeallocate()) {
+        glDeleteTextures(1, &m_renderID);
+    }
+}
+
+void opengl::TextureMS::bind(unsigned slot) const noexcept { glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_renderID); }

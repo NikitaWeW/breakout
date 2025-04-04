@@ -156,6 +156,13 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
 }
+inline constexpr glm::vec3 hex(int hexValue) {
+    return {
+        ((hexValue >> 16) & 0xFF) / 255.0,
+        ((hexValue >> 8) & 0xFF) / 255.0,
+        ((hexValue) & 0xFF) / 255.0
+    };
+}
 
 int main(int argc, char **argv) {
     std::unique_ptr<Deallocator, Deallocator> cleanup{new Deallocator};
@@ -193,9 +200,9 @@ int main(int argc, char **argv) {
     }};
     opengl::IndexBuffer quadIBO{sizeof(indices), indices};
     opengl::ShaderProgram shader{"shaders/colorTexture"};
-    opengl::Texture ballTexture{"res/ball.png", true, true};
+    opengl::Texture ballTexture{"res/textures/ball.png", true, true};
 
-    text::Font font = text::Font("res/Consolas-Regular.ttf", basicLatin);
+    text::Font font = text::Font("res/OpenSans-Light.ttf", basicLatin);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -210,9 +217,7 @@ int main(int argc, char **argv) {
         glViewport(0, 0, camera.width, camera.height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        font.drawText("!\"#$%&'()*+,-./01234\n56789:;<=>?@ABCDEFGHIJK\nLMNOPQRSTUVW\nXYZ[\\]^_`abcdefghijkl\nmnopqrstuvwxyz{|}", {-0.9, 0.9}, 1, glm::vec4{1, 1, 0, 1}, camera.getProjectionMatrix());
-        font.drawText("I hate text\nrendering", {-0.5, -0.5}, 1, glm::vec4{0, 1, 1, 1}, camera.getProjectionMatrix());
-        font.drawText("It's such a mess", {0, 0}, 1, glm::vec4{1, 1, 1, 1}, camera.getProjectionMatrix());
+        font.drawText("text rendering still works.", {-0.9, 0.9}, 0.8, hex(0xFABC3C), camera.getProjectionMatrix());
 
         // quadVAO.bind();
         // quadIBO.bind();

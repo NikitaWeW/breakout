@@ -23,7 +23,11 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
                 currentPosition.y -= 0.1;
                 continue;
             }
-            GlyphData const &data = atlas.glyphs.at(*it);
+            auto dataIter = atlas.glyphs.find(*it);
+            if(dataIter == atlas.glyphs.end()) {
+                std::cout << "failed to find glyph for char \'" << (wchar_t) *it << "\'!\n";
+            }
+            GlyphData const &data = dataIter->second;
 
             GlyphRenderData currentRenderData{};
             currentRenderData.quadPosition = { currentPosition.x, currentPosition.y + data.verticalOffset };
@@ -81,7 +85,7 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
     // ========================================================
 
     atlas.size = atlasSize;
-    atlas.texture = opengl::Texture{atlasSize, atlasSize, GL_RED};
+    atlas.texture = opengl::TextureMS{atlasSize, atlasSize, 4, GL_RED, GL_CLAMP_TO_EDGE, GL_LINEAR};
 
     unsigned numRows = glm::ceil(glm::sqrt(chars.size()));
     unsigned numCols = glm::ceil((float)chars.size() / numRows);

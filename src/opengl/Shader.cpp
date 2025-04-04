@@ -105,7 +105,8 @@ std::string shaderTypeToString(unsigned type) noexcept {
 }
 bool opengl::ShaderProgram::compileShaders() noexcept
 {
-    if(canDeallocate()) deallocate();
+    if(canDeallocate()) 
+        deallocate();
 
     m_UniformLocationCache.erase(m_UniformLocationCache.begin(), m_UniformLocationCache.end());
     m_log = "";

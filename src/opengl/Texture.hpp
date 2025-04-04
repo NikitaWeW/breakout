@@ -16,4 +16,13 @@ namespace opengl
 
         void bind(unsigned slot = 0) const noexcept;
     };
+    class TextureMS : public Object
+    {
+    public:
+        TextureMS() = default;
+        TextureMS(unsigned width, unsigned height, unsigned samples = 4, GLenum format = GL_RGBA, GLenum wrap = GL_CLAMP_TO_EDGE, GLenum filter = GL_NEAREST) noexcept;
+        ~TextureMS();
+
+        void bind(unsigned slot = 0) const noexcept;
+    };
 } // namespace opengl

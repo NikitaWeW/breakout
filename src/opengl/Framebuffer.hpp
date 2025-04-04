@@ -13,6 +13,14 @@ namespace opengl
     
         void bind(unsigned slot = 0) const noexcept;
     };
+    class RenderbufferMS : public Object {
+    public:
+        RenderbufferMS() = default;
+        RenderbufferMS(unsigned width, unsigned height, unsigned samples, GLenum format);
+        ~RenderbufferMS();
+    
+        void bind(unsigned slot = 0) const noexcept;
+    };
 
     class Framebuffer : public Object {
     protected:
@@ -23,6 +31,8 @@ namespace opengl
         void bind(unsigned slot = 0) const noexcept;
         bool isComplete();
         void attach(Texture const &texture, GLenum attachment = GL_COLOR_ATTACHMENT0);
+        void attach(TextureMS const &texture, GLenum attachment = GL_COLOR_ATTACHMENT0);
         void attach(Renderbuffer const &renderbuffer, GLenum attachment = GL_DEPTH_STENCIL_ATTACHMENT);
+        void attach(RenderbufferMS const &renderbuffer, GLenum attachment = GL_DEPTH_STENCIL_ATTACHMENT);
     };
 } // namespace opengl
