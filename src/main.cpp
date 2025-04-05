@@ -14,6 +14,9 @@
 #include "opengl/Framebuffer.hpp"
 #include "utils/AABB.hpp"
 #include "utils/Text.hpp"
+#include "utils/ECS.hpp"
+#include "game/PhysicsComponents.hpp"
+#include "game/PhysicsSystem.hpp"
 #define basicLatin text::charRange(L'!', L'~')
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
@@ -176,9 +179,25 @@ int main(int argc, char **argv) {
         std::cout << "failed to init!\n";
         return -1;
     };
-    Camera camera{{0, 0, -1}, {-90, 0, 0}, Camera::ProjectionType::ORTHO};
+    Camera camera{{0, 0, -1}, {-90, 0, 0}, Camera::ProjectionType::ORTHO}; // TODO: make camera an entity
     camera.near = -1; camera.far = 1;
 
+    float vertices[] = {
+        -1,  1, 0,  0, 1,
+         1,  1, 0,  1, 1,
+         1, -1, 0,  1, 0,
+        -1, -1, 0,  0, 0 
+    };
+    opengl::VertexBuffer vb{sizeof(vertices), vertices};
+    opengl::VertexArray va{vb, opengl::InterleavedVertexBufferLayout{
+        {3, GL_FLOAT},
+        {2, GL_FLOAT}
+    }};
+    opengl::ShaderProgram shader{"shaders/basic", true};
+    
+    ecs::Entity_t entity1 = ecs::makeEntity<game::PositionComponent, game::VelocityComponent>();
+    ecs::get<game::VelocityComponent>(entity1).velocity = {0.01, 0, 0};
+    ecs::getSystemManager().registerSystem<game::MovementSystem>()->m_entities.insert(entity1);
 
     double deltatime = 1;
     std::thread fpsShower{[&deltatime, &window](){while(!glfwWindowShouldClose(window)) {glfwSetWindowTitle(window, ("breakout -- " + std::to_string((int) glm::round(1 / deltatime)) + " FPS").c_str()); std::this_thread::sleep_for(std::chrono::milliseconds{500}); }}}; fpsShower.detach();
@@ -187,10 +206,17 @@ int main(int argc, char **argv) {
         auto start = std::chrono::high_resolution_clock::now();
         glfwGetWindowSize(window, &camera.width, &camera.height);
         camera.update(deltatime);
+        ecs::getSystemManager().update(deltatime);    
+
         glViewport(0, 0, camera.width, camera.height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        
+        va.bind();
+        shader.bind();
+        glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &glm::translate(glm::mat4{1.0f}, ecs::get<game::PositionComponent>(entity1).position)[0][0]);
+        glUniformMatrix4fv(shader.getUniform("u_viewMat"), 1, GL_FALSE, &camera.getViewMatrix()[0][0]);
+        glUniformMatrix4fv(shader.getUniform("u_projectionMat"), 1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

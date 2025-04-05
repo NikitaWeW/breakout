@@ -3,7 +3,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include <iostream>
 
-Camera::Camera(glm::vec3 const &pos, glm::vec3 const &rotation, ProjectionType projectionType) noexcept : position(pos), rotation(rotation), fov(45), projectionType(projectionType) {}
+Camera::Camera(glm::vec3 const &pos, glm::vec3 const &rotation, ProjectionType projectionType) noexcept : position(pos), rotation(rotation), projectionType(projectionType) {}
 
 Camera::~Camera() noexcept {}
 
