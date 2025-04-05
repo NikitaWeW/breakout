@@ -68,7 +68,7 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
 text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, unsigned atlasSize)
 {
     // TODO: export and cache atlas using stb image write
-    // TODO: nuke this shit and use free type or stb_truetype
+    // TODO: nuke this shit and use msdfgen or stb_truetype
 
     float vertices[] = {
         0, 1, 0,  0, 1,

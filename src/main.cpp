@@ -139,6 +139,9 @@ bool init(GLFWwindow** window) {
     }
 
     glfwMakeContextCurrent(*window);
+    glfwSetKeyCallback(*window, key_callback);
+    glfwSetScrollCallback(*window, scroll_callback);
+    glfwSwapInterval(0);
 
     int version = gladLoadGL(glfwGetProcAddress);
     if (version == 0) {
@@ -147,6 +150,8 @@ bool init(GLFWwindow** window) {
     }
     std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << '.' << GLAD_VERSION_MINOR(version) << " (compatibility)\n";
     glDebugMessageCallback(debugCallback, nullptr);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
 
     return true;
 }
@@ -173,40 +178,8 @@ int main(int argc, char **argv) {
     };
     Camera camera{{0, 0, -1}, {-90, 0, 0}, Camera::ProjectionType::ORTHO};
     camera.near = -1; camera.far = 1;
-    glfwSetWindowUserPointer(window, &camera);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetScrollCallback(window, scroll_callback);
-    glfwSwapInterval(0);
 
-    float vertices[] = {
-        -1,  1, 0,
-         1,  1, 0,
-         1, -1, 0,
-        -1, -1, 0,
 
-        0, 1,
-        1, 1,
-        1, 0,
-        0, 0 
-    };
-    unsigned indices[] = {
-        0, 1, 2,
-        0, 2, 3
-    };
-    opengl::VertexBuffer quadVBO{sizeof(vertices), vertices};
-    opengl::VertexArray quadVAO{quadVBO, opengl::VertexBufferLayout{
-        {3, GL_FLOAT, 0},
-        {2, GL_FLOAT, 12 * sizeof(float)}
-    }};
-    opengl::IndexBuffer quadIBO{sizeof(indices), indices};
-    opengl::ShaderProgram shader{"shaders/colorTexture"};
-    opengl::Texture ballTexture{"res/textures/ball.png", true, true};
-
-    text::Font font = text::Font("res/OpenSans-Light.ttf", basicLatin);
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-    
     double deltatime = 1;
     std::thread fpsShower{[&deltatime, &window](){while(!glfwWindowShouldClose(window)) {glfwSetWindowTitle(window, ("breakout -- " + std::to_string((int) glm::round(1 / deltatime)) + " FPS").c_str()); std::this_thread::sleep_for(std::chrono::milliseconds{500}); }}}; fpsShower.detach();
     while (!glfwWindowShouldClose(window))
@@ -217,19 +190,7 @@ int main(int argc, char **argv) {
         glViewport(0, 0, camera.width, camera.height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        font.drawText("text rendering still works.", {-0.9, 0.9}, 0.8, hex(0xFABC3C), camera.getProjectionMatrix());
-
-        // quadVAO.bind();
-        // quadIBO.bind();
-        // glm::mat4 modelMat{1.0f};
-        // font.getAtlas().texture.bind();
-        // shader.bind();
-        // glUniform1i(shader.getUniform("u_texture"), 0);
-        // glUniform3f(shader.getUniform("u_color"), 1, 1, 1);
-        // glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
-        // glUniformMatrix4fv(shader.getUniform("u_viewMat"),      1, GL_FALSE, &camera.getViewMatrix()[0][0]);
-        // glUniformMatrix4fv(shader.getUniform("u_projectionMat"),1, GL_FALSE, &glm::mat4(1.0f)[0][0]);
-        // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        
 
         glfwSwapBuffers(window);
         glfwPollEvents();
