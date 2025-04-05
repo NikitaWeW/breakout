@@ -85,7 +85,7 @@ void ecs::ComponentManager::registerComponent()
     char const *name = typeid(Component_t).name();
     assert(m_componentIDs.find(name) == m_componentIDs.end() && "registering component type more than once");
     m_componentIDs.insert({name, m_nextID++});
-    m_componentArrays.insert({name, std::make_shared<ComponentArray<Component_t>()});
+    m_componentArrays.insert({name, std::make_shared<ComponentArray<Component_t>>()});
 }
 template <typename Component_t>
 ecs::ComponentID_t ecs::ComponentManager::getComponentID()
@@ -119,7 +119,7 @@ template <typename Component_t>
 std::shared_ptr<ecs::ComponentArray<Component_t>> ecs::ComponentManager::getComponentArray()
 {
     char const *name = typeid(Component_t).name();
-    assert(m_componentIDs.find(typeName) != m_componentIDs.end() && "component not registered before use");
+    assert(m_componentIDs.find(name) != m_componentIDs.end() && "component not registered before use");
     std::static_pointer_cast<ComponentArray<Component_t>>(m_componentArrays.at(name));
 }
 void ecs::ComponentManager::entityDestroyed(Entity_t entity)
@@ -133,7 +133,7 @@ template <typename System_t>
 std::shared_ptr<System_t> ecs::SystemManager::registerSystem()
 {
     char const *name = typeid(System_t).name();
-    assert(m_systems.find(typeName) == m_systems.end() && "registering system more than once");
+    assert(m_systems.find(name) == m_systems.end() && "registering system more than once");
 
     auto system = std::make_shared<System_t>();
     m_systems.insert({name, system});
@@ -143,7 +143,7 @@ template <typename System_t>
 void ecs::SystemManager::setSignature(Signature_t signature)
 {
     char const *name = typeid(System_t).name();
-    assert(mSystems.find(typeName) != mSystems.end() && "system used before registered");
+    assert(m_systems.find(name) != m_systems.end() && "system used before registered");
     m_signatures.insert({name, signature});
 }
 

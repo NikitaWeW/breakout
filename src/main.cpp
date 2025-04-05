@@ -119,6 +119,12 @@ class Deallocator {public: inline void operator()(void *) {
     glfwTerminate();
     this->~Deallocator(); // just in case
 }};
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+}
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
+}
 bool init(GLFWwindow** window) {
     assert(window);
     if (!glfwInit())
@@ -154,12 +160,6 @@ bool init(GLFWwindow** window) {
     glEnable(GL_BLEND);
 
     return true;
-}
-void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
-{
-}
-void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
-{
 }
 inline constexpr glm::vec3 hex(int hexValue) {
     return {
