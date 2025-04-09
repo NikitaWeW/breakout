@@ -15,5 +15,5 @@ public:
     void operator=(Resource &&other);
 
     bool canDeallocate() const;
-    ~Resource() = default;
+    virtual ~Resource() = default;
 };

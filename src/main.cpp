@@ -1,22 +1,9 @@
 #include <iostream>
-#include <memory>
-#include <cassert>
-#include <chrono>
-#include <thread>
+#include <cmath>
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
-#include "opengl/Shader.hpp"
-#include "opengl/VertexBuffer.hpp"
-#include "opengl/IndexBuffer.hpp"
-#include "utils/ControllableCamera.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "opengl/Texture.hpp"
-#include "opengl/Framebuffer.hpp"
-#include "utils/AABB.hpp"
-#include "utils/Text.hpp"
 #include "utils/ECS.hpp"
-#include "game/PhysicsComponents.hpp"
-#include "game/PhysicsSystem.hpp"
+#include "game/GameMain.hpp"
 #define basicLatin text::charRange(L'!', L'~')
 
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
@@ -118,10 +105,15 @@ void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsiz
 
     std::cout << error.id << ": opengl " << error.severity << " severity " << error.type << ", raised from " << error.source << ":\n\t" << error.message << '\n';
 }
-class Deallocator {public: inline void operator()(void *) {
-    glfwTerminate();
-    this->~Deallocator(); // just in case
-}};
+class Deallocator {
+public: 
+    inline ~Deallocator() {
+        delete &ecs::getEntityManager(); // needed to explicitly deallocate opengl entities such as textures before context termination
+        delete &ecs::getComponentManager();
+        delete &ecs::getSystemManager();
+        glfwTerminate();
+    }
+};
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 }
@@ -164,63 +156,17 @@ bool init(GLFWwindow** window) {
 
     return true;
 }
-inline constexpr glm::vec3 hex(int hexValue) {
-    return {
-        ((hexValue >> 16) & 0xFF) / 255.0,
-        ((hexValue >> 8) & 0xFF) / 255.0,
-        ((hexValue) & 0xFF) / 255.0
-    };
-}
 
 int main(int argc, char **argv) {
-    std::unique_ptr<Deallocator, Deallocator> cleanup{new Deallocator};
+    std::unique_ptr<Deallocator> cleanup{new Deallocator};
     GLFWwindow* window;
     if(!init(&window)) {
         std::cout << "failed to init!\n";
         return -1;
     };
-    Camera camera{{0, 0, -1}, {-90, 0, 0}, Camera::ProjectionType::ORTHO}; // TODO: make camera an entity
-    camera.near = -1; camera.far = 1;
 
-    float vertices[] = {
-        -1,  1, 0,  0, 1,
-         1,  1, 0,  1, 1,
-         1, -1, 0,  1, 0,
-        -1, -1, 0,  0, 0 
-    };
-    opengl::VertexBuffer vb{sizeof(vertices), vertices};
-    opengl::VertexArray va{vb, opengl::InterleavedVertexBufferLayout{
-        {3, GL_FLOAT},
-        {2, GL_FLOAT}
-    }};
-    opengl::ShaderProgram shader{"shaders/basic", true};
-    
-    ecs::Entity_t entity1 = ecs::makeEntity<game::PositionComponent, game::VelocityComponent>();
-    ecs::get<game::VelocityComponent>(entity1).velocity = {0.01, 0, 0};
-    ecs::getSystemManager().registerSystem<game::MovementSystem>()->m_entities.insert(entity1);
-
-    double deltatime = 1;
-    std::thread fpsShower{[&deltatime, &window](){while(!glfwWindowShouldClose(window)) {glfwSetWindowTitle(window, ("breakout -- " + std::to_string((int) glm::round(1 / deltatime)) + " FPS").c_str()); std::this_thread::sleep_for(std::chrono::milliseconds{500}); }}}; fpsShower.detach();
-    while (!glfwWindowShouldClose(window))
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-        glfwGetWindowSize(window, &camera.width, &camera.height);
-        camera.update(deltatime);
-        ecs::getSystemManager().update(deltatime);    
-
-        glViewport(0, 0, camera.width, camera.height);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-        va.bind();
-        shader.bind();
-        glUniformMatrix4fv(shader.getUniform("u_modelMat"), 1, GL_FALSE, &glm::translate(glm::mat4{1.0f}, ecs::get<game::PositionComponent>(entity1).position)[0][0]);
-        glUniformMatrix4fv(shader.getUniform("u_viewMat"), 1, GL_FALSE, &camera.getViewMatrix()[0][0]);
-        glUniformMatrix4fv(shader.getUniform("u_projectionMat"), 1, GL_FALSE, &camera.getProjectionMatrix()[0][0]);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-        deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
+    if(game::gameMain(window) != 0) {
+        std::cout << "game failed to do stuff!\n";
+        return -1;
     }
 }
-

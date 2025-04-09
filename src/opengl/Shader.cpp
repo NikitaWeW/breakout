@@ -66,6 +66,13 @@ opengl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
     }
 }
 
+opengl::ShaderProgram::~ShaderProgram()
+{
+    if(canDeallocate()) {
+        deallocate();
+    }
+}
+
 bool opengl::ShaderProgram::collectShaders(std::string const &directory) noexcept
 {
     assert(std::filesystem::exists(directory));

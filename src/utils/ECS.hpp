@@ -7,6 +7,7 @@
 #include <memory>
 #include <set>
 #include <cassert>
+#include <iostream>
 
 // thanks to https://austinmorlan.com/posts/entity_component_system
 namespace ecs
@@ -30,6 +31,7 @@ namespace ecs
         std::array<Signature_t, MAX_ENTITIES> m_signatures;
     public:
         EntityManager();
+        ~EntityManager() = default;
         Entity_t createEntity(Signature_t signature = {});
         void destroyEntity(Entity_t entity);
         void setSignature(Entity_t entity, Signature_t signature);
@@ -66,6 +68,9 @@ namespace ecs
         std::map<char const *, std::shared_ptr<IComponentArray>> m_componentArrays{};
         ComponentID_t m_nextID = 0;
     public:
+        ComponentManager() = default;
+        ~ComponentManager() = default;
+
         template <typename Component_t> void registerComponent();
         template <typename Component_t> ComponentID_t getComponentID();
         template <typename Component_t> void addComponent(Entity_t entity, Component_t component);
@@ -91,25 +96,29 @@ namespace ecs
         std::map<char const *, std::shared_ptr<System>> m_systems{};
         std::map<char const *, Signature_t> m_signatures{};
     public:
+        SystemManager() = default;
+        ~SystemManager() = default;
+
         template <typename System_t> std::shared_ptr<System_t> registerSystem();
         template <typename System_t> void setSignature(Signature_t signature);
         void update(double deltatime);
+        void addEntity(Entity_t entity);
         void entityDestroyed(Entity_t entity);
         void entitySignatureChanged(Entity_t entity, Signature_t signature);
     };
 
     // singleton getters
     inline EntityManager &getEntityManager() {
-        static EntityManager manager{};
-        return manager;
+        static EntityManager *manager = new EntityManager{}; // needed to explicitly deallocate opengl entities such as textures before context termination
+        return *manager;
     }
     inline ComponentManager &getComponentManager() {
-        static ComponentManager manager{};
-        return manager;
+        static ComponentManager *manager = new ComponentManager{};
+        return *manager;
     }
     inline SystemManager &getSystemManager() {
-        static SystemManager manager{};
-        return manager;
+        static SystemManager *manager = new SystemManager{};
+        return *manager;
     }
     template <typename Component_t> bool entityHasComponent(Entity_t entity);
     template <typename Component_t> Component_t &get(Entity_t entity);
@@ -158,7 +167,10 @@ inline ecs::Signature_t const &ecs::EntityManager::getSignature(Entity_t entity)
 template <typename Component_t>
 inline void ecs::ComponentArray<Component_t>::insert(Entity_t entity, Component_t component)
 {
-    assert(m_entityToIndex.find(entity) == m_entityToIndex.end() && "component added to the same entity more than once");
+    if(m_entityToIndex.find(entity) != m_entityToIndex.end()) {
+        std::cout << "WARNING: component added to the same entity more than once!\n";
+        return;
+    }
 
     size_t index = m_size++;
     m_entityToIndex[entity] = index;
@@ -273,6 +285,13 @@ inline void ecs::SystemManager::update(double deltatime)
 {
     for(auto const &pair : m_systems) {
         pair.second->update(deltatime);
+    }
+}
+
+inline void ecs::SystemManager::addEntity(Entity_t entity)
+{
+    for(auto const &pair : m_systems) {
+        pair.second->m_entities.insert(entity);
     }
 }
 

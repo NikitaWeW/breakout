@@ -24,6 +24,7 @@ namespace opengl
         public:
         ShaderProgram() noexcept = default;
         ShaderProgram(std::string const &directory, bool showLog = false);
+        ~ShaderProgram();
         bool collectShaders(std::string const &directory) noexcept;
         bool compileShaders() noexcept;
         int getUniform(std::string const &name) const noexcept;

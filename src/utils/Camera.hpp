@@ -32,3 +32,11 @@ public:
     virtual inline glm::vec3 getRight() const noexcept { return right; }
     virtual inline glm::vec3 getUp() const noexcept { return up; }
 };
+
+inline constexpr glm::vec3 hex(int hexValue) {
+    return {
+        ((hexValue >> 16) & 0xFF) / 255.0,
+        ((hexValue >> 8) & 0xFF) / 255.0,
+        ((hexValue) & 0xFF) / 255.0
+    };
+}
