@@ -15,11 +15,11 @@ void game::Renderer::update(double deltatime)
         camera.projMat = glm::perspective<float>(glm::radians(camera.fov), (float) camera.width / camera.height, camera.znear, camera.zfar);
 
         camera.viewMat = glm::mat4{1.0f};
+        if(ecs::entityHasComponent<RotationQuaternion>(cameraEntity)) {
+            camera.viewMat *= glm::mat4_cast(glm::normalize(ecs::get<RotationQuaternion>(cameraEntity).quat));
+        }
         if(ecs::entityHasComponent<Position>(cameraEntity)) {
             camera.viewMat *= glm::translate(camera.viewMat, -ecs::get<Position>(cameraEntity).position);
-        }
-        if(ecs::entityHasComponent<RotationQuaternion>(cameraEntity)) {
-            camera.viewMat *= glm::mat4_cast(ecs::get<RotationQuaternion>(cameraEntity).quat);
         }
         
         glViewport(0, 0, camera.width, camera.height);

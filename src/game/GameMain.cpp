@@ -2,6 +2,7 @@
 #include "glm/glm.hpp"
 #include "Renderer.hpp"
 #include "Physics.hpp"
+#include "Controller.hpp"
 #include <chrono>
 #include <thread>
 
@@ -21,6 +22,8 @@ int game::gameMain(GLFWwindow *window) {
 
     ecs::getSystemManager().registerSystem<MovementSystem>();
     ecs::getSystemManager().registerSystem<Renderer>()->window = window;
+    ecs::getSystemManager().registerSystem<CameraController>()->window = window;
+
     ecs::getComponentManager().registerComponent<Color>();
     ecs::getComponentManager().registerComponent<ModelMatrix>();
     ecs::getComponentManager().registerComponent<Rotation>();
@@ -29,7 +32,7 @@ int game::gameMain(GLFWwindow *window) {
     ecs::getSystemManager().addEntity(ballSprite);
 
     ecs::get<Position>(ballSprite).position = glm::vec3{0, 0, 0};
-    ecs::get<Velocity>(ballSprite).velocity = glm::vec3{0.5, 0.5, 0} / 10.0f;
+    ecs::get<Velocity>(ballSprite).velocity = glm::vec3{0, 0, 0};
     ecs::get<Scale   >(ballSprite).scale    = glm::vec3{0.1, 0.1, 0.1};
     ecs::get<Color   >(ballSprite).color    = glm::vec4{0.8, 0.9, 0.1, 1};
     ecs::get<opengl::Texture>(ballSprite) = opengl::Texture("res/textures/ball.png", true, true);
@@ -51,7 +54,7 @@ int game::gameMain(GLFWwindow *window) {
     ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, Position, RotationQuaternion>();
     ecs::getSystemManager().addEntity(cameraEntity);
     ecs::get<Position>(cameraEntity).position = {0, 0, 1};
-    ecs::get<RotationQuaternion>(cameraEntity).quat = {0, {0, 0, 0}};
+    ecs::get<RotationQuaternion>(cameraEntity).quat = glm::angleAxis(0.0f, glm::vec3{0, 0, -1});
     ecs::get<Camera>(cameraEntity) = {};
 
     // ========================================================
@@ -63,6 +66,7 @@ int game::gameMain(GLFWwindow *window) {
         auto start = std::chrono::high_resolution_clock::now();
         
         ecs::getSystemManager().update(deltatime);
+        // ecs::get<RotationQuaternion>(cameraEntity).quat *= glm::normalize(glm::quat{0.0001, {0, 1, 0}});
 
         glfwSwapBuffers(window);
         glfwPollEvents();
