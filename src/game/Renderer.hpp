@@ -5,6 +5,8 @@
 #include "opengl/Shader.hpp"
 #include "glm/glm.hpp"
 #include "opengl/IndexBuffer.hpp"
+#include "utils/Text.hpp"
+
 #include <optional>
 
 namespace game
@@ -17,6 +19,14 @@ namespace game
         std::optional<opengl::IndexBuffer> ib;
         unsigned count;
         GLenum mode;
+    };
+    struct Text
+    {
+        text::Font *font;
+        std::string text;
+        glm::vec2 position;
+        float size;
+        std::optional<glm::mat4> matrix;
     };
     struct Camera
     {

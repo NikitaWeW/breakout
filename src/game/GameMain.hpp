@@ -5,5 +5,5 @@
 
 namespace game
 {
-    int gameMain(GLFWwindow *mainWindow);
+    void gameMain(GLFWwindow *mainWindow);
 } // namespace game

@@ -20,7 +20,7 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
                 continue;
             } else if(*it == L'\n') {
                 currentPosition.x = position.x;
-                currentPosition.y -= 0.1;
+                currentPosition.y -= newLineSize * size;
                 continue;
             }
             auto dataIter = atlas.glyphs.find(*it);
@@ -30,7 +30,7 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
             GlyphData const &data = dataIter->second;
 
             GlyphRenderData currentRenderData{};
-            currentRenderData.quadPosition = { currentPosition.x, currentPosition.y + data.verticalOffset };
+            currentRenderData.quadPosition = { currentPosition.x, currentPosition.y + data.verticalOffset * size };
             currentRenderData.quadSize = { data.size.x * size, data.size.y * size };
             currentRenderData.glyphOffset = data.offset;
             currentRenderData.glyphSize = data.size;

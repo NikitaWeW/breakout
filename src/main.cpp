@@ -6,6 +6,12 @@
 #include "game/GameMain.hpp"
 #define basicLatin text::charRange(L'!', L'~')
 
+#ifdef NDEBUG
+extern constexpr bool DEBUG = false;
+#else
+extern constexpr bool DEBUG = true;
+#endif
+
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
     struct OpenGlError {
@@ -142,7 +148,7 @@ bool init(GLFWwindow** window) {
     glfwMakeContextCurrent(*window);
     glfwSetKeyCallback(*window, key_callback);
     glfwSetScrollCallback(*window, scroll_callback);
-    glfwSwapInterval(0);
+    glfwSwapInterval(DEBUG ? 0 : 1);
 
     int version = gladLoadGL(glfwGetProcAddress);
     if (version == 0) {
@@ -152,7 +158,9 @@ bool init(GLFWwindow** window) {
     std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << '.' << GLAD_VERSION_MINOR(version) << " (compatibility)\n";
     glDebugMessageCallback(debugCallback, nullptr);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glEnable(GL_BLEND);
+    glEnable(GL_MULTISAMPLE);  
 
     return true;
 }
@@ -165,8 +173,5 @@ int main(int argc, char **argv) {
         return -1;
     };
 
-    if(game::gameMain(window) != 0) {
-        std::cout << "game failed to do stuff!\n";
-        return -1;
-    }
+    game::gameMain(window);
 }

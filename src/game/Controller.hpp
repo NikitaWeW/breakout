@@ -18,10 +18,14 @@ namespace game
         bool firstTimeMovingMouse = true;
     };
 
+    void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
     class CameraController : public ecs::System
     {
-    private:
     public:
+        static CameraController *controllerCallbackUser; // glfw callbacks redirect here
+        void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+        CameraController();
         void update(double deltatime);
     };
 } // namespace game

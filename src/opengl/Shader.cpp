@@ -60,7 +60,7 @@ opengl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
         throw std::runtime_error{"failed to init shader program"};
     }
     if(!compileShaders()) {
-        m_log.insert(0, "failed to collect shaders in directory \"" + directory + "\"\n");
+        m_log.insert(0, "failed to compile shaders in directory \"" + directory + "\"\n");
         if(showLog) std::cout << getLog();
         throw std::runtime_error{"failed to init shader program"};
     }
@@ -138,9 +138,9 @@ int opengl::ShaderProgram::getUniform(std::string const &name) const noexcept
     if(m_UniformLocationCache.find(name) != m_UniformLocationCache.end()) return m_UniformLocationCache[name];
     int location = glGetUniformLocation(m_renderID, name.c_str());
     m_UniformLocationCache[name] = location;
-    if(location == -1) {
-        std::cout << "uniform \"" << name << "\" in shaders \"" << getPath() << "\" is not used or does not exist.\n";
-    }
+    // if(location == -1) {
+    //     std::cout << "uniform \"" << name << "\" in shaders \"" << getPath() << "\" is not used or does not exist.\n";
+    // }
     return location;
 }
 

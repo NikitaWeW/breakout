@@ -2,6 +2,47 @@
 #include "Physics.hpp"
 #include "Renderer.hpp"
 
+game::CameraController *game::CameraController::controllerCallbackUser = nullptr;
+
+void game::key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) 
+{ 
+    assert(game::CameraController::controllerCallbackUser && "No controller registred and the key callback is called! Register the controller system or remove this glfw callback.");
+    game::CameraController::controllerCallbackUser->key_callback(window, key, scancode, action, mods); 
+}
+void game::CameraController::key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    if(key == GLFW_KEY_R && action == GLFW_PRESS) { // hot reload shaders
+        for(auto entity : m_entities) {
+            if(!ecs::entityHasComponent<Drawable>(entity)) continue;
+            opengl::ShaderProgram &shader = *ecs::get<Drawable>(entity).shader;
+            
+            opengl::ShaderProgram copy = shader;
+            if(!shader.collectShaders(shader.getPath())) {
+                std::cout << "failed to collect shaders from directory \"" << shader.getPath() << "\":\n" << shader.getLog();
+                std::swap(shader, copy);
+                continue;
+            };
+            if(!shader.compileShaders()) {
+                std::cout << "failed to compile shaders in directory \"" << shader.getPath() << "\":\n" << shader.getLog();
+                std::swap(shader, copy);
+                continue;
+            }
+        }
+    }
+    if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        for(auto entity : m_entities) {
+            if(!ecs::entityHasComponent<ControllableCamera>(entity)) continue;
+            bool &locked = ecs::get<ControllableCamera>(entity).locked;
+            locked = !locked;
+        }
+    }
+}
+
+game::CameraController::CameraController()
+{
+    game::CameraController::controllerCallbackUser = this;
+}
+
 void game::CameraController::update(double deltatime)
 {
     for(auto entity : m_entities) {
@@ -53,7 +94,7 @@ void game::CameraController::update(double deltatime)
         controllable.prevCursorPos = cursorPos;
         
         offset *= controllable.sensitivity;
-        offset *= deltatime;
+        // offset *= deltatime;
 
         if(ecs::entityHasComponent<Rotation>(entity)) {
             glm::vec3 &orientation = ecs::get<Rotation>(entity).rotation;
@@ -90,3 +131,4 @@ void game::CameraController::update(double deltatime)
         }
     }
 }
+

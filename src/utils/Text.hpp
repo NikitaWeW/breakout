@@ -36,6 +36,7 @@ namespace text
         Atlas atlas;
     public:
         float spaceSize = 0.05f;
+        float newLineSize = 0.1f;
         float spacing = 0.005f;
 
         Font() = default;

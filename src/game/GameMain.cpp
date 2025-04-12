@@ -17,8 +17,14 @@ unsigned indices[] = {
     0, 2, 3
 };
 
-int game::gameMain(GLFWwindow *window) {
+#define basicLatin text::charRange(L'!', L'~')
+
+void game::gameMain(GLFWwindow *window) 
+{
     opengl::ShaderProgram spriteShader{"shaders/colorTexture", true};
+    opengl::ShaderProgram gridShader{"shaders/grid", true};
+    text::Font mainFont{"res/OpenSans-Light.ttf", basicLatin};
+    glfwSetKeyCallback(window, game::key_callback);
 
     ecs::getSystemManager().registerSystem<MovementSystem>();
     ecs::getSystemManager().registerSystem<Renderer>();
@@ -29,10 +35,10 @@ int game::gameMain(GLFWwindow *window) {
     ecs::getComponentManager().registerComponent<Rotation>();
     ecs::getComponentManager().registerComponent<RotationQuaternion>();
     ecs::getComponentManager().registerComponent<opengl::Texture>();
+    ecs::getComponentManager().registerComponent<Text>();
 
     ecs::Entity_t ballSprite = ecs::makeEntity<Color, Position, Velocity, opengl::Texture, Scale, Drawable>();
     ecs::getSystemManager().addEntity(ballSprite);
-
     ecs::get<Position>(ballSprite).position = glm::vec3{0, 0, 0};
     ecs::get<Velocity>(ballSprite).velocity = glm::vec3{0, 0, 0};
     ecs::get<Scale   >(ballSprite).scale    = glm::vec3{0.1, 0.1, 0.1};
@@ -53,6 +59,29 @@ int game::gameMain(GLFWwindow *window) {
         };
     }
 
+    ecs::Entity_t gridEntity = ecs::makeEntity<Drawable, Color>();
+    ecs::getSystemManager().addEntity(gridEntity);
+    ecs::get<Color>(gridEntity).color = {1, 1, 1, 1};
+    ecs::get<Drawable>(gridEntity) = {
+        &gridShader,
+        opengl::VertexBuffer{},
+        opengl::VertexArray{opengl::VertexBuffer{}, opengl::VertexBufferLayout{}},
+        {},
+        6,
+        GL_TRIANGLES
+    };
+
+    ecs::Entity_t testTextEntity = ecs::makeEntity<Text, Color>();
+    ecs::getSystemManager().addEntity(testTextEntity);
+    ecs::get<Text>(testTextEntity) = {
+        &mainFont,
+        "Text rendering\nstill works.",
+        {-1, 0.95},
+        0.5,
+        {}
+    };
+    ecs::get<Color>(testTextEntity).color = {1, 1, 1, 1};
+
     ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, ControllableCamera, Position, Rotation>();
     ecs::getSystemManager().addEntity(cameraEntity);
     ecs::get<Position>(cameraEntity).position = {0, 0, 1};
@@ -60,7 +89,7 @@ int game::gameMain(GLFWwindow *window) {
     ecs::get<ControllableCamera>(cameraEntity) = {
         window,
         1,
-        100,
+        0.1,
         true
     };
     ecs::get<Camera>(cameraEntity) = {};
@@ -79,6 +108,4 @@ int game::gameMain(GLFWwindow *window) {
         glfwPollEvents();
         deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
     }
-
-    return 0;
 }
