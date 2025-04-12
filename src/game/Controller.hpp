@@ -6,13 +6,22 @@
 
 namespace game
 {
+    struct ControllableCamera
+    {
+        GLFWwindow *window;
+        float speedUnitsPerSecond;
+        float sensitivity;
+        bool locked = true;
+
+        // managed by CameraController system
+        glm::vec<2, double> prevCursorPos;
+        bool firstTimeMovingMouse = true;
+    };
+
     class CameraController : public ecs::System
     {
     private:
-        glm::vec<2, double> m_prevCursorPos;
-        bool firstTimeMovingMouse = true;
     public:
-        GLFWwindow *window;
         void update(double deltatime);
     };
 } // namespace game

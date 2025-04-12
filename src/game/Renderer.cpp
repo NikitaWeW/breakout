@@ -8,7 +8,6 @@ void game::Renderer::update(double deltatime)
     for(auto &cameraEntity : m_entities) {
         if(!ecs::entityHasComponent<Camera>(cameraEntity)) continue;
         Camera &camera = ecs::get<Camera>(cameraEntity);
-        glfwGetWindowSize(window, &camera.width, &camera.height);
         
         // float aspect = (float) camera.width / camera.height;
         // camera.projMat = glm::ortho<float>(-aspect, aspect, -1, 1, near, far);
@@ -16,10 +15,25 @@ void game::Renderer::update(double deltatime)
 
         camera.viewMat = glm::mat4{1.0f};
         if(ecs::entityHasComponent<RotationQuaternion>(cameraEntity)) {
-            camera.viewMat *= glm::mat4_cast(glm::normalize(ecs::get<RotationQuaternion>(cameraEntity).quat));
-        }
-        if(ecs::entityHasComponent<Position>(cameraEntity)) {
-            camera.viewMat *= glm::translate(camera.viewMat, -ecs::get<Position>(cameraEntity).position);
+            glm::vec3 position = ecs::entityHasComponent<Position>(cameraEntity) ? ecs::get<Position>(cameraEntity).position : glm::vec3{0, 0, 0};
+            camera.viewMat = glm::translate(glm::mat4_cast(glm::normalize(ecs::get<RotationQuaternion>(cameraEntity).quat)), -position);
+        } else if(ecs::entityHasComponent<Rotation>(cameraEntity)) {
+            glm::vec3 position = ecs::entityHasComponent<Position>(cameraEntity) ? ecs::get<Position>(cameraEntity).position : glm::vec3{0, 0, 0};
+            glm::vec3 orientation = glm::radians(ecs::get<Rotation>(cameraEntity).rotation);
+            glm::vec3 forward = glm::normalize(glm::vec3(
+                cos(orientation.y) * cos(orientation.x),
+                sin(orientation.x),
+                sin(orientation.y) * cos(orientation.x)
+            ));
+            glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
+            glm::vec3 up = glm::normalize(glm::vec3{
+                glm::rotate(glm::mat4{1.0f}, orientation.z, {0, 0, 1}) * glm::vec4{glm::cross(right, forward), 0}
+            });
+            right = glm::cross(forward, up);
+            
+            camera.viewMat = glm::lookAt(position, position + forward, up);
+        } else if(ecs::entityHasComponent<Position>(cameraEntity)) {
+            camera.viewMat = glm::translate(glm::mat4{1.0f}, -ecs::get<Position>(cameraEntity).position);
         }
         
         glViewport(0, 0, camera.width, camera.height);
@@ -32,8 +46,7 @@ void game::Renderer::update(double deltatime)
     
             glm::mat4 modelMat{1.0f};
 
-            if(ecs::entityHasComponent<ModelMatrix>(entity))
-            {
+            if(ecs::entityHasComponent<ModelMatrix>(entity)) {
                 modelMat = ecs::get<ModelMatrix>(entity).modelMatrix;
             }
             if(ecs::entityHasComponent<Position>(entity)) {

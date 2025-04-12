@@ -21,14 +21,16 @@ int game::gameMain(GLFWwindow *window) {
     opengl::ShaderProgram spriteShader{"shaders/colorTexture", true};
 
     ecs::getSystemManager().registerSystem<MovementSystem>();
-    ecs::getSystemManager().registerSystem<Renderer>()->window = window;
-    ecs::getSystemManager().registerSystem<CameraController>()->window = window;
+    ecs::getSystemManager().registerSystem<Renderer>();
+    ecs::getSystemManager().registerSystem<CameraController>();
 
     ecs::getComponentManager().registerComponent<Color>();
     ecs::getComponentManager().registerComponent<ModelMatrix>();
     ecs::getComponentManager().registerComponent<Rotation>();
+    ecs::getComponentManager().registerComponent<RotationQuaternion>();
+    ecs::getComponentManager().registerComponent<opengl::Texture>();
 
-    ecs::Entity_t ballSprite = ecs::makeEntity<Color, Position, Velocity, Scale, opengl::Texture, Drawable>();
+    ecs::Entity_t ballSprite = ecs::makeEntity<Color, Position, Velocity, opengl::Texture, Scale, Drawable>();
     ecs::getSystemManager().addEntity(ballSprite);
 
     ecs::get<Position>(ballSprite).position = glm::vec3{0, 0, 0};
@@ -51,10 +53,16 @@ int game::gameMain(GLFWwindow *window) {
         };
     }
 
-    ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, Position, RotationQuaternion>();
+    ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, ControllableCamera, Position, Rotation>();
     ecs::getSystemManager().addEntity(cameraEntity);
     ecs::get<Position>(cameraEntity).position = {0, 0, 1};
-    ecs::get<RotationQuaternion>(cameraEntity).quat = glm::angleAxis(0.0f, glm::vec3{0, 0, -1});
+    ecs::get<Rotation>(cameraEntity).rotation = {0, -90, 0};
+    ecs::get<ControllableCamera>(cameraEntity) = {
+        window,
+        1,
+        100,
+        true
+    };
     ecs::get<Camera>(cameraEntity) = {};
 
     // ========================================================
@@ -66,7 +74,6 @@ int game::gameMain(GLFWwindow *window) {
         auto start = std::chrono::high_resolution_clock::now();
         
         ecs::getSystemManager().update(deltatime);
-        // ecs::get<RotationQuaternion>(cameraEntity).quat *= glm::normalize(glm::quat{0.0001, {0, 1, 0}});
 
         glfwSwapBuffers(window);
         glfwPollEvents();

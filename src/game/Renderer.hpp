@@ -4,7 +4,6 @@
 #include "opengl/Framebuffer.hpp"
 #include "opengl/Shader.hpp"
 #include "glm/glm.hpp"
-#include "GLFW/glfw3.h"
 #include "opengl/IndexBuffer.hpp"
 #include <optional>
 
@@ -24,12 +23,12 @@ namespace game
         float zfar = 100;
         float znear = 0.01f;
         float fov = 45;
+        int width = 0; 
+        int height = 0;
 
         // calculated by renderer system
         glm::mat4 viewMat;
         glm::mat4 projMat;
-        int width = 0; 
-        int height = 0;
     };
     struct Color
     {
@@ -45,7 +44,6 @@ namespace game
     private:
         opengl::Texture m_notfound{"res/textures/notfound.png", false, true};
     public:
-        GLFWwindow *window;
         void update(double deltatime);
     };
 } // namespace game
