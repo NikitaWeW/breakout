@@ -5,20 +5,16 @@
 void game::CameraController::update(double deltatime)
 {
     for(auto entity : m_entities) {
-        if(
-            !ecs::entityHasComponent<Camera>(entity) || 
-            !ecs::entityHasComponent<ControllableCamera>(entity) || 
-            !ecs::entityHasComponent<Position>(entity) || 
-            !ecs::entityHasComponent<Rotation>(entity)
-        ) continue;
-
+        if(!ecs::entityHasComponent<Camera>(entity) || !ecs::entityHasComponent<ControllableCamera>(entity)) continue;
         ControllableCamera &controllable = ecs::get<ControllableCamera>(entity);
         Camera &camera = ecs::get<Camera>(entity);
+        glfwGetWindowSize(controllable.window, &camera.width, &camera.height);
+        if(!ecs::entityHasComponent<Position>(entity)) continue;
+
         glfwGetWindowSize(controllable.window, &camera.width, &camera.height);
         float const &speed = controllable.speedUnitsPerSecond;
         glm::mat4 const &invViewMat = glm::inverse(camera.viewMat);
         glm::vec3 &position = ecs::get<Position>(entity).position;
-        glm::vec3 &orientation = ecs::get<Rotation>(entity).rotation;
         
         glm::vec3 forward = glm::normalize(glm::vec3{invViewMat * glm::vec4{0, 0, -1, 0}});
         glm::vec3 right   = glm::normalize(glm::vec3{invViewMat * glm::vec4{1, 0, 0, 0}});
@@ -36,13 +32,7 @@ void game::CameraController::update(double deltatime)
             position += speed * (float) deltatime * up;
         } if(glfwGetKey(controllable.window, GLFW_KEY_Q) == GLFW_PRESS) {
             position -= speed * (float) deltatime * up;
-        } if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) {
-            orientation.z -= controllable.sensitivity * (float) deltatime;
-        } if(glfwGetKey(controllable.window, GLFW_KEY_C) == GLFW_PRESS) {
-            orientation.z += controllable.sensitivity * (float) deltatime;
-        } if(glfwGetKey(controllable.window, GLFW_KEY_X) == GLFW_PRESS) {
-            orientation.z = 0;
-        }
+        } 
 
         if(!controllable.locked) {
             controllable.firstTimeMovingMouse = true;
@@ -65,13 +55,38 @@ void game::CameraController::update(double deltatime)
         offset *= controllable.sensitivity;
         offset *= deltatime;
 
-        orientation.x -= offset.y;
-        orientation.y += offset.x;
+        if(ecs::entityHasComponent<Rotation>(entity)) {
+            glm::vec3 &orientation = ecs::get<Rotation>(entity).rotation;
 
-        if(orientation.x >= 90) {
-            orientation.x = 89.999;
-        } else if(orientation.x <= -90) {
-            orientation.x = -89.999;
+            if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) {
+                orientation.z -= controllable.sensitivity * (float) deltatime;
+            } if(glfwGetKey(controllable.window, GLFW_KEY_C) == GLFW_PRESS) {
+                orientation.z += controllable.sensitivity * (float) deltatime;
+            } if(glfwGetKey(controllable.window, GLFW_KEY_X) == GLFW_PRESS) {
+                orientation.z = 0;
+            }
+
+            orientation.x -= offset.y;
+            orientation.y += offset.x;
+    
+            if(orientation.x >= 90) {
+                orientation.x = 89.999;
+            } else if(orientation.x <= -90) {
+                orientation.x = -89.999;
+            }
+        }
+
+        if(ecs::entityHasComponent<RotationQuaternion>(entity)) {
+            glm::quat &orientation = ecs::get<RotationQuaternion>(entity).quat;
+            if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) {
+                orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * (float) deltatime), glm::vec3{0, 0, 1});
+            } if(glfwGetKey(controllable.window, GLFW_KEY_C) == GLFW_PRESS) {
+                orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * (float) deltatime), glm::vec3{0, 0, -1});
+            } if(glfwGetKey(controllable.window, GLFW_KEY_X) == GLFW_PRESS) {
+                orientation = glm::quat{1, 0, 0, 0};
+            }
+
+            orientation = glm::normalize(glm::angleAxis(glm::radians(offset.y), glm::vec3{1, 0, 0}) * orientation * glm::angleAxis(glm::radians(offset.x), glm::vec3{0, 1, 0}));
         }
     }
 }
