@@ -61,11 +61,11 @@ void game::gameMain(GLFWwindow *window)
 
     ecs::Entity_t gridEntity = ecs::makeEntity<Drawable, Color>();
     ecs::getSystemManager().addEntity(gridEntity);
-    ecs::get<Color>(gridEntity).color = {1, 1, 1, 1};
+    ecs::get<Color>(gridEntity).color = {1, 1, 1, 0.5};
     ecs::get<Drawable>(gridEntity) = {
         &gridShader,
         opengl::VertexBuffer{},
-        opengl::VertexArray{opengl::VertexBuffer{}, opengl::VertexBufferLayout{}},
+        opengl::VertexArray{opengl::VertexBuffer{}, opengl::VertexBufferLayout{}}, // the vertex buffer is not initialised. the size is 0, no buffer added to the vertex array
         {},
         6,
         GL_TRIANGLES
@@ -88,7 +88,7 @@ void game::gameMain(GLFWwindow *window)
     ecs::get<Rotation>(cameraEntity).rotation = {0, -90, 0};
     ecs::get<ControllableCamera>(cameraEntity) = {
         window,
-        1,
+        7,
         0.1,
         true
     };

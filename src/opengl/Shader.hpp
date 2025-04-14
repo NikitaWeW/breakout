@@ -15,7 +15,7 @@ namespace opengl
             std::string source;
         };
     private:
-        mutable std::map<std::string, int> m_UniformLocationCache;
+        mutable std::map<std::string, int> m_uniformLocationCache;
         std::vector<Shader> m_shaders;
         std::string m_log;
         std::string m_dirPath;

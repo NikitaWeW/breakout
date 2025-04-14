@@ -13,9 +13,7 @@ in VS_OUT {
 const float maxFadeDistance = 25;
 
 // thx to https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8
-float grid(float lineWidth, float frequency, vec2 texCoord) {
-    texCoord *= frequency;
-
+float grid(float lineWidth, vec2 texCoord) {
     vec4 uvDDXY = vec4(dFdx(texCoord), dFdy(texCoord)); 
     vec2 uvDeriv = vec2(length(uvDDXY.xz), length(uvDDXY.yw));
     bool invertLine = lineWidth > 0.5;
@@ -36,5 +34,5 @@ void main() {
     o_color = u_color;
 
     float falloff = smoothstep(1.0, 0.0, length(fs_in.fragmentPosition - fs_in.cameraPosition) / maxFadeDistance); // fade the grid
-    o_color.a = (grid(0.01, 1000, fs_in.texCoord) + grid(0.01, 100, fs_in.texCoord)) * falloff;
+    o_color.a = (grid(0.01, 1000 * fs_in.texCoord) + grid(0.003, 100 * fs_in.texCoord)) * falloff;
 }

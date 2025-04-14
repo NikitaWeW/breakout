@@ -27,14 +27,14 @@ const int indices[6] = int[6](
     0, 2, 3
 );
 
-const float gridSize = 100;
+const float gridSize = 50;
 const float gridHeight = -0.5;
+const float gridSpacing = 10;
 
 void main() {
     vec3 vertexPosition = vertices[indices[gl_VertexID]] * gridSize;
-    vertexPosition.x += u_cameraPosition.x;
+    vertexPosition += floor(u_cameraPosition / gridSpacing) * gridSpacing;
     vertexPosition.y = gridHeight;
-    vertexPosition.z += u_cameraPosition.z;
     vs_out.fragmentPosition = vertexPosition;
     vs_out.cameraPosition = u_cameraPosition;
     vs_out.texCoord = texCoords[indices[gl_VertexID]];

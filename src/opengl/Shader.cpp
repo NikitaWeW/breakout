@@ -78,6 +78,8 @@ bool opengl::ShaderProgram::collectShaders(std::string const &directory) noexcep
     assert(std::filesystem::exists(directory));
     m_dirPath = directory;
     m_log = "";
+    m_shaders.erase(m_shaders.begin(), m_shaders.end());
+    m_uniformLocationCache.erase(m_uniformLocationCache.begin(), m_uniformLocationCache.end());
     for(auto const &directoryEntry : std::filesystem::recursive_directory_iterator{directory}) {
         if(!std::filesystem::is_regular_file(directoryEntry.path())) continue; 
         Shader shader;
@@ -115,7 +117,7 @@ bool opengl::ShaderProgram::compileShaders() noexcept
     if(canDeallocate()) 
         deallocate();
 
-    m_UniformLocationCache.erase(m_UniformLocationCache.begin(), m_UniformLocationCache.end());
+    m_uniformLocationCache.erase(m_uniformLocationCache.begin(), m_uniformLocationCache.end());
     m_log = "";
     
     for(Shader &shader : m_shaders) {
@@ -135,9 +137,9 @@ bool opengl::ShaderProgram::compileShaders() noexcept
 
 int opengl::ShaderProgram::getUniform(std::string const &name) const noexcept
 {
-    if(m_UniformLocationCache.find(name) != m_UniformLocationCache.end()) return m_UniformLocationCache[name];
+    if(m_uniformLocationCache.find(name) != m_uniformLocationCache.end()) return m_uniformLocationCache[name];
     int location = glGetUniformLocation(m_renderID, name.c_str());
-    m_UniformLocationCache[name] = location;
+    m_uniformLocationCache[name] = location;
     // if(location == -1) {
     //     std::cout << "uniform \"" << name << "\" in shaders \"" << getPath() << "\" is not used or does not exist.\n";
     // }
