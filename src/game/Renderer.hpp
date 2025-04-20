@@ -18,7 +18,7 @@ namespace game
         opengl::VertexArray va;
         std::optional<opengl::IndexBuffer> ib;
         unsigned count;
-        GLenum mode;
+        GLenum mode = GL_TRIANGLES;
     };
     struct Text
     {
@@ -40,6 +40,8 @@ namespace game
         glm::mat4 viewMat;
         glm::mat4 projMat;
     };
+    struct PerspectiveProjection {}; // marker component
+    struct Transparent {}; // also a marker component
     struct Color
     {
         glm::vec4 color;
@@ -48,12 +50,29 @@ namespace game
     {
         glm::mat4 modelMatrix;
     };
+    struct RenderTarget
+    {
+        glm::vec4 clearColor{0, 0, 0, 1};
+        unsigned mainFBOid = 0;
+        int prevWidth = -1, prevHeight = -1;
+        opengl::Framebuffer OIT_transparentFBO; // TODO: omit opaqueFBO, make the only OIT_FBO 
+        opengl::Framebuffer OIT_opaqueFBO;
+        opengl::Texture OIT_accumTexture {GL_LINEAR};
+        opengl::Texture OIT_revealTexture{GL_LINEAR};
+        opengl::Texture OIT_opaqueTexture{GL_LINEAR};
+        opengl::Texture OIT_depthTexture {GL_NEAREST};
+    };
 
-    class Renderer : public ecs::System
+    class Renderer : public ecs::ISystem
     {
     private:
         opengl::Texture m_notfound{"res/textures/notfound.png", false, true};
+        opengl::Texture m_whiteTexture{"res/textures/white.png", false, false};
+        opengl::ShaderProgram m_transparentShader{"shaders/transparent"};
+        opengl::ShaderProgram m_oitCompositeShader{"shaders/oitComposite"};
+        opengl::ShaderProgram m_hdrShader{"shaders/hdrImage"};
     public:
-        void update(double deltatime);
+        Renderer() = default;
+        void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;
     };
 } // namespace game

@@ -49,10 +49,9 @@ namespace ecs
     class ComponentArray : public IComponentArray
     {
     private:
-        std::array<Component_t, MAX_COMPONENTS> m_components{};
+        std::vector<Component_t> m_components{};
         std::map<Entity_t, size_t> m_entityToIndex{};
         std::map<size_t, Entity_t> m_indexToEntity{};
-        size_t m_size = 0;
     public:
         void insert(Entity_t entity, Component_t component);
         void remove(Entity_t entity);
@@ -82,29 +81,26 @@ namespace ecs
         template <typename Component_t> std::shared_ptr<ComponentArray<Component_t>> getComponentArray();
     };
 
-    class System
+    class ISystem
     {
     public:
-        virtual ~System() = default;
-        virtual void update(double deltatime) = 0;
-        std::set<Entity_t> m_entities;
+        virtual ~ISystem() = default;
+        virtual void update(std::set<Entity_t> const &entities, double deltatime) = 0;
     };
      
     class SystemManager
     {
     private:
-        std::map<char const *, std::shared_ptr<System>> m_systems{};
-        std::map<char const *, Signature_t> m_signatures{};
+        std::map<char const *, std::shared_ptr<ISystem>> m_systems{};
+        std::set<Entity_t> m_entities{};
     public:
         SystemManager() = default;
         ~SystemManager() = default;
 
         template <typename System_t> std::shared_ptr<System_t> registerSystem();
-        template <typename System_t> void setSignature(Signature_t signature);
         void update(double deltatime);
         void addEntity(Entity_t entity);
-        void entityDestroyed(Entity_t entity);
-        void entitySignatureChanged(Entity_t entity, Signature_t signature);
+        void destroyEntity(Entity_t entity);
     };
 
     // singleton getters
@@ -172,22 +168,23 @@ inline void ecs::ComponentArray<Component_t>::insert(Entity_t entity, Component_
         return;
     }
 
-    size_t index = m_size++;
+    size_t index = m_components.size();
     m_entityToIndex[entity] = index;
     m_indexToEntity[index] = entity;
-    m_components[index] = component;
+    m_components.push_back(component);
 }
 template <typename Component_t>
 inline void ecs::ComponentArray<Component_t>::remove(Entity_t entity)
 {
     assert(m_entityToIndex.find(entity) != m_entityToIndex.end() && "removing non-existing component");
     size_t removedEntityIndex = m_entityToIndex.at(entity);
-    size_t lastEntityIndex = m_size-- - 1;
+    size_t lastEntityIndex = m_components.size() - 1;
     m_components[removedEntityIndex] = m_components[lastEntityIndex];
 
     Entity_t lastEntity = m_indexToEntity.at(lastEntityIndex);
     m_entityToIndex.at(lastEntityIndex) = removedEntityIndex;
     m_indexToEntity.at(removedEntityIndex) = lastEntity;
+    m_components.pop_back();
 }
 template <typename Component_t>
 inline Component_t const &ecs::ComponentArray<Component_t>::getComponent(Entity_t entity) const
@@ -273,53 +270,21 @@ inline std::shared_ptr<System_t> ecs::SystemManager::registerSystem()
     m_systems.insert({name, system});
     return system;
 }
-template <typename System_t>
-inline void ecs::SystemManager::setSignature(Signature_t signature)
-{
-    char const *name = typeid(System_t).name();
-    assert(m_systems.find(name) != m_systems.end() && "system used before registered");
-    m_signatures.insert({name, signature});
-}
-
 inline void ecs::SystemManager::update(double deltatime)
 {
     for(auto const &pair : m_systems) {
-        pair.second->update(deltatime);
+        pair.second->update(m_entities, deltatime);
     }
 }
 
 inline void ecs::SystemManager::addEntity(Entity_t entity)
 {
-    for(auto const &pair : m_systems) {
-        pair.second->m_entities.insert(entity);
-    }
+    m_entities.insert(entity);
 }
 
-inline void ecs::SystemManager::entityDestroyed(Entity_t entity)
+inline void ecs::SystemManager::destroyEntity(Entity_t entity)
 {
-    for(auto const &pair : m_systems) {
-        pair.second->m_entities.erase(entity);
-    }
-}
-
-inline void ecs::SystemManager::entitySignatureChanged(Entity_t entity, Signature_t signature)
-{
-    for(auto const &pair : m_systems) {
-        char const *name = pair.first;
-        auto const &system = pair.second;
-        auto const &systemSignature = m_signatures.at(name);
-        if((signature & systemSignature) == systemSignature) {
-            // Entity signature matches system signature - insert into set
-            // whut
-            system->m_entities.insert(entity);
-        }
-        else
-        {
-            // Entity signature does not match system signature - erase from set
-            system->m_entities.erase(entity);
-        }
-
-    }
+    m_entities.erase(entity);
 }
 
 template <typename Component_t> 

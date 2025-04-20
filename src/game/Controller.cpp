@@ -6,46 +6,20 @@ game::CameraController *game::CameraController::controllerCallbackUser = nullptr
 
 void game::key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) 
 { 
-    assert(game::CameraController::controllerCallbackUser && "No controller registred and the key callback is called! Register the controller system or remove this glfw callback.");
-    game::CameraController::controllerCallbackUser->key_callback(window, key, scancode, action, mods); 
+    assert(game::CameraController::controllerCallbackUser && "No controller registred and the key callback is called! Register the game::CameraController system or remove this glfw callback.");
+    game::CameraController::controllerCallbackUser->pushKeyEvent({window, key, scancode, action, mods}); 
 }
-void game::CameraController::key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
-{
-    if(key == GLFW_KEY_R && action == GLFW_PRESS) { // hot reload shaders
-        for(auto entity : m_entities) {
-            if(!ecs::entityHasComponent<Drawable>(entity)) continue;
-            opengl::ShaderProgram &shader = *ecs::get<Drawable>(entity).shader;
-            
-            opengl::ShaderProgram copy = shader;
-            if(!shader.collectShaders(shader.getPath())) {
-                std::cout << "failed to collect shaders from directory \"" << shader.getPath() << "\":\n" << shader.getLog();
-                std::swap(shader, copy);
-                continue;
-            };
-            if(!shader.compileShaders()) {
-                std::cout << "failed to compile shaders in directory \"" << shader.getPath() << "\":\n" << shader.getLog();
-                std::swap(shader, copy);
-                continue;
-            }
-        }
-    }
-    if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        for(auto entity : m_entities) {
-            if(!ecs::entityHasComponent<ControllableCamera>(entity)) continue;
-            bool &locked = ecs::get<ControllableCamera>(entity).locked;
-            locked = !locked;
-        }
-    }
-}
+
+void game::CameraController::pushKeyEvent(KeyEvent const &event) { m_keyQueue.push(event); }
 
 game::CameraController::CameraController()
 {
     game::CameraController::controllerCallbackUser = this;
 }
 
-void game::CameraController::update(double deltatime)
+void game::CameraController::update(std::set<ecs::Entity_t> const &entities, double deltatime)
 {
-    for(auto entity : m_entities) {
+    for(ecs::Entity_t const &entity : entities) {
         if(!ecs::entityHasComponent<Camera>(entity) || !ecs::entityHasComponent<ControllableCamera>(entity)) continue;
         ControllableCamera &controllable = ecs::get<ControllableCamera>(entity);
         Camera &camera = ecs::get<Camera>(entity);
@@ -75,6 +49,8 @@ void game::CameraController::update(double deltatime)
             position -= speed * (float) deltatime * up;
         } 
 
+        // =======================================================================
+
         if(!controllable.locked) {
             controllable.firstTimeMovingMouse = true;
             glfwSetInputMode(controllable.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -99,7 +75,7 @@ void game::CameraController::update(double deltatime)
         if(ecs::entityHasComponent<Rotation>(entity)) {
             glm::vec3 &orientation = ecs::get<Rotation>(entity).rotation;
 
-            if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) {
+            if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) { // FIXME: doesent rotate?
                 orientation.z -= controllable.sensitivity * (float) deltatime;
             } if(glfwGetKey(controllable.window, GLFW_KEY_C) == GLFW_PRESS) {
                 orientation.z += controllable.sensitivity * (float) deltatime;
@@ -115,9 +91,7 @@ void game::CameraController::update(double deltatime)
             } else if(orientation.x <= -90) {
                 orientation.x = -89.999;
             }
-        }
-
-        if(ecs::entityHasComponent<RotationQuaternion>(entity)) {
+        } else if(ecs::entityHasComponent<RotationQuaternion>(entity)) {
             glm::quat &orientation = ecs::get<RotationQuaternion>(entity).quat;
             if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) {
                 orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * (float) deltatime), glm::vec3{0, 0, 1});
@@ -128,6 +102,33 @@ void game::CameraController::update(double deltatime)
             }
 
             orientation = glm::normalize(glm::angleAxis(glm::radians(offset.y), glm::vec3{1, 0, 0}) * orientation * glm::angleAxis(glm::radians(offset.x), glm::vec3{0, 1, 0}));
+        }
+
+    }
+
+    // =======================================================================
+    for (; !m_keyQueue.empty(); m_keyQueue.pop()) {
+        KeyEvent const &event = m_keyQueue.front();
+        for(ecs::Entity_t const &entity : entities) {
+            if(event.key == GLFW_KEY_R && event.action == GLFW_PRESS && ecs::entityHasComponent<Drawable>(entity)) { // hot reload shaders
+                opengl::ShaderProgram &shader = *ecs::get<Drawable>(entity).shader;
+                
+                opengl::ShaderProgram copy = shader;
+                if(!shader.collectShaders(shader.getPath())) {
+                    std::cout << "failed to collect shaders from directory \"" << shader.getPath() << "\":\n" << shader.getLog();
+                    std::swap(shader, copy);
+                    continue;
+                };
+                if(!shader.compileShaders()) {
+                    std::cout << "failed to compile shaders in directory \"" << shader.getPath() << "\":\n" << shader.getLog();
+                    std::swap(shader, copy);
+                    continue;
+                }
+            }
+            if(event.key == GLFW_KEY_ESCAPE && event.action == GLFW_PRESS && ecs::entityHasComponent<ControllableCamera>(entity)) {
+                bool &locked = ecs::get<ControllableCamera>(entity).locked;
+                locked = !locked;
+            }
         }
     }
 }

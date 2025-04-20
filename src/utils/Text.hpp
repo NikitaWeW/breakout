@@ -24,13 +24,12 @@ namespace text
         };
         struct Atlas {
             opengl::TextureMS texture;
-            unsigned size;
+            int size;
             unsigned glyfCount;
             std::map<char, GlyphData> glyphs;
         };
     private:
         opengl::ShaderProgram textShader;
-        opengl::VertexBuffer quadVBO;
         opengl::ShaderProgram atlasShader;
         opengl::ShaderProgram blurShader;
         Atlas atlas;
@@ -41,7 +40,7 @@ namespace text
 
         Font() = default;
         ~Font() = default;
-        Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, unsigned atlasSize = 2048);
+        Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, int atlasSize = 2048);
         void drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &color = {1, 1, 1, 1}, glm::mat4 const &projectionMatrix = glm::mat4{1.0f});
         inline void drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec3 const &color = {1, 1, 1}, glm::mat4 const &projectionMatrix = glm::mat4{1.0f}) { drawText(text, position, size, glm::vec4(color, 1), projectionMatrix); }
         inline Atlas const &getAtlas() const { return atlas; }

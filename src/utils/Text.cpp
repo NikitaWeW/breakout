@@ -46,18 +46,13 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
     glUniform1i (textShader.getUniform("u_atlas"), 0);
     glUniformMatrix4fv(textShader.getUniform("u_projMat"), 1, GL_FALSE, &projectionMatrix[0][0]);
     atlas.texture.bind(0);
-    opengl::VertexArray quadVAO{quadVBO, opengl::InterleavedVertexBufferLayout {
-        {3, GL_FLOAT},
-        {2, GL_FLOAT} 
-    }};
-    quadVAO.bind();
     opengl::VertexBuffer renderDataBuffer{renderData.size() * sizeof(GlyphRenderData), renderData.data()};
-    quadVAO.addBuffer(renderDataBuffer, opengl::InterleavedInstancingVertexBufferLayout{
+    opengl::VertexArray quadVAO{renderDataBuffer, opengl::InterleavedInstancingVertexBufferLayout{ 
         {2, GL_FLOAT, 1},
         {2, GL_FLOAT, 1},
         {2, GL_FLOAT, 1},
         {2, GL_FLOAT, 1}
-    });
+    }};
     glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, renderData.size());
 
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -65,18 +60,10 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
     glUseProgram(0);
 }
 
-text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, unsigned atlasSize)
+text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, int atlasSize)
 {
     // TODO: export and cache atlas using stb image write
     // TODO: nuke this shit and use msdfgen or stb_truetype
-
-    float vertices[] = {
-        0, 1, 0,  0, 1,
-        1, 1, 0,  1, 1,
-        1, 0, 0,  1, 0,
-        0, 0, 0,  0, 0 
-    };
-    quadVBO = opengl::VertexBuffer{sizeof(vertices), vertices};
 
     textShader = opengl::ShaderProgram{"shaders/drawText", true};
     atlasShader = opengl::ShaderProgram{"shaders/fontAtlas", true};
@@ -85,7 +72,8 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
     // ========================================================
 
     atlas.size = atlasSize;
-    atlas.texture = opengl::TextureMS{atlasSize, atlasSize, 4, GL_RED, GL_CLAMP_TO_EDGE, GL_LINEAR};
+    atlas.texture = opengl::TextureMS{GL_LINEAR};
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RED, atlasSize, atlasSize, GL_TRUE);
 
     unsigned numRows = glm::ceil(glm::sqrt(chars.size()));
     unsigned numCols = glm::ceil((float)chars.size() / numRows);
@@ -128,7 +116,7 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
         unsigned glyphCellWidth = glm::floor(glm::min<float>(cellWidth, glyphWidth * cellWidth));
         unsigned glyphCellHeight = glm::floor(glm::min<float>(cellHeight, glyphHeight * cellWidth));
         largestHeightInCurrentRow = glm::max(largestHeightInCurrentRow, glyphCellHeight);
-        glViewport(currentPos.x, currentPos.y, glyphCellWidth, glyphCellHeight);
+        glViewport(currentPos.x, currentPos.y, glyphCellWidth, glyphCellHeight); 
 
         // draw the (stupid) mesh 
         opengl::VertexBuffer meshVBO{mesh->nvert * sizeof(mesh->vert[0]), mesh->vert};

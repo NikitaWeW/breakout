@@ -1,4 +1,6 @@
 #pragma once
+#include <memory>
+#include <atomic>
 
 /*
 deallocate only if canDeallocate returns true
@@ -6,7 +8,7 @@ deallocate only if canDeallocate returns true
 class Resource 
 {
 private:
-    mutable bool m_managing = false;
+    mutable std::atomic_uint m_referenceCount = 1;
 public:
     Resource();
     Resource(Resource const &other);
@@ -14,6 +16,7 @@ public:
     void operator=(Resource const &other);
     void operator=(Resource &&other);
 
+    // object owns the resource
     bool canDeallocate() const;
     virtual ~Resource() = default;
 };

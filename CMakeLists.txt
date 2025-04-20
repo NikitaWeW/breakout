@@ -1,7 +1,8 @@
-# This line will be changed if reconfiguration is required
+# This line will be changed if reconfiguration is required 
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 project(breakout C CXX)
 
@@ -13,6 +14,9 @@ if(WIN32)
     file(GLOB_RECURSE LIBRARIES "dependencies/lib/windows/*")
 elseif(UNIX AND NOT APPLE) # linux
     file(GLOB_RECURSE LIBRARIES "dependencies/lib/linux/*")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
+elseif(APPLE)
+    message(WARNING "mac users will have to set LIBRARIES variable manualy via adding -DLIBRRAIES=\"all the necessary library files\" to cmake configure command.")
 endif() 
 # "Poor mac ysers" -- DEA__TH (Cosmic Horizons Dev) - 3/21/25, 5:30 PM
 

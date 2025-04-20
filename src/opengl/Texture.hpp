@@ -10,8 +10,8 @@ namespace opengl
     public:
         std::string type = "";
         Texture() = default;
-        Texture(unsigned width, unsigned height, GLenum format = GL_RGBA, GLenum wrap = GL_CLAMP_TO_EDGE, GLenum filter = GL_NEAREST) noexcept;
-        Texture(std::string const &filepath, bool flip = false, bool srgb = false, GLenum wrap = GL_CLAMP_TO_EDGE, GLenum filter = GL_NEAREST, std::string const &type = "");
+        explicit Texture(GLenum filter, GLenum wrap = GL_CLAMP_TO_EDGE) noexcept;
+        explicit Texture(std::string const &filepath, bool flip = false, bool srgb = false, GLenum filter = GL_NEAREST, GLenum wrap = GL_CLAMP_TO_EDGE, std::string const &type = "");
         ~Texture();
 
         void bind(unsigned slot = 0) const noexcept;
@@ -20,7 +20,7 @@ namespace opengl
     {
     public:
         TextureMS() = default;
-        TextureMS(unsigned width, unsigned height, unsigned samples = 4, GLenum format = GL_RGBA, GLenum wrap = GL_CLAMP_TO_EDGE, GLenum filter = GL_NEAREST) noexcept;
+        explicit TextureMS(GLenum filter, GLenum wrap = GL_CLAMP_TO_EDGE) noexcept;
         ~TextureMS();
 
         void bind(unsigned slot = 0) const noexcept;

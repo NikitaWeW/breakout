@@ -9,7 +9,7 @@ opengl::Framebuffer::~Framebuffer()
 
 void opengl::Framebuffer::bind(unsigned slot) const noexcept
 {
-    if(m_renderID == 0) {
+    if(m_renderID == 0) { // hack, did not wanted to generate a framebuffer from a default constructor
         glGenFramebuffers(1, &m_renderID);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, m_renderID);
@@ -17,7 +17,6 @@ void opengl::Framebuffer::bind(unsigned slot) const noexcept
 
 bool opengl::Framebuffer::isComplete()
 {
-    bind();
     return glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
 }
 

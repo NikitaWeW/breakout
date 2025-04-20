@@ -20,12 +20,21 @@ namespace game
 
     void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-    class CameraController : public ecs::System
+    class CameraController : public ecs::ISystem
     {
+    private:
+        struct KeyEvent {
+            GLFWwindow *window; 
+            int key; 
+            int scancode; 
+            int action; 
+            int mods;
+        };
+        std::queue<KeyEvent> m_keyQueue;
     public:
         static CameraController *controllerCallbackUser; // glfw callbacks redirect here
-        void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+        void pushKeyEvent(KeyEvent const &event);
         CameraController();
-        void update(double deltatime);
+        void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;
     };
 } // namespace game

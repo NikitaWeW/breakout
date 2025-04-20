@@ -26,4 +26,5 @@ vec4 textureMultisample(sampler2DMS sampler, vec2 texCoord, int numSamples)
 
 void main() {
     o_color = u_color * textureMultisample(u_atlas, fs_in.glyphOffset + fs_in.texCoord * fs_in.glyphSize, 4).r;
+    if(o_color.a < 1e-5) discard;
 }

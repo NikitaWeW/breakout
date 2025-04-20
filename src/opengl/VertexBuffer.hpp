@@ -11,7 +11,6 @@ namespace opengl
     {
     private:
     public:
-        size_t size = 0;
         VertexBuffer() = default;
         VertexBuffer(size_t size, GLenum usage = GL_DYNAMIC_DRAW);
         VertexBuffer(size_t size, void const *data, GLenum usage = GL_DYNAMIC_DRAW);
@@ -114,7 +113,7 @@ namespace opengl
     };
     template <typename Layout_t> inline VertexArray::VertexArray(VertexBuffer const &buffer, Layout_t const &layout) { 
         glGenVertexArrays(1, &m_renderID);
-        if(buffer.size != 0)
+        if(layout.getElements().size() != 0)
             addBuffer(buffer, layout); 
     }
 } // namespace opengl

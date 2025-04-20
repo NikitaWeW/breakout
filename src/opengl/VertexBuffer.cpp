@@ -1,13 +1,13 @@
 #include <cassert>
 #include "VertexBuffer.hpp"
 
-opengl::VertexBuffer::VertexBuffer(size_t size, GLenum usage) : size(size)
+opengl::VertexBuffer::VertexBuffer(size_t size, GLenum usage)
 {
     glGenBuffers(1, &m_renderID);
     bind();
     glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
 }
-opengl::VertexBuffer::VertexBuffer(size_t size, void const *data, GLenum usage) : size(size)
+opengl::VertexBuffer::VertexBuffer(size_t size, void const *data, GLenum usage)
 {
     glGenBuffers(1, &m_renderID);
     bind();

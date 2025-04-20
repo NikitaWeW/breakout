@@ -4,7 +4,7 @@
 #include "GLFW/glfw3.h"
 #include "utils/ECS.hpp"
 #include "game/GameMain.hpp"
-#define basicLatin text::charRange(L'!', L'~')
+#include <csignal>
 
 #ifdef NDEBUG
 extern constexpr bool DEBUG = false;
@@ -110,6 +110,7 @@ void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsiz
     }
 
     std::cout << error.id << ": opengl " << error.severity << " severity " << error.type << ", raised from " << error.source << ":\n\t" << error.message << '\n';
+    assert(severity != GL_DEBUG_SEVERITY_HIGH);
 }
 class Deallocator {
 public: 

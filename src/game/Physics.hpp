@@ -27,9 +27,9 @@ namespace game
         glm::quat quat;
     };
 
-    class MovementSystem : public ecs::System
+    class MovementSystem : public ecs::ISystem
     {
     public:
-        void update(double deltatime);
+        void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;
     };  
 } // namespace game

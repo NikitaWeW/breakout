@@ -23,7 +23,7 @@ namespace opengl
         
         public:
         ShaderProgram() noexcept = default;
-        ShaderProgram(std::string const &directory, bool showLog = false);
+        ShaderProgram(std::string const &directory, bool showLog = true);
         ~ShaderProgram();
         bool collectShaders(std::string const &directory) noexcept;
         bool compileShaders() noexcept;

@@ -2,7 +2,7 @@
 #include "stb_image.h"
 #include <stdexcept>
 
-opengl::Texture::Texture(unsigned width, unsigned height, GLenum format, GLenum wrap, GLenum filter) noexcept
+opengl::Texture::Texture(GLenum filter, GLenum wrap) noexcept
 {
     glGenTextures(1, &m_renderID);
     bind();
@@ -11,11 +11,9 @@ opengl::Texture::Texture(unsigned width, unsigned height, GLenum format, GLenum 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
-    
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 }
 
-opengl::Texture::Texture(std::string const &filepath, bool flip, bool srgb, GLenum wrap, GLenum filter, std::string const &type) : type(type)
+opengl::Texture::Texture(std::string const &filepath, bool flip, bool srgb, GLenum filter, GLenum wrap, std::string const &type) : type(type)
 {
     stbi_set_flip_vertically_on_load(flip);
     int width = 0, height = 0;
@@ -48,11 +46,10 @@ void opengl::Texture::bind(unsigned slot) const noexcept {
     glBindTexture(GL_TEXTURE_2D, m_renderID);
 }
 
-opengl::TextureMS::TextureMS(unsigned width, unsigned height, unsigned samples, GLenum format, GLenum wrap, GLenum filter) noexcept
+opengl::TextureMS::TextureMS(GLenum filter, GLenum wrap) noexcept
 {
     glGenTextures(1, &m_renderID);
     bind();
-    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, format, width, height, GL_TRUE);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
