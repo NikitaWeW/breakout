@@ -20,6 +20,7 @@ void game::gameMain(GLFWwindow *window)
 {
     opengl::ShaderProgram colorTextureShader{"shaders/colorTexture", true};
     opengl::ShaderProgram plainColorShader{"shaders/plainColor", true};
+    opengl::ShaderProgram textureShader{"shaders/colorTexture", true};
     text::Font mainFont{"res/OpenSans-Light.ttf", basicLatin};
     opengl::VertexBuffer quadVBO{sizeof(vertices), vertices};
     Drawable quad;
@@ -31,7 +32,7 @@ void game::gameMain(GLFWwindow *window)
     quad.ib = {};
     quad.count = 4;
     quad.mode = GL_TRIANGLE_FAN;
-    model::Model cubeModel{"res/models/cube.obj", model::ModelLoadFlags::LOAD_DATA | model::ModelLoadFlags::LOAD_DRAWABLE};
+    model::Model model{"res/models/backpack/backpack.obj", model::ModelLoadFlags::LOAD_DATA | model::ModelLoadFlags::LOAD_DRAWABLE};
     model::Model gridModel{};
     gridModel.getMeshes().push_back({
         {}, // data. optional
@@ -66,12 +67,11 @@ void game::gameMain(GLFWwindow *window)
     ecs::get<model::Model>(gridEntity) = gridModel;
     ecs::get<opengl::ShaderProgram>(gridEntity) = opengl::ShaderProgram{"shaders/grid", true};
     
-    ecs::Entity_t cubeEntity = ecs::makeEntity<model::Model, opengl::ShaderProgram, Color>();
+    ecs::Entity_t cubeEntity = ecs::makeEntity<model::Model, opengl::ShaderProgram>();
     ecs::getSystemManager().addEntity(cubeEntity);
-    ecs::get<Color>(cubeEntity).color = {0.5, 0.1, 0.3, 1};
-    assert(cubeModel.getMeshes()[0].drawable.has_value());
-    ecs::get<model::Model>(cubeEntity) = cubeModel;
-    ecs::get<opengl::ShaderProgram>(cubeEntity) = plainColorShader;
+    assert(model.getMeshes()[0].drawable.has_value());
+    ecs::get<model::Model>(cubeEntity) = model;
+    ecs::get<opengl::ShaderProgram>(cubeEntity) = textureShader;
 
     ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, PerspectiveProjection, ControllableCamera, RenderTarget, Position, Rotation>(); // QuaternionRotation is also available
     ecs::getSystemManager().addEntity(cameraEntity);
@@ -79,7 +79,7 @@ void game::gameMain(GLFWwindow *window)
     ecs::get<Rotation>(cameraEntity).rotation = {0, -90, 0};
     ecs::get<ControllableCamera>(cameraEntity) = {
         window,
-        2,
+        4,
         0.1,
         true
     };

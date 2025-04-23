@@ -112,11 +112,14 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
                     glm::mat4 modelMat = getModelMat(entity);
                     opengl::ShaderProgram &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
     
-                    ecs::entityHasComponent<opengl::Texture>(entity) ? 
-                        ecs::get<opengl::Texture>(entity).bind(0) : 
-                        m_notfound.bind(0);
-                    
+                    opengl::Texture const *diffuseTexture = nullptr;
+                    for(auto const &texture : mesh.textures) {
+                        if(texture.type == "diffuse") diffuseTexture = &texture;
+                    }
+                    if(!diffuseTexture) diffuseTexture = &m_notfound;
+
                     shader.bind();
+                    diffuseTexture->bind(0);
                     ecs::entityHasComponent<Color>(entity) ?
                         glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
                         glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
@@ -126,6 +129,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
                     glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
                     glUniform3fv(      shader.getUniform("u_cameraPosition"), 1, &cameraPosition.x);
                     glEnable(GL_DEPTH_TEST);
+                    glEnable(GL_CULL_FACE);
                     draw(drawable);
                 }
             }
