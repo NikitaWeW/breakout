@@ -2,6 +2,7 @@
 #include "glm/gtc/quaternion.hpp"
 #include "Renderer.hpp"
 #include "game/Physics.hpp"
+#include "utils/Model.hpp"
 
 #define NUM_DEPTH_PEEL_PASSES 4
 
@@ -69,6 +70,14 @@ void draw(game::Drawable const &drawable) {
         glDrawArrays(drawable.mode, 0, drawable.count);
     }
 }
+void drawText(ecs::Entity_t const &textEntity) {
+    using namespace game;
+    assert(ecs::entityHasComponent<Text>(textEntity));
+    Text const &text = ecs::get<Text>(textEntity);
+    glm::vec4 color = ecs::entityHasComponent<Color>(textEntity) ? ecs::get<Color>(textEntity).color : glm::vec4{0.5, 0.5, 0.5, 1};
+    glm::mat4 matrix = text.matrix.value_or(glm::mat4{1.0f});
+    text.font->drawText(text.text, text.position, text.size, color, matrix);
+}
 
 void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double deltatime)
 {
@@ -78,23 +87,8 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         RenderTarget &rtarget = ecs::get<RenderTarget>(cameraEntity);
 
         if(rtarget.prevWidth != camera.width || rtarget.prevHeight != camera.height) { // resize or initialize buffers / textures
-            rtarget.OIT_accumTexture.bind();  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, camera.width, camera.height, 0, GL_RGBA, GL_HALF_FLOAT, nullptr);
-            rtarget.OIT_opaqueTexture.bind(); glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, camera.width, camera.height, 0, GL_RGBA, GL_HALF_FLOAT, nullptr);
-            rtarget.OIT_revealTexture.bind(); glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, camera.width, camera.height, 0, GL_RED, GL_HALF_FLOAT, nullptr);
-            rtarget.OIT_depthTexture.bind();  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, camera.width, camera.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
         }
         if(rtarget.prevWidth == -1) { // initialize render target
-            rtarget.OIT_opaqueFBO.bind();
-            rtarget.OIT_opaqueFBO.attach(rtarget.OIT_opaqueTexture, GL_COLOR_ATTACHMENT0);
-            rtarget.OIT_opaqueFBO.attach(rtarget.OIT_depthTexture,  GL_DEPTH_ATTACHMENT);
-            assert(rtarget.OIT_opaqueFBO.isComplete());
-
-            rtarget.OIT_transparentFBO.bind();
-            rtarget.OIT_transparentFBO.attach(rtarget.OIT_accumTexture, GL_COLOR_ATTACHMENT0);
-            rtarget.OIT_transparentFBO.attach(rtarget.OIT_revealTexture, GL_COLOR_ATTACHMENT1);
-            GLenum const transparentDrawBuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-            glDrawBuffers(2, transparentDrawBuffers);
-            assert(rtarget.OIT_transparentFBO.isComplete());
         }
         rtarget.prevWidth = camera.width;
         rtarget.prevHeight = camera.height;
@@ -103,112 +97,39 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         camera.viewMat = getViewMat(cameraEntity);
         glm::vec3 cameraPosition = glm::vec4{0, 0, 0, 1} * camera.viewMat;
         
-        glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
         glViewport(0, 0, camera.width, camera.height);
-        glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-        
-        glm::vec4 zeroCleaner{0};
-        glm::vec4 oneCleaner{1};
-        rtarget.OIT_transparentFBO.bind();
-        glClearBufferfv(GL_COLOR, 0, &zeroCleaner.x);
-        glClearBufferfv(GL_COLOR, 1, &oneCleaner.x);
-
-        rtarget.OIT_opaqueFBO.bind();
+        glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
         glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        for(ecs::Entity_t const &entity : entities) { // TODO: batch it or something?
-            if(ecs::entityHasComponent<Drawable>(entity)) {
-                Drawable &drawable = ecs::get<Drawable>(entity);
-                glm::mat4 modelMat = getModelMat(entity);
+        for(ecs::Entity_t const &entity : entities) {
+            if(ecs::entityHasComponent<model::Model>(entity)) {
+                model::Model const &model = ecs::get<model::Model>(entity);
+                assert(model.isLoaded());
+                for(auto const &mesh : model.getMeshes()) {
+                    if(!mesh.drawable.has_value()) continue;
 
-                if(ecs::entityHasComponent<Transparent>(entity)) {
-                    glDepthMask(GL_FALSE);
-                    glEnable(GL_BLEND);
-                    glBlendFunci(0, GL_ONE, GL_ONE);
-                    glBlendFunci(1, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                    glBlendEquation(GL_FUNC_ADD);
-                    rtarget.OIT_transparentFBO.bind();
-                    m_transparentShader.bind();
-
-                    glUniformMatrix4fv(m_transparentShader.getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
-                    glUniformMatrix4fv(m_transparentShader.getUniform("u_viewMat"), 1, GL_FALSE, &camera.viewMat[0][0]);
-                    glUniformMatrix4fv(m_transparentShader.getUniform("u_projectionMat"), 1, GL_FALSE, &camera.projMat[0][0]);
-                    glUniform3fv(      m_transparentShader.getUniform("u_cameraPosition"), 1, &cameraPosition.x);
-                    glUniform1i(       m_transparentShader.getUniform("u_texture"), 0);
-                    if(ecs::entityHasComponent<opengl::Texture>(entity)) {
-                        ecs::get<opengl::Texture>(entity).bind(0);
-                    } else {
-                        m_whiteTexture.bind(0);
-                    }
-                    if(ecs::entityHasComponent<Color>(entity)) {
-                        glUniform4fv(m_transparentShader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r);
-                    } else {
-                        glUniform4f(m_transparentShader.getUniform("u_color"), 1, 1, 1, 1);
-                    }
-                    draw(drawable);
-                } else {
-                    glEnable(GL_DEPTH_TEST);
-                    glDepthFunc(GL_LESS);
-                    glDepthMask(GL_TRUE);
-                    glDisable(GL_BLEND);
-                    rtarget.OIT_opaqueFBO.bind();
-                    drawable.shader->bind();
-                    if(ecs::entityHasComponent<Color>(entity)) {
-                        glUniform4fv(drawable.shader->getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r);
-                    } else {
-                        glUniform4f(drawable.shader->getUniform("u_color"), 1, 1, 1, 1);
-                    }
-                    glUniform1i(drawable.shader->getUniform("u_texture"), 0);
-                    if(ecs::entityHasComponent<opengl::Texture>(entity)) {
-                        ecs::get<opengl::Texture>(entity).bind(0);
-                    } else {
+                    Drawable const &drawable = mesh.drawable.value();
+                    glm::mat4 modelMat = getModelMat(entity);
+                    opengl::ShaderProgram &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
+    
+                    ecs::entityHasComponent<opengl::Texture>(entity) ? 
+                        ecs::get<opengl::Texture>(entity).bind(0) : 
                         m_notfound.bind(0);
-                    }
-                    glUniformMatrix4fv(drawable.shader->getUniform("u_modelMat"), 1, GL_FALSE, &modelMat[0][0]);
-                    glUniformMatrix4fv(drawable.shader->getUniform("u_viewMat"), 1, GL_FALSE, &camera.viewMat[0][0]);
-                    glUniformMatrix4fv(drawable.shader->getUniform("u_projectionMat"), 1, GL_FALSE, &camera.projMat[0][0]);
-                    glUniform3fv(      drawable.shader->getUniform("u_cameraPosition"), 1, &cameraPosition.x);
+                    
+                    shader.bind();
+                    ecs::entityHasComponent<Color>(entity) ?
+                        glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
+                        glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
+                    glUniform1i(       shader.getUniform("u_texture"),        0);
+                    glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
+                    glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
+                    glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
+                    glUniform3fv(      shader.getUniform("u_cameraPosition"), 1, &cameraPosition.x);
+                    glEnable(GL_DEPTH_TEST);
                     draw(drawable);
                 }
             }
-
-            // ========================================
-            if(ecs::entityHasComponent<Text>(entity)) {
-                Text const &text = ecs::get<Text>(entity);
-                glm::vec4 color = ecs::entityHasComponent<Color>(entity) ? ecs::get<Color>(entity).color : glm::vec4{0.5, 0.5, 0.5, 1};
-                glm::mat4 matrix = text.matrix.value_or(glm::mat4{1.0f});
-                glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
-                text.font->drawText(text.text, text.position, text.size, color, matrix);
-            }
+            if(ecs::entityHasComponent<Text>(entity)) drawText(entity);
         } // for(auto &entity : entities) 
-
-        // oit composite pass
-        // ==================
-        glDepthFunc(GL_ALWAYS);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        rtarget.OIT_opaqueFBO.bind();
-        m_oitCompositeShader.bind();
-        opengl::VertexArray emptyVAO{{}, opengl::VertexBufferLayout{}};
-        emptyVAO.bind();
-        glUniform1i(m_oitCompositeShader.getUniform("u_accum"), 0);  rtarget.OIT_accumTexture.bind(0);
-        glUniform1i(m_oitCompositeShader.getUniform("u_reveal"), 1); rtarget.OIT_revealTexture.bind(1);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-        // main FBO pass
-        // =============
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_BLEND);
-        glDepthMask(GL_TRUE);
-        glClearColor(0, 0, 0, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
-        glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_hdrShader.bind();
-        emptyVAO.bind();
-        rtarget.OIT_opaqueTexture.bind(0);
-        glUniform1i(m_hdrShader.getUniform("u_texture"), 0);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     } // for(auto &cameraEntity : entities)
 }

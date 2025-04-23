@@ -33,16 +33,16 @@ namespace ecs
         EntityManager();
         ~EntityManager() = default;
         Entity_t createEntity(Signature_t signature = {});
-        void destroyEntity(Entity_t entity);
-        void setSignature(Entity_t entity, Signature_t signature);
-        Signature_t const &getSignature(Entity_t entity) const;
+        void destroyEntity(Entity_t const &entity);
+        void setSignature(Entity_t const &entity, Signature_t signature);
+        Signature_t const &getSignature(Entity_t const &entity) const;
     };
 
     class IComponentArray 
     {
     public:
         virtual ~IComponentArray() = default;
-        virtual void onEntityDestroyed(Entity_t entity) = 0;
+        virtual void onEntityDestroyed(Entity_t const &entity) = 0;
     };
 
     template <typename Component_t>
@@ -53,11 +53,11 @@ namespace ecs
         std::map<Entity_t, size_t> m_entityToIndex{};
         std::map<size_t, Entity_t> m_indexToEntity{};
     public:
-        void insert(Entity_t entity, Component_t component);
-        void remove(Entity_t entity);
-        Component_t &getComponent(Entity_t entity);
-        Component_t const &getComponent(Entity_t entity) const;
-        void onEntityDestroyed(Entity_t entity) override;
+        void insert(Entity_t const &entity, Component_t component);
+        void remove(Entity_t const &entity);
+        Component_t &getComponent(Entity_t const &entity);
+        Component_t const &getComponent(Entity_t const &entity) const;
+        void onEntityDestroyed(Entity_t const &entity) override;
     };
 
     class ComponentManager
@@ -72,11 +72,11 @@ namespace ecs
 
         template <typename Component_t> void registerComponent();
         template <typename Component_t> ComponentID_t getComponentID();
-        template <typename Component_t> void addComponent(Entity_t entity, Component_t component);
-        template <typename Component_t> void removeComponent(Entity_t entity);
-        template <typename Component_t> Component_t &getComponent(Entity_t entity);
-        template <typename Component_t> Component_t const &getComponent(Entity_t entity) const;
-        void entityDestroyed(Entity_t entity);
+        template <typename Component_t> void addComponent(Entity_t const &entity, Component_t component);
+        template <typename Component_t> void removeComponent(Entity_t const &entity);
+        template <typename Component_t> Component_t &getComponent(Entity_t const &entity);
+        template <typename Component_t> Component_t const &getComponent(Entity_t const &entity) const;
+        void entityDestroyed(Entity_t const &entity);
     private:
         template <typename Component_t> std::shared_ptr<ComponentArray<Component_t>> getComponentArray();
     };
@@ -99,8 +99,8 @@ namespace ecs
 
         template <typename System_t> std::shared_ptr<System_t> registerSystem();
         void update(double deltatime);
-        void addEntity(Entity_t entity);
-        void destroyEntity(Entity_t entity);
+        void addEntity(Entity_t const &entity);
+        void destroyEntity(Entity_t const &entity);
     };
 
     // singleton getters
@@ -116,8 +116,8 @@ namespace ecs
         static SystemManager *manager = new SystemManager{};
         return *manager;
     }
-    template <typename Component_t> bool entityHasComponent(Entity_t entity);
-    template <typename Component_t> Component_t &get(Entity_t entity);
+    template <typename Component_t> bool entityHasComponent(Entity_t const &entity);
+    template <typename Component_t> Component_t &get(Entity_t const &entity);
     template <typename... Components_t> ecs::Entity_t makeEntity();
 } // namespace ecs
 
@@ -141,7 +141,7 @@ inline ecs::Entity_t ecs::EntityManager::createEntity(Signature_t signature)
     setSignature(entity, signature);
     return entity;
 }
-inline void ecs::EntityManager::destroyEntity(Entity_t entity)
+inline void ecs::EntityManager::destroyEntity(Entity_t const &entity)
 {
     assert(entity <= MAX_ENTITIES && "entity out of range");
     --m_livingEntitiesCount;
@@ -149,19 +149,19 @@ inline void ecs::EntityManager::destroyEntity(Entity_t entity)
 
     m_signatures[entity].reset();
 }
-inline void ecs::EntityManager::setSignature(Entity_t entity, Signature_t signature)
+inline void ecs::EntityManager::setSignature(Entity_t const &entity, Signature_t signature)
 {
     assert(entity <= MAX_ENTITIES && "entity out of range");
     m_signatures[entity] = signature;
 }
-inline ecs::Signature_t const &ecs::EntityManager::getSignature(Entity_t entity) const
+inline ecs::Signature_t const &ecs::EntityManager::getSignature(Entity_t const &entity) const
 {
     assert(entity <= MAX_ENTITIES && "entity out of range");
     return m_signatures[entity]; 
 }
 
 template <typename Component_t>
-inline void ecs::ComponentArray<Component_t>::insert(Entity_t entity, Component_t component)
+inline void ecs::ComponentArray<Component_t>::insert(Entity_t const &entity, Component_t component)
 {
     if(m_entityToIndex.find(entity) != m_entityToIndex.end()) {
         std::cout << "WARNING: component added to the same entity more than once!\n";
@@ -174,7 +174,7 @@ inline void ecs::ComponentArray<Component_t>::insert(Entity_t entity, Component_
     m_components.push_back(component);
 }
 template <typename Component_t>
-inline void ecs::ComponentArray<Component_t>::remove(Entity_t entity)
+inline void ecs::ComponentArray<Component_t>::remove(Entity_t const &entity)
 {
     assert(m_entityToIndex.find(entity) != m_entityToIndex.end() && "removing non-existing component");
     size_t removedEntityIndex = m_entityToIndex.at(entity);
@@ -187,21 +187,21 @@ inline void ecs::ComponentArray<Component_t>::remove(Entity_t entity)
     m_components.pop_back();
 }
 template <typename Component_t>
-inline Component_t const &ecs::ComponentArray<Component_t>::getComponent(Entity_t entity) const
+inline Component_t const &ecs::ComponentArray<Component_t>::getComponent(Entity_t const &entity) const
 {
     assert(m_entityToIndex.find(entity) != m_entityToIndex.end() && "retrieving non-existent component");
 
     return m_components.at(m_entityToIndex.at(entity));
 }
 template <typename Component_t>
-inline Component_t &ecs::ComponentArray<Component_t>::getComponent(Entity_t entity)
+inline Component_t &ecs::ComponentArray<Component_t>::getComponent(Entity_t const &entity)
 {
     assert(m_entityToIndex.find(entity) != m_entityToIndex.end() && "retrieving non-existent component");
 
     return m_components.at(m_entityToIndex.at(entity));
 }
 template <typename Component_t>
-inline void ecs::ComponentArray<Component_t>::onEntityDestroyed(Entity_t entity)
+inline void ecs::ComponentArray<Component_t>::onEntityDestroyed(Entity_t const &entity)
 {
     if(m_entityToIndex.find(entity) != m_entityToIndex.end()) {
         remove(entity);
@@ -226,23 +226,23 @@ inline ecs::ComponentID_t ecs::ComponentManager::getComponentID()
     return m_componentIDs.at(name);
 }
 template <typename Component_t>
-inline void ecs::ComponentManager::addComponent(Entity_t entity, Component_t component)
+inline void ecs::ComponentManager::addComponent(Entity_t const &entity, Component_t component)
 {
     getComponentArray<Component_t>()->insert(entity, component);
 }
 template <typename Component_t>
-inline void ecs::ComponentManager::removeComponent(Entity_t entity)
+inline void ecs::ComponentManager::removeComponent(Entity_t const &entity)
 {
     getComponentArray<Component_t>()->remove(entity);
 }
 template <typename Component_t>
-inline Component_t &ecs::ComponentManager::getComponent(Entity_t entity)
+inline Component_t &ecs::ComponentManager::getComponent(Entity_t const &entity)
 {
     return getComponentArray<Component_t>()->getComponent(entity);
 }
 
 template <typename Component_t>
-inline Component_t const &ecs::ComponentManager::getComponent(Entity_t entity) const
+inline Component_t const &ecs::ComponentManager::getComponent(Entity_t const &entity) const
 {
     getComponentArray<Component_t>()->getComponent(entity);
 }
@@ -253,7 +253,7 @@ inline std::shared_ptr<ecs::ComponentArray<Component_t>> ecs::ComponentManager::
     assert(m_componentIDs.find(name) != m_componentIDs.end() && "component not registered before use");
     return std::static_pointer_cast<ComponentArray<Component_t>>(m_componentArrays.at(name));
 }
-inline void ecs::ComponentManager::entityDestroyed(Entity_t entity)
+inline void ecs::ComponentManager::entityDestroyed(Entity_t const &entity)
 {
     for(auto const &pair : m_componentArrays) {
         pair.second->onEntityDestroyed(entity);
@@ -277,23 +277,23 @@ inline void ecs::SystemManager::update(double deltatime)
     }
 }
 
-inline void ecs::SystemManager::addEntity(Entity_t entity)
+inline void ecs::SystemManager::addEntity(Entity_t const &entity)
 {
     m_entities.insert(entity);
 }
 
-inline void ecs::SystemManager::destroyEntity(Entity_t entity)
+inline void ecs::SystemManager::destroyEntity(Entity_t const &entity)
 {
     m_entities.erase(entity);
 }
 
 template <typename Component_t> 
-inline bool ecs::entityHasComponent(Entity_t entity) 
+inline bool ecs::entityHasComponent(Entity_t const &entity) 
 { 
     return getEntityManager().getSignature(entity)[getComponentManager().getComponentID<Component_t>()]; 
 }
 template <typename Component_t>
-inline Component_t &ecs::get(Entity_t entity) 
+inline Component_t &ecs::get(Entity_t const &entity) 
 {
     return getComponentManager().getComponent<Component_t>(entity);
 };

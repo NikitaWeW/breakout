@@ -44,7 +44,7 @@ namespace opengl
         struct Element {
             unsigned count;
             GLenum type;
-            unsigned offset;
+            size_t offset;
         };
     private:
         std::vector<Element> m_elements;

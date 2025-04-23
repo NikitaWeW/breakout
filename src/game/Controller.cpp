@@ -110,8 +110,8 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
     for (; !m_keyQueue.empty(); m_keyQueue.pop()) {
         KeyEvent const &event = m_keyQueue.front();
         for(ecs::Entity_t const &entity : entities) {
-            if(event.key == GLFW_KEY_R && event.action == GLFW_PRESS && ecs::entityHasComponent<Drawable>(entity)) { // hot reload shaders
-                opengl::ShaderProgram &shader = *ecs::get<Drawable>(entity).shader;
+            if(event.key == GLFW_KEY_R && event.action == GLFW_PRESS && ecs::entityHasComponent<opengl::ShaderProgram>(entity)) { // hot reload shaders
+                opengl::ShaderProgram &shader = ecs::get<opengl::ShaderProgram>(entity);
                 
                 opengl::ShaderProgram copy = shader;
                 if(!shader.collectShaders(shader.getPath())) {
