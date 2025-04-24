@@ -88,7 +88,7 @@ text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> con
     assert(atlasFBO.isComplete());
 
     ttf_t *font;
-    ttf_load_from_file(filepath.c_str(), &font, false);
+    ttf_load_from_file(filepath.string().c_str(), &font, false);
     assert(font);
     unsigned largestHeightInCurrentRow = 0;
     for(uint16_t currentChar : chars) {

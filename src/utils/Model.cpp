@@ -116,7 +116,7 @@ model::Model::Model(std::filesystem::path const &filePath, int flags)
 {
     Assimp::Importer importer;
 
-    aiScene const *scene = importer.ReadFile( filePath.c_str(),
+    aiScene const *scene = importer.ReadFile( filePath.string().c_str(),
         aiProcess_CalcTangentSpace      |
         aiProcess_Triangulate           |
         aiProcess_JoinIdenticalVertices |

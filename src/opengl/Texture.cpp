@@ -18,7 +18,7 @@ opengl::Texture::Texture(std::string const &filepath, bool flip, bool srgb, GLen
     stbi_set_flip_vertically_on_load(flip);
     int width = 0, height = 0;
     unsigned char *buffer = nullptr;
-    buffer = stbi_load(filepath.c_str(), &width, &height, nullptr, 4);
+    buffer = stbi_load(static_cast<char const *>(filepath.c_str()), &width, &height, nullptr, 4);
     if(!buffer) throw std::runtime_error{"failed to load a texture"};
 
     glGenTextures(1, &m_renderID);
