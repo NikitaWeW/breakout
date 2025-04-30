@@ -26,11 +26,18 @@ const vec2 texCoords[4] = vec2[4](
 const float gridSize = 50;
 const float gridHeight = -10; // ignore oit and call it a feature. TODO: second OIT try
 const float gridSpacing = 10;
+const float EPSILON = 1e-5;
+
+bool approximatelyEqual(float a, float b)
+{
+    return abs(a - b) <= (abs(a) < abs(b) ? abs(b) : abs(a)) * EPSILON;
+}
 
 void main() {
     vec3 vertexPosition = vertices[gl_VertexID] * gridSize;
     vertexPosition += floor(u_cameraPosition / gridSpacing) * gridSpacing;
     vertexPosition.y = gridHeight;
+    if(approximatelyEqual(u_cameraPosition.y, gridHeight)) vertexPosition = vec3(0); // discard the grid (wierd dots appear)
     vs_out.fragmentPosition = vertexPosition;
     vs_out.cameraPosition = u_cameraPosition;
     vs_out.texCoord = texCoords[gl_VertexID];

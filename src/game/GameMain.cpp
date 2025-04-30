@@ -2,6 +2,7 @@
 #include "glm/glm.hpp"
 #include "Renderer.hpp"
 #include "Physics.hpp"
+#include "Animator.hpp"
 #include "Controller.hpp"
 #include <chrono>
 #include <thread>
@@ -21,7 +22,7 @@ void game::gameMain(GLFWwindow *window)
     opengl::ShaderProgram colorTextureShader{"shaders/colorTexture", true};
     opengl::ShaderProgram plainColorShader{"shaders/plainColor", true};
     opengl::ShaderProgram textureShader{"shaders/colorTexture", true};
-    text::Font mainFont{"res/OpenSans-Light.ttf", basicLatin};
+    text::Font mainFont{"res/fonts/OpenSans-Light.ttf", basicLatin};
     opengl::VertexBuffer quadVBO{sizeof(vertices), vertices};
     Drawable quad;
     quad.vb = quadVBO;
@@ -32,46 +33,23 @@ void game::gameMain(GLFWwindow *window)
     quad.ib = {};
     quad.count = 4;
     quad.mode = GL_TRIANGLE_FAN;
-    model::Model model{"res/models/backpack/backpack.obj", model::ModelLoadFlags::LOAD_DATA | model::ModelLoadFlags::LOAD_DRAWABLE};
-    model::Model gridModel{};
-    gridModel.getMeshes().push_back({
-        {}, // data. optional
-        Drawable{ // drawable
-            opengl::VertexBuffer{},
-            opengl::VertexArray{opengl::VertexBuffer{}, opengl::VertexBufferLayout{}}, // the vertex buffer is not initialised. the size is 0, no buffer added to the vertex array
-            {},
-            4,
-            GL_TRIANGLE_FAN
-        },
-        {} // textures
-    });
-
+    typedef model::Model::LoadFlags Flags;
+    model::Model model{"res/models/dancing_vampire/dancing_vampire.dae", Flags::LOAD_DATA | Flags::LOAD_DRAWABLE | Flags::FLIP_TEXTURES};
     glfwSetKeyCallback(window, game::key_callback);
 
-    ecs::getSystemManager().registerSystem<MovementSystem>();
     ecs::getSystemManager().registerSystem<Renderer>();
     ecs::getSystemManager().registerSystem<CameraController>();
+    ecs::getSystemManager().registerSystem<Animator>();
 
-    ecs::getComponentManager().registerComponent<Color>();
-    ecs::getComponentManager().registerComponent<ModelMatrix>();
-    ecs::getComponentManager().registerComponent<Rotation>();
-    ecs::getComponentManager().registerComponent<RotationQuaternion>();
-    ecs::getComponentManager().registerComponent<opengl::Texture>();
-    ecs::getComponentManager().registerComponent<Text>();
-    ecs::getComponentManager().registerComponent<Velocity>();
-    ecs::getComponentManager().registerComponent<Scale>();
-
-    ecs::Entity_t gridEntity = ecs::makeEntity<model::Model, Color, Transparent, opengl::ShaderProgram>();
-    ecs::getSystemManager().addEntity(gridEntity);
-    ecs::get<Color>(gridEntity).color = {1, 1, 1, 0.5};
-    ecs::get<model::Model>(gridEntity) = gridModel;
-    ecs::get<opengl::ShaderProgram>(gridEntity) = opengl::ShaderProgram{"shaders/grid", true};
-    
-    ecs::Entity_t cubeEntity = ecs::makeEntity<model::Model, opengl::ShaderProgram>();
-    ecs::getSystemManager().addEntity(cubeEntity);
+    ecs::Entity_t modelEntity = ecs::makeEntity<Scale, model::Model, opengl::ShaderProgram, Animation>();
+    ecs::getSystemManager().addEntity(modelEntity);
     assert(model.getMeshes()[0].drawable.has_value());
-    ecs::get<model::Model>(cubeEntity) = model;
-    ecs::get<opengl::ShaderProgram>(cubeEntity) = textureShader;
+    ecs::get<model::Model>(modelEntity) = model;
+    ecs::get<Scale>(modelEntity).scale = glm::vec3{0.1};
+    ecs::get<opengl::ShaderProgram>(modelEntity) = textureShader;
+    Animation &animation = ecs::get<Animation>(modelEntity);
+    animation.aianimation = model.getScene()->HasAnimations() ? model.getScene()->mAnimations[0] : nullptr;
+    animation.repeatMode = MIRROR;
 
     ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, PerspectiveProjection, ControllableCamera, RenderTarget, Position, Rotation>(); // QuaternionRotation is also available
     ecs::getSystemManager().addEntity(cameraEntity);
@@ -88,7 +66,17 @@ void game::gameMain(GLFWwindow *window)
     ecs::get<Camera>(cameraEntity) = {};
 
     // ========================================================
+    ecs::getComponentManager().registerComponent<Color>();
+    ecs::getComponentManager().registerComponent<ModelMatrix>();
+    ecs::getComponentManager().registerComponent<Rotation>();
+    ecs::getComponentManager().registerComponent<RotationQuaternion>();
+    ecs::getComponentManager().registerComponent<opengl::Texture>();
+    ecs::getComponentManager().registerComponent<Text>();
+    ecs::getComponentManager().registerComponent<Scale>();
+    ecs::getComponentManager().registerComponent<Animation>();
+    // ========================================================
 
+    // ! all deltatime is in seconds
     double deltatime = 1;
     std::thread fpsShower{[&deltatime, &window](){while(!glfwWindowShouldClose(window)) {glfwSetWindowTitle(window, ("breakout -- " + std::to_string((int) std::round(1 / deltatime)) + " FPS").c_str()); std::this_thread::sleep_for(std::chrono::milliseconds{500}); }}}; fpsShower.detach();
     while (!glfwWindowShouldClose(window))
