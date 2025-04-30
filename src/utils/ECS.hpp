@@ -21,6 +21,15 @@
 namespace ecs
 {
     /**
+     * \brief Entity ID.
+     */
+    using Entity_t = std::uint32_t;
+    /**
+     * Component ID. Used with Signature_t
+     */
+    using ComponentID_t = std::uint8_t;
+
+    /**
      * \brief Controls the maximum number of entities allowed to exist simultaneously.
      */
     const Entity_t MAX_ENTITIES = 5000;
@@ -29,14 +38,6 @@ namespace ecs
      */
     const ComponentID_t MAX_COMPONENTS = 32;
 
-    /**
-     * \brief Entity ID.
-     */
-    using Entity_t = std::uint32_t;
-    /**
-     * Component ID. Used with Signature_t
-     */
-    using ComponentID_t = std::uint8_t;
     /**
      * \brief Used to track which components entity has. 
      * As an example, if Transform has type 0, RigidBody has type 1, and Gravity has type 2, an entity that “has” those three components would have a signature of 0b111 (bits 0, 1, and 2 are set).
@@ -346,7 +347,7 @@ template <typename System_t>
 inline std::shared_ptr<System_t> ecs::SystemManager::registerSystem()
 {
     char const *name = typeid(System_t).name();
-    if(m_systems.find(name) == m_systems.end()) return;
+    if(m_systems.find(name) != m_systems.end()) return nullptr;
 
     auto system = std::make_shared<System_t>();
     m_systems.insert({name, system});
