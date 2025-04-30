@@ -71,6 +71,8 @@ namespace model
         inline std::map<std::string, unsigned> &getBoneMap() { return m_boneMap; }
         inline std::vector<glm::mat4> const &getBones() const { return m_boneTransformations; } // use getBoneTransformations
         inline std::vector<glm::mat4> &getBones() { return m_boneTransformations; }
+        inline std::vector<glm::mat4> const &getTpose() const { return m_tposeTransform; } // use getBoneTransformations
+        inline std::vector<glm::mat4> &getTpose() { return m_tposeTransform; }
         inline aiScene const *getScene() const { return m_scene; }
     };
 } // namespace model

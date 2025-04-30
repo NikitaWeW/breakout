@@ -23,7 +23,7 @@ void game::Animator::update(std::set<ecs::Entity_t> const &entities, double delt
         animation.timeSeconds += deltatime * animation.speed;
         float ticksPerSecond = (float) (animation.aianimation->mTicksPerSecond != 0 ? animation.aianimation->mTicksPerSecond : 25.0f);
         float animationDurationSeconds = animation.aianimation->mDuration / ticksPerSecond;
-        if(animation.timeSeconds > animationDurationSeconds || animation.timeSeconds < 0) {
+        if(animation.timeSeconds >= animationDurationSeconds || animation.timeSeconds <= 0) {
             switch (animation.repeatMode)
             {
             case AnimationRepeatMode::LOOP:
@@ -46,9 +46,5 @@ void game::Animator::update(std::set<ecs::Entity_t> const &entities, double delt
         if(ecs::entityHasComponent<model::Model>(entity)) {
             animation.boneMatrices = &ecs::get<model::Model>(entity).getBoneTransformations(animation.timeSeconds, animation.aianimation);
         }
-        std::cout << "\n===\n";
-        std::cout << "e" << entity << ": " << animation.timeSeconds << "s, speed: " << animation.speed << "\n";
-        std::cout << (*animation.boneMatrices)[4];
-        std::cout << "===\n";
     }
 }

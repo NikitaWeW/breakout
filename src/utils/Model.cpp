@@ -86,7 +86,6 @@ glm::vec3 calculateInterpolatedPosition(float animationTimeTicks, aiNodeAnim con
     float deltatime = time2 - time1;
     float factor = (animationTimeTicks - time1) / deltatime;
     factor = glm::clamp<float>(factor, 0, 1);
-    // std::cout << "animationTimeTicks: " << animationTimeTicks << "t; factor: " << factor << "; time1: " << time1 << "; time2: " << time2 << ";\n";
 
     return glm::mix( // the stupid function is called mix, not lerp
         toVec3(nodeAnim->mPositionKeys[positionIndex].mValue),
@@ -208,22 +207,25 @@ void makeDrawable(game::Drawable &drawable, model::MeshData &data)
         data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]), 
         data.tangents.size() * sizeof(data.tangents[0]), 
         data.tangents.data());
-    glBufferSubData(GL_ARRAY_BUFFER, 
-        data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]) + data.tangents.size() * sizeof(data.tangents[0]), 
-        data.boneIDs.size() * sizeof(data.boneIDs[0]), 
-        data.boneIDs.data());
-    glBufferSubData(GL_ARRAY_BUFFER, 
-        data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]) + data.tangents.size() * sizeof(data.tangents[0]) + data.boneIDs.size() * sizeof(data.boneIDs[0]), 
-        data.weights.size() * sizeof(data.weights[0]), 
-        data.weights.data());
+    if(data.boneIDs.size() != 0) {
+        glBufferSubData(GL_ARRAY_BUFFER, 
+            data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]) + data.tangents.size() * sizeof(data.tangents[0]), 
+            data.boneIDs.size() * sizeof(data.boneIDs[0]), 
+            data.boneIDs.data());
+        glBufferSubData(GL_ARRAY_BUFFER, 
+            data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]) + data.tangents.size() * sizeof(data.tangents[0]) + data.boneIDs.size() * sizeof(data.boneIDs[0]), 
+            data.weights.size() * sizeof(data.weights[0]), 
+            data.weights.data());
+    }
     /*
-        Index Name
-        0     positions
-        1     normals
-        2     texCoords
-        3     tangents
-        4     boneIDs
-        5     weights
+        Index|Name
+        -----|----------
+          0  | positions
+          1  | normals
+          2  | texCoords
+          3  | tangents
+          4  | boneIDs
+          5  | weights
     */
 
     drawable.ib = opengl::IndexBuffer{data.indices.size() * sizeof(data.indices[0]), data.indices.data()};
@@ -297,6 +299,7 @@ model::Mesh model::Model::processMesh(aiMesh *aimesh, int flags, aiScene const *
     extractVertexData(mesh.data.value(), aimesh, scene);
     if(aimesh->HasBones()) {
         extractBones(mesh.data.value(), m_boneMap, m_tposeTransform, aimesh, scene);
+        m_boneTransformations.resize(m_tposeTransform.size());
     }
 
     if(flags & LOAD_DRAWABLE) {
@@ -374,7 +377,6 @@ std::vector<glm::mat4> const &model::Model::getBoneTransformations(float animati
 
 std::vector<glm::mat4> const &model::Model::getBoneTransformations(aiAnimation const *animation, float animationTimeTicks)
 {
-    m_boneTransformations.resize(m_tposeTransform.size());
     processAnimationNode(animation, animationTimeTicks, m_scene->mRootNode, glm::mat4{1.0f}, m_boneMap, m_boneTransformations, m_tposeTransform, m_globalInverseTransorm);
     return m_boneTransformations;
 }

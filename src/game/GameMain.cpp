@@ -49,7 +49,7 @@ void game::gameMain(GLFWwindow *window)
     ecs::get<opengl::ShaderProgram>(modelEntity) = textureShader;
     Animation &animation = ecs::get<Animation>(modelEntity);
     animation.aianimation = model.getScene()->HasAnimations() ? model.getScene()->mAnimations[0] : nullptr;
-    animation.repeatMode = MIRROR;
+    animation.repeatMode = LOOP;
 
     ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, PerspectiveProjection, ControllableCamera, RenderTarget, Position, Rotation>(); // QuaternionRotation is also available
     ecs::getSystemManager().addEntity(cameraEntity);
