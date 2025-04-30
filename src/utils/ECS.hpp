@@ -1,3 +1,12 @@
+/**
+ * \file ECS.hpp
+ * \brief My Entity Component System implimentation.
+ * 
+ * thanks to this post: https://austinmorlan.com/posts/entity_component_system
+ * 
+ * 
+ */
+
 #pragma once
 #include <cstdint>
 #include <bitset>
@@ -9,20 +18,35 @@
 #include <cassert>
 #include <iostream>
 
-// thanks to https://austinmorlan.com/posts/entity_component_system
 namespace ecs
 {
-    // entity ID
-    using Entity_t = std::uint32_t;
-    // component ID. Used with EntitySignature_t
-    using ComponentID_t = std::uint8_t;
-
+    /**
+     * \brief Controls the maximum number of entities allowed to exist simultaneously.
+     */
     const Entity_t MAX_ENTITIES = 5000;
+    /**
+     * \brief Controls the maximum number of registered components allowed to exist simultaneously.
+     */
     const ComponentID_t MAX_COMPONENTS = 32;
 
-    // Used to track which components entity has. As an example, if Transform has type 0, RigidBody has type 1, and Gravity has type 2, an entity that “has” those three components would have a signature of 0b111 (bits 0, 1, and 2 are set).
+    /**
+     * \brief Entity ID.
+     */
+    using Entity_t = std::uint32_t;
+    /**
+     * Component ID. Used with Signature_t
+     */
+    using ComponentID_t = std::uint8_t;
+    /**
+     * \brief Used to track which components entity has. 
+     * As an example, if Transform has type 0, RigidBody has type 1, and Gravity has type 2, an entity that “has” those three components would have a signature of 0b111 (bits 0, 1, and 2 are set).
+     */
     using Signature_t = std::bitset<MAX_COMPONENTS>;
 
+    /**
+     * \brief Manages entities (create, destroy) and their signatures (set, get).
+     * Any entity supplied to the manager must be created by the same manager object.
+     */
     class EntityManager
     {
     private:
@@ -32,12 +56,26 @@ namespace ecs
     public:
         EntityManager();
         ~EntityManager() = default;
+        /**
+         * \brief Creates entity with an optional signature.
+         * \returns Unique entity id managed by EntityManager.
+         */
         Entity_t createEntity(Signature_t signature = {});
+        /**
+         * \brief Destroys entity.
+         */
         void destroyEntity(Entity_t const &entity);
+        /**
+         * \brief sets the signature of the entity.
+         */
         void setSignature(Entity_t const &entity, Signature_t signature);
         Signature_t const &getSignature(Entity_t const &entity) const;
+        Signature_t &getSignature(Entity_t const &entity);
     };
 
+    /**
+     * Every instanced ComponentArray derived from that polymorphic class.
+     */
     class IComponentArray 
     {
     public:
@@ -45,6 +83,10 @@ namespace ecs
         virtual void onEntityDestroyed(Entity_t const &entity) = 0;
     };
 
+    /**
+     * \brief Stores entity Components of a specific type.
+     * @tparam Component_t The type of stored components.
+     */
     template <typename Component_t>
     class ComponentArray : public IComponentArray
     {
@@ -55,11 +97,14 @@ namespace ecs
     public:
         void insert(Entity_t const &entity, Component_t component);
         void remove(Entity_t const &entity);
-        Component_t &getComponent(Entity_t const &entity);
         Component_t const &getComponent(Entity_t const &entity) const;
+        Component_t &getComponent(Entity_t const &entity);
         void onEntityDestroyed(Entity_t const &entity) override;
     };
 
+    /**
+     * \brief Manages components and their arrays. All components are destroyed automatically.
+     */
     class ComponentManager
     {
     private:
@@ -70,7 +115,15 @@ namespace ecs
         ComponentManager() = default;
         ~ComponentManager() = default;
 
+        /**
+         * \brief Registers component.
+         * This should be called for every component used. Multiple calls for the same Component_t will do nothing.
+         * @tparam Component_t The component type.
+         */
         template <typename Component_t> void registerComponent();
+        /**
+         * Get unique component ID used to index the Signature_t bitset.
+         */
         template <typename Component_t> ComponentID_t getComponentID();
         template <typename Component_t> void addComponent(Entity_t const &entity, Component_t component);
         template <typename Component_t> void removeComponent(Entity_t const &entity);
@@ -81,13 +134,23 @@ namespace ecs
         template <typename Component_t> std::shared_ptr<ComponentArray<Component_t>> getComponentArray();
     };
 
+    /**
+     * \brief System interface.
+     * All systems should derive from that interface.
+     */
     class ISystem
     {
     public:
         virtual ~ISystem() = default;
+        /**
+         * \brief Callback on every system update.
+         */
         virtual void update(std::set<Entity_t> const &entities, double deltatime) = 0;
     };
-     
+
+    /**
+     * \brief Manages all the systems and the entities supplied to them.
+     */
     class SystemManager
     {
     private:
@@ -97,15 +160,26 @@ namespace ecs
         SystemManager() = default;
         ~SystemManager() = default;
 
+        /**
+         * This should be called for every system used. Multiple calls for the same System_t will do nothing.
+         * @tparam System_t The system type.
+         */
         template <typename System_t> std::shared_ptr<System_t> registerSystem();
+        template <typename System_t> void removeSystem();
         void update(double deltatime);
+        /**
+         * adds the entity to the list of entities given to the systems.
+         */
         void addEntity(Entity_t const &entity);
-        void destroyEntity(Entity_t const &entity);
+        /**
+         * removes the entity from the list of entities given to the systems.
+         */
+        void removeEntity(Entity_t const &entity);
     };
 
     // singleton getters
     inline EntityManager &getEntityManager() {
-        static EntityManager *manager = new EntityManager{}; // needed to explicitly deallocate opengl entities such as textures before context termination
+        static EntityManager *manager = new EntityManager{}; // needed to explicitly deallocate opengl entities such as textures before context termination.
         return *manager;
     }
     inline ComponentManager &getComponentManager() {
@@ -118,13 +192,15 @@ namespace ecs
     }
     template <typename Component_t> bool entityHasComponent(Entity_t const &entity);
     template <typename Component_t> Component_t &get(Entity_t const &entity);
+    template <typename Component_t> void removeComponent(Entity_t const &entity);
+    template <typename Component_t> void addComponent(Entity_t const &entity);
     template <typename... Components_t> ecs::Entity_t makeEntity();
 } // namespace ecs
 
 
-// ============================================================
-// ============================================================
-
+// ===============
+// Implimentation
+// ===============
 
 inline ecs::EntityManager::EntityManager()
 {
@@ -147,7 +223,7 @@ inline void ecs::EntityManager::destroyEntity(Entity_t const &entity)
     --m_livingEntitiesCount;
     m_availableEntityIDs.push(entity);
 
-    m_signatures[entity].reset();
+    m_signatures.at(entity).reset();
 }
 inline void ecs::EntityManager::setSignature(Entity_t const &entity, Signature_t signature)
 {
@@ -157,7 +233,13 @@ inline void ecs::EntityManager::setSignature(Entity_t const &entity, Signature_t
 inline ecs::Signature_t const &ecs::EntityManager::getSignature(Entity_t const &entity) const
 {
     assert(entity <= MAX_ENTITIES && "entity out of range");
-    return m_signatures[entity]; 
+    return m_signatures.at(entity); 
+}
+
+inline ecs::Signature_t &ecs::EntityManager::getSignature(Entity_t const &entity)
+{
+    assert(entity <= MAX_ENTITIES && "entity out of range");
+    return m_signatures.at(entity);
 }
 
 template <typename Component_t>
@@ -264,11 +346,18 @@ template <typename System_t>
 inline std::shared_ptr<System_t> ecs::SystemManager::registerSystem()
 {
     char const *name = typeid(System_t).name();
-    assert(m_systems.find(name) == m_systems.end() && "registering system more than once");
+    if(m_systems.find(name) == m_systems.end()) return;
 
     auto system = std::make_shared<System_t>();
     m_systems.insert({name, system});
     return system;
+}
+template <typename System_t>
+inline void ecs::SystemManager::removeSystem()
+{
+    char const *name = typeid(System_t).name();
+    assert(m_systems.find(name) != m_systems.end() && "system not registered before use");
+    m_systems.erase(name);
 }
 inline void ecs::SystemManager::update(double deltatime)
 {
@@ -282,7 +371,7 @@ inline void ecs::SystemManager::addEntity(Entity_t const &entity)
     m_entities.insert(entity);
 }
 
-inline void ecs::SystemManager::destroyEntity(Entity_t const &entity)
+inline void ecs::SystemManager::removeEntity(Entity_t const &entity)
 {
     m_entities.erase(entity);
 }
@@ -306,4 +395,17 @@ inline ecs::Entity_t ecs::makeEntity()
     Entity_t entity = getEntityManager().createEntity(signature);
     (getComponentManager().addComponent(entity, Components_t{}), ...);
     return entity;
+}
+template <typename Component_t> 
+void ecs::removeComponent(Entity_t const &entity) 
+{
+    getComponentManager().removeComponent<Component_t>(entity);
+    getEntityManager().getSignature(entity).set(getComponentManager().getComponentID<Component_t>(), false);
+}
+
+template <typename Component_t>
+void ecs::addComponent(Entity_t const &entity)
+{
+    getComponentManager().addComponent<Component_t>(entity);
+    getEntityManager().getSignature(entity).set(getComponentManager().getComponentID<Component_t>(), true);
 }
