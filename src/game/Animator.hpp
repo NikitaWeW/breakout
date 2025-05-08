@@ -1,6 +1,7 @@
 #pragma once
 #include "utils/ECS.hpp"
 #include "utils/Model.hpp"
+#include "EaseFunctions.hpp"
 
 namespace game
 {
@@ -13,8 +14,15 @@ namespace game
         AnimationRepeatMode repeatMode = LOOP;
         aiAnimation const *aianimation = nullptr;
         std::vector<glm::mat4> const *boneMatrices = nullptr;
-        float timeSeconds = 0;
+        float normalizedTime = 0; // time ranging from 0 to 1 (time / duration)
         float speed = 1;
+    };
+    struct AnimationTransition
+    {
+        Animation to;
+        float factor = 0;
+        float factorPerSecond = 1; // how much does transition factor change per second
+        easeFunc::easeFuncPtr easeFunction = easeFunc::liniar;
     };
     class Animator : public ecs::ISystem
     {

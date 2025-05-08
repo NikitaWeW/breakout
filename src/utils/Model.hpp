@@ -30,20 +30,20 @@ namespace model
         std::optional<game::Drawable> drawable;
         std::vector<opengl::Texture> textures;
     };
+    enum LoadFlags 
+    {
+        NONE               = 0,
+        LOAD_DATA          = 1 << 0,
+        LOAD_DRAWABLE      = 1 << 1,
+        FLIP_TEXTURES      = 1 << 2,
+        FLIP_WINDING_ORDER = 1 << 3 
+    };
 
     class Model 
     {
-    public:
-        enum LoadFlags 
-        {
-            NONE               = 0,
-            LOAD_DATA          = 1 << 0,
-            LOAD_DRAWABLE      = 1 << 1,
-            FLIP_TEXTURES      = 1 << 2,
-            FLIP_WINDING_ORDER = 1 << 3 
-        };
     private:
-        std::vector<Mesh> m_meshes;
+        // "memory friendly"
+        std::vector<Mesh> m_meshes; 
         std::map<std::string, unsigned> m_boneMap;
         std::vector<glm::mat4> m_boneTransformations;
         std::vector<glm::mat4> m_tposeTransform;
@@ -53,9 +53,8 @@ namespace model
         std::shared_ptr<Assimp::Importer> m_importer;
         aiScene const *m_scene;
         
-        void processNode(aiNode *node, int flags, aiScene const *scene);
-        Mesh processMesh(aiMesh *aimesh, int flags, aiScene const *scene);
-        void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial *material, aiTextureType const type, std::string const &typeName, int flags);
+        void processNode(aiNode const *node, int flags, aiScene const *scene);
+        Mesh processMesh(aiMesh const *aimesh, int flags, aiScene const *scene);
     public:
         Model() = default;
         Model(std::filesystem::path const &filePath, int flags = NONE);
@@ -64,15 +63,11 @@ namespace model
         std::vector<glm::mat4> const &getBoneTransformations(float animationTimeSeconds, aiAnimation const *animation);
         std::vector<glm::mat4> const &getBoneTransformations(aiAnimation const *animation, float animationTimeTicks);
 
-        inline bool isLoaded() const { return m_meshes.size() != 0; }
+        std::vector<glm::mat4> const &getBoneTransformations(aiAnimation const *first, aiAnimation const *second, float factor, float firstTimeTicks, float secondTimeTicks);
+        std::vector<glm::mat4> const &getBoneTransformations(float firstTimeSeconds, float secondTimeSeconds, aiAnimation const *first, aiAnimation const *second, float factor);
+
         inline std::vector<Mesh> const &getMeshes() const { return m_meshes; }
         inline std::vector<Mesh> &getMeshes() { return m_meshes; }
-        inline std::map<std::string, unsigned> const &getBoneMap() const { return m_boneMap; }
-        inline std::map<std::string, unsigned> &getBoneMap() { return m_boneMap; }
-        inline std::vector<glm::mat4> const &getBones() const { return m_boneTransformations; } // use getBoneTransformations
-        inline std::vector<glm::mat4> &getBones() { return m_boneTransformations; }
-        inline std::vector<glm::mat4> const &getTpose() const { return m_tposeTransform; } // use getBoneTransformations
-        inline std::vector<glm::mat4> &getTpose() { return m_tposeTransform; }
         inline aiScene const *getScene() const { return m_scene; }
     };
 } // namespace model

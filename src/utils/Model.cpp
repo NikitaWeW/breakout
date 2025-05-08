@@ -144,15 +144,34 @@ glm::vec3 calculateInterpolatedScaling(float animationTimeTicks, aiNodeAnim cons
     );
 }
 
-void processAnimationNode(aiAnimation const *animation, float animationTimeTicks, aiNode const *node, glm::mat4 const &parentTransformation, std::map<std::string, unsigned> const &boneMap, std::vector<glm::mat4> &boneTransformations, std::vector<glm::mat4> const &tposeTransform, glm::mat4 const &globalInverseTransform)
+void processAnimationNode( // ignore the argument count
+    aiNode const *sceneNode, 
+    aiAnimation const *animation, float animationTimeTicks,  
+    aiAnimation const *secondAnimation, float secondAnimationTimeTicks, float factor,
+    glm::mat4 const &parentTransformation, glm::mat4 const &globalInverseTransform, 
+    std::map<std::string, unsigned> const &boneMap, 
+    std::vector<glm::mat4> &boneTransformations, std::vector<glm::mat4> const &tposeTransform
+)
 {
-    std::string nodeName = node->mName.C_Str();
-    glm::mat4 nodeTransformation = toMat4(node->mTransformation);
+    std::string nodeName = sceneNode->mName.C_Str();
+    glm::mat4 nodeTransformation = toMat4(sceneNode->mTransformation);
     aiNodeAnim const *nodeAnim = findNodeAnim(animation, nodeName);
+    
     if(nodeAnim) {
-        glm::vec3 position = calculateInterpolatedPosition(animationTimeTicks, nodeAnim);
-        glm::quat rotation = calculateInterpolatedRotation(animationTimeTicks, nodeAnim);
-        glm::vec3 scale =    calculateInterpolatedScaling (animationTimeTicks, nodeAnim);
+        glm::vec3 position;
+        glm::quat rotation;
+        glm::vec3 scale;
+        
+        aiNodeAnim const *secondNodeAnim = secondAnimation ? findNodeAnim(secondAnimation, nodeName) : nullptr;
+        if(secondNodeAnim) {
+            position = glm::mix  (calculateInterpolatedPosition(animationTimeTicks, nodeAnim), calculateInterpolatedPosition(secondAnimationTimeTicks, secondNodeAnim), factor);
+            rotation = glm::slerp(calculateInterpolatedRotation(animationTimeTicks, nodeAnim), calculateInterpolatedRotation(secondAnimationTimeTicks, secondNodeAnim), factor);
+            scale    = glm::mix  (calculateInterpolatedScaling (animationTimeTicks, nodeAnim), calculateInterpolatedScaling (secondAnimationTimeTicks, secondNodeAnim), factor);
+        } else {
+            position = calculateInterpolatedPosition(animationTimeTicks, nodeAnim);
+            rotation = calculateInterpolatedRotation(animationTimeTicks, nodeAnim);
+            scale    = calculateInterpolatedScaling (animationTimeTicks, nodeAnim);
+        }
 
         nodeTransformation = 
             glm::translate(glm::mat4{1.0f}, position) * 
@@ -166,12 +185,12 @@ void processAnimationNode(aiAnimation const *animation, float animationTimeTicks
         modelToBoneSpace = globalInverseTransform * globalTransformation * tposeTransform.at(boneMap.at(nodeName));
     }
 
-    for(unsigned i = 0; i < node->mNumChildren; ++i) {
-        processAnimationNode(animation, animationTimeTicks, node->mChildren[i], globalTransformation, boneMap, boneTransformations, tposeTransform, globalInverseTransform);
+    for(unsigned i = 0; i < sceneNode->mNumChildren; ++i) {
+        processAnimationNode(sceneNode->mChildren[i], animation, animationTimeTicks, secondAnimation, secondAnimationTimeTicks, factor, globalTransformation, globalInverseTransform, boneMap, boneTransformations, tposeTransform);
     }
 }
 
-void model::Model::processNode( aiNode *node, int flags, aiScene const *scene)
+void model::Model::processNode(aiNode const *node, int flags, aiScene const *scene)
 {
     for(unsigned i = 0; i < node->mNumMeshes; ++i) {
         m_meshes.push_back(processMesh(scene->mMeshes[node->mMeshes[i]], flags, scene));
@@ -239,7 +258,7 @@ void makeDrawable(game::Drawable &drawable, model::MeshData &data)
     }};
     drawable.count = data.indices.size();
 }
-void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMap, std::vector<glm::mat4> &boneTransformations, aiMesh *aimesh, aiScene const *scene) 
+void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMap, std::vector<glm::mat4> &boneTransformations, aiMesh const *aimesh, aiScene const *scene) 
 {
     static unsigned boneCounter = 0;
     std::array<int, model::MAX_BONES_PER_VERTEX> boneIDs{}; boneIDs.fill(-1); data.boneIDs.resize(data.positions.size(), boneIDs); // i hate it
@@ -272,7 +291,7 @@ void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMa
         }
     }
 }
-void extractVertexData(model::MeshData &data, aiMesh *aimesh, aiScene const *scene)
+void extractVertexData(model::MeshData &data, aiMesh const *aimesh, aiScene const *scene)
 {
     for(unsigned i = 0; i < aimesh->mNumVertices; ++i) {
         // i use vec4's for potential byte alignment. lets hope it wont be that bad on large models
@@ -289,8 +308,32 @@ void extractVertexData(model::MeshData &data, aiMesh *aimesh, aiScene const *sce
     }
 }
 
-model::Mesh model::Model::processMesh(aiMesh *aimesh, int flags, aiScene const *scene)
+void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial *material, aiTextureType const type, std::string const &typeName, int flags, std::vector<std::pair<std::string, opengl::Texture>> &loadedTextureCache, std::filesystem::path const &textureDirectory)
 {
+    aiString str;
+    for(unsigned int i = 0; i < material->GetTextureCount(type); i++) {
+        material->GetTexture(type, i, &str);
+        bool alreadyLoaded = false;
+        for(auto &loadedTexturePair : loadedTextureCache) {
+            if(loadedTexturePair.first == textureDirectory.string() + '/' + str.C_Str()) {
+                textures.push_back(loadedTexturePair.second);
+                alreadyLoaded = true;
+                break;
+            }
+        }
+        if(!alreadyLoaded) {
+            std::string filepath{textureDirectory.string() + '/' + str.C_Str()};
+            std::replace_if(filepath.begin(), filepath.end(), [](char c){ return c == '\\'; }, '/');
+            opengl::Texture texture{filepath, (flags & model::FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, GL_NEAREST, GL_CLAMP_TO_EDGE, typeName};
+            texture.type = typeName;
+            textures.push_back(texture);
+            loadedTextureCache.push_back(std::make_pair(filepath, texture));
+        }
+    }
+}
+model::Mesh model::Model::processMesh(aiMesh const *aimesh, int flags, aiScene const *scene)
+{
+    assert(aimesh->HasNormals());
     assert(aimesh->HasTangentsAndBitangents());
     assert(aimesh->HasTextureCoords(0));
 
@@ -309,10 +352,10 @@ model::Mesh model::Model::processMesh(aiMesh *aimesh, int flags, aiScene const *
 
     if(aimesh->mMaterialIndex >= 0) {
         aiMaterial *material = scene->mMaterials[aimesh->mMaterialIndex];
-        loadMaterialTextures(mesh.textures, material, aiTextureType_DIFFUSE,  "diffuse",  flags);
-        loadMaterialTextures(mesh.textures, material, aiTextureType_SPECULAR, "specular", flags);
-        loadMaterialTextures(mesh.textures, material, aiTextureType_HEIGHT,   "normal",   flags);
-        loadMaterialTextures(mesh.textures, material, aiTextureType_NORMALS,  "normal",   flags);
+        loadMaterialTextures(mesh.textures, material, aiTextureType_DIFFUSE,  "diffuse",  flags, m_loadedTextures, m_directory);
+        loadMaterialTextures(mesh.textures, material, aiTextureType_SPECULAR, "specular", flags, m_loadedTextures, m_directory);
+        loadMaterialTextures(mesh.textures, material, aiTextureType_HEIGHT,   "normal",   flags, m_loadedTextures, m_directory);
+        loadMaterialTextures(mesh.textures, material, aiTextureType_NORMALS,  "normal",   flags, m_loadedTextures, m_directory);
     }
 
     if(!(flags & LOAD_DATA)) { // deallocate data
@@ -321,34 +364,12 @@ model::Mesh model::Model::processMesh(aiMesh *aimesh, int flags, aiScene const *
 
     return mesh;
 }
-void model::Model::loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial *material, aiTextureType const type, std::string const &typeName, int flags)
-{
-    aiString str;
-    for(unsigned int i = 0; i < material->GetTextureCount(type); i++) {
-        material->GetTexture(type, i, &str);
-        bool alreadyLoaded = false;
-        for(auto &loadedTexturePair : m_loadedTextures) {
-            if(loadedTexturePair.first == m_directory.string() + '/' + str.C_Str()) {
-                textures.push_back(loadedTexturePair.second);
-                alreadyLoaded = true;
-                break;
-            }
-        }
-        if(!alreadyLoaded) {
-            std::string filepath{m_directory.string() + '/' + str.C_Str()};
-            std::replace_if(filepath.begin(), filepath.end(), [](char c){ return c == '\\'; }, '/');
-            opengl::Texture texture{filepath, (flags & FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, GL_NEAREST, GL_CLAMP_TO_EDGE, typeName};
-            texture.type = typeName;
-            textures.push_back(texture);
-            m_loadedTextures.push_back(std::make_pair(filepath, texture));
-        }
-    }
-}
 
 model::Model::Model(std::filesystem::path const &filePath, int flags)
 {
     m_importer = std::make_shared<Assimp::Importer>();
     m_scene = m_importer->ReadFile( filePath.string().c_str(),
+        aiProcess_GenNormals            |
         aiProcess_CalcTangentSpace      |
         aiProcess_Triangulate           |
         aiProcess_JoinIdenticalVertices |
@@ -357,15 +378,14 @@ model::Model::Model(std::filesystem::path const &filePath, int flags)
         aiProcess_OptimizeMeshes        |
         ((flags & FLIP_WINDING_ORDER) ? aiProcess_FlipWindingOrder : 0)
     );
+    if(!m_scene) {
+        std::cout << "error parcing " << filePath << " model:\n\t" << m_importer->GetErrorString() << "\n";
+    } 
     assert(m_scene);
 
     m_directory = filePath.parent_path();
     m_globalInverseTransorm = toMat4(m_scene->mRootNode->mTransformation.Inverse());
     processNode(m_scene->mRootNode, flags, m_scene);
-
-    if (!isLoaded()) {
-        std::cout << "error parcing " << filePath << " model:\n\t" << m_importer->GetErrorString();
-    } 
 }
 
 std::vector<glm::mat4> const &model::Model::getBoneTransformations(float animationTimeSeconds, aiAnimation const *animation)
@@ -374,9 +394,25 @@ std::vector<glm::mat4> const &model::Model::getBoneTransformations(float animati
     float timeTicks = animationTimeSeconds * ticksPerSecond;
     return getBoneTransformations(animation, timeTicks);
 }
+std::vector<glm::mat4> const &model::Model::getBoneTransformations(float firstTimeSeconds, float secondTimeSeconds, aiAnimation const *first, aiAnimation const *second, float factor)
+{
+    float firstTicksPerSecond = (float) (first->mTicksPerSecond != 0 ? first->mTicksPerSecond : 25.0f);
+    float secondTicksPerSecond = (float) (second->mTicksPerSecond != 0 ? second->mTicksPerSecond : 25.0f);
+    float firstTimeTicks = firstTimeSeconds * firstTicksPerSecond;
+    float secondTimeTicks = secondTimeSeconds * secondTicksPerSecond;
+    return getBoneTransformations(first, second, factor, firstTimeTicks, secondTimeTicks);
+}
 
 std::vector<glm::mat4> const &model::Model::getBoneTransformations(aiAnimation const *animation, float animationTimeTicks)
 {
-    processAnimationNode(animation, animationTimeTicks, m_scene->mRootNode, glm::mat4{1.0f}, m_boneMap, m_boneTransformations, m_tposeTransform, m_globalInverseTransorm);
+    assert(animationTimeTicks <= animation->mDuration);
+    processAnimationNode(getScene()->mRootNode, animation, animationTimeTicks, nullptr, 0, 0, glm::mat4{1.0f}, m_globalInverseTransorm, m_boneMap, m_boneTransformations, m_tposeTransform);
+    return m_boneTransformations;
+}
+std::vector<glm::mat4> const &model::Model::getBoneTransformations(aiAnimation const *first, aiAnimation const *second, float factor, float firstTimeTicks, float secondTimeTicks)
+{
+    assert(firstTimeTicks <= first->mDuration);
+    assert(secondTimeTicks <= second->mDuration);
+    processAnimationNode(getScene()->mRootNode, first, firstTimeTicks, second, secondTimeTicks, factor, glm::mat4{1.0f}, m_globalInverseTransorm, m_boneMap, m_boneTransformations, m_tposeTransform);
     return m_boneTransformations;
 }

@@ -8,24 +8,29 @@ layout(location = 5) in vec4 a_weights;
 
 out vec2 v_texCoord;
 
+const int MAX_BONES = 100;
+const int MAX_BONE_INFLUENCE = 4;
+
 uniform mat4 u_modelMat;
 uniform mat4 u_viewMat;
 uniform mat4 u_projectionMat;
-
-const int MAX_BONES = 100;
-const int MAX_BONE_INFLUENCE = 4;
 uniform mat4 u_boneMatrices[MAX_BONES];
+uniform bool u_animated;
 
 void main() {
     vec4 position = vec4(0);
-    for(int i = 0; i < MAX_BONE_INFLUENCE; ++i) {
-        if(a_boneIDs[i] == -1) continue;
-        if(a_boneIDs[i] >= MAX_BONES) {
-            position = a_position;
-            break;
+    if(u_animated) {
+        for(int i = 0; i < MAX_BONE_INFLUENCE; ++i) {
+            if(a_boneIDs[i] == -1) continue;
+            if(a_boneIDs[i] >= MAX_BONES) {
+                position = a_position;
+                break;
+            }
+            vec4 localPosition = u_boneMatrices[a_boneIDs[i]] * a_position;
+            position += localPosition * a_weights[i];
         }
-        vec4 localPosition = u_boneMatrices[a_boneIDs[i]] * a_position;
-        position += localPosition * a_weights[i];
+    } else {
+        position = a_position;
     }
 
     gl_Position = u_projectionMat * u_viewMat * u_modelMat * position;

@@ -76,12 +76,13 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
             glm::vec3 &orientation = ecs::get<Rotation>(entity).rotation;
 
             if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) { // FIXME: doesent rotate?
-                orientation.z -= controllable.sensitivity * (float) deltatime;
+                orientation.z -= controllable.sensitivity * 1000 * (float) deltatime;
             } if(glfwGetKey(controllable.window, GLFW_KEY_C) == GLFW_PRESS) {
-                orientation.z += controllable.sensitivity * (float) deltatime;
+                orientation.z += controllable.sensitivity * 1000 * (float) deltatime;
             } if(glfwGetKey(controllable.window, GLFW_KEY_X) == GLFW_PRESS) {
                 orientation.z = 0;
             }
+            std::cout << orientation.z << '\n';
 
             orientation.x -= offset.y;
             orientation.y += offset.x;
@@ -94,9 +95,9 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
         } else if(ecs::entityHasComponent<RotationQuaternion>(entity)) {
             glm::quat &orientation = ecs::get<RotationQuaternion>(entity).quat;
             if(glfwGetKey(controllable.window, GLFW_KEY_Z) == GLFW_PRESS) {
-                orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * (float) deltatime), glm::vec3{0, 0, 1});
+                orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * 1000 * (float) deltatime), glm::vec3{0, 0, 1});
             } if(glfwGetKey(controllable.window, GLFW_KEY_C) == GLFW_PRESS) {
-                orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * (float) deltatime), glm::vec3{0, 0, -1});
+                orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * 1000 * (float) deltatime), glm::vec3{0, 0, -1});
             } if(glfwGetKey(controllable.window, GLFW_KEY_X) == GLFW_PRESS) {
                 orientation = glm::quat{1, 0, 0, 0};
             }

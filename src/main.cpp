@@ -156,7 +156,6 @@ bool init(GLFWwindow** window) {
         std::cout << "ERROR: Failed to initialize OpenGL context\n";
         return false;
     }
-    std::cout << "Loaded OpenGL " << GLAD_VERSION_MAJOR(version) << '.' << GLAD_VERSION_MINOR(version) << " (compatibility)\n";
     glDebugMessageCallback(debugCallback, nullptr);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
