@@ -81,14 +81,95 @@ void drawText(ecs::Entity_t const &textEntity) {
     glm::mat4 matrix = text.matrix.value_or(glm::mat4{1.0f});
     text.font->drawText(text.text, text.position, text.size, color, matrix);
 }
+std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t const &entity)
+{
+    std::optional<std::vector<glm::mat4> const *> boneMatrices = {};
+    if(ecs::entityHasComponent<game::Animation>(entity) && ecs::get<game::Animation>(entity).boneMatrices != nullptr) {
+        boneMatrices.emplace(ecs::get<game::Animation>(entity).boneMatrices);
+    }
+
+    return boneMatrices;
+}
+void setDefaultTexture(std::string const &type, std::set<std::string> boundTextureTypes, std::map<std::string, opengl::Texture> const &defaultTextures, size_t &textureCounter, opengl::ShaderProgram const &shader)
+{
+    if(boundTextureTypes.find(type) == boundTextureTypes.end()) {
+        glUniform1i(shader.getUniform("u_material." + type), textureCounter);
+        opengl::Texture const *texture = defaultTextures.find(type) != defaultTextures.end() ? 
+            &defaultTextures.at(type) : 
+            &defaultTextures.at("");
+
+        assert(texture);
+        texture->bind(textureCounter);
+        ++textureCounter;
+    }
+}
+void setTextures(model::Mesh const &mesh, opengl::ShaderProgram const &shader, std::map<std::string, opengl::Texture> const &defaultTextures)
+{
+    size_t textureCount = 0;
+    std::set<std::string> boundTextureTypes;
+    for(auto const &texture : mesh.textures) {
+        glUniform1i(shader.getUniform("u_material." + texture.type), textureCount);
+        texture.bind(textureCount);
+        boundTextureTypes.insert(texture.type);
+        ++textureCount;
+    }
+    setDefaultTexture("diffuse",  boundTextureTypes, defaultTextures, textureCount, shader);
+    setDefaultTexture("normal",   boundTextureTypes, defaultTextures, textureCount, shader);
+    setDefaultTexture("rough",    boundTextureTypes, defaultTextures, textureCount, shader);
+    setDefaultTexture("specular", boundTextureTypes, defaultTextures, textureCount, shader);
+    setDefaultTexture("AO",       boundTextureTypes, defaultTextures, textureCount, shader);
+}
+
+void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
+{
+    glViewport(0, 0, camera.width, camera.height);
+    glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
+    glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glm::vec3 cameraPosition = glm::vec4{0, 0, 0, 1} * camera.viewMat;
+
+    for(ecs::Entity_t const &entity : entities) {
+        if(ecs::entityHasComponent<model::Model>(entity)) {
+            model::Model const &model = ecs::get<model::Model>(entity);
+            glm::mat4 modelMat = getModelMat(entity);
+            std::optional<std::vector<glm::mat4> const *> boneMatrices = getBoneMatrices(entity);
+            opengl::ShaderProgram &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
+            for(auto const &mesh : model.getMeshes()) {
+                if(!mesh.drawable.has_value()) continue;
+
+                Drawable const &drawable = mesh.drawable.value();
+
+                
+                shader.bind();
+                setTextures(mesh, shader, m_defaultTextures);
+                ecs::entityHasComponent<Color>(entity) ?
+                    glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
+                    glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
+                if(boneMatrices.has_value() != 0) {
+                    glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), boneMatrices.value()->size(), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
+                }
+                glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
+                glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
+                glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
+                glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
+                glUniform3fv(      shader.getUniform("u_cameraPosition"), 1, &cameraPosition.x);
+                glEnable(GL_DEPTH_TEST);
+                glEnable(GL_CULL_FACE);
+                draw(drawable);
+            }
+        }
+
+        if(ecs::entityHasComponent<game::Text>(entity)) drawText(entity);
+    } // for(auto &entity : entities) 
+}
 
 void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double deltatime)
 { // good luck reading it
     for(ecs::Entity_t const &cameraEntity : entities) {
         if(!ecs::entityHasComponent<Camera>(cameraEntity) || !ecs::entityHasComponent<RenderTarget>(cameraEntity)) continue;
-        Camera &camera = ecs::get<Camera>(cameraEntity);
-        RenderTarget &rtarget = ecs::get<RenderTarget>(cameraEntity);
 
+        game::Camera &camera = ecs::get<game::Camera>(cameraEntity);
+        game::RenderTarget &rtarget = ecs::get<game::RenderTarget>(cameraEntity);
         if(rtarget.prevWidth != camera.width || rtarget.prevHeight != camera.height) { // resize or initialize buffers / textures
         }
         if(rtarget.prevWidth == -1) { // initialize render target
@@ -98,52 +179,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         
         camera.projMat = getProjMat(cameraEntity);
         camera.viewMat = getViewMat(cameraEntity);
-        glm::vec3 cameraPosition = glm::vec4{0, 0, 0, 1} * camera.viewMat;
-        
-        glViewport(0, 0, camera.width, camera.height);
-        glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
-        glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        for(ecs::Entity_t const &entity : entities) {
-            if(ecs::entityHasComponent<model::Model>(entity)) {
-                model::Model const &model = ecs::get<model::Model>(entity);
-                glm::mat4 modelMat = getModelMat(entity);
-                std::optional<std::vector<glm::mat4> const *> boneMatrices = {};
-                if(ecs::entityHasComponent<Animation>(entity) && ecs::get<Animation>(entity).boneMatrices != nullptr) {
-                    boneMatrices.emplace(ecs::get<Animation>(entity).boneMatrices);
-                }
-                opengl::ShaderProgram &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
-                for(auto const &mesh : model.getMeshes()) {
-                    if(!mesh.drawable.has_value()) continue;
 
-                    Drawable const &drawable = mesh.drawable.value();
-    
-                    opengl::Texture const *diffuseTexture = nullptr;
-                    for(auto const &texture : mesh.textures) {
-                        if(texture.type == "diffuse") diffuseTexture = &texture;
-                    }
-                    if(!diffuseTexture) diffuseTexture = &m_notfound;
-
-                    shader.bind();
-                    diffuseTexture->bind(0);
-                    ecs::entityHasComponent<Color>(entity) ?
-                        glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
-                        glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
-                    if(boneMatrices.has_value() != 0) {
-                        glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), boneMatrices.value()->size(), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
-                    }
-                    glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
-                    glUniform1i(       shader.getUniform("u_texture"),        0);
-                    glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
-                    glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
-                    glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
-                    glUniform3fv(      shader.getUniform("u_cameraPosition"), 1, &cameraPosition.x);
-                    glEnable(GL_DEPTH_TEST);
-                    glEnable(GL_CULL_FACE);
-                    draw(drawable);
-                }
-            }
-            if(ecs::entityHasComponent<Text>(entity)) drawText(entity);
-        } // for(auto &entity : entities) 
+        render(entities, deltatime, camera, rtarget);
     } // for(auto &cameraEntity : entities)
 }

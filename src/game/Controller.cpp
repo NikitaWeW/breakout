@@ -82,7 +82,6 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
             } if(glfwGetKey(controllable.window, GLFW_KEY_X) == GLFW_PRESS) {
                 orientation.z = 0;
             }
-            std::cout << orientation.z << '\n';
 
             orientation.x -= offset.y;
             orientation.y += offset.x;

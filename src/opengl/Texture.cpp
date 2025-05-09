@@ -13,12 +13,12 @@ opengl::Texture::Texture(GLenum filter, GLenum wrap) noexcept
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 }
 
-opengl::Texture::Texture(std::string const &filepath, bool flip, bool srgb, GLenum filter, GLenum wrap, std::string const &type) : type(type)
+opengl::Texture::Texture(std::filesystem::path const &filepath, bool flip, bool srgb, GLenum filter, GLenum wrap, std::string const &type) : type(type)
 {
     stbi_set_flip_vertically_on_load(flip);
     int width = 0, height = 0;
     unsigned char *buffer = nullptr;
-    buffer = stbi_load(static_cast<char const *>(filepath.c_str()), &width, &height, nullptr, 4);
+    buffer = stbi_load(static_cast<char const *>(filepath.string().c_str()), &width, &height, nullptr, 4);
     if(!buffer) throw std::runtime_error{"failed to load a texture"};
 
     glGenTextures(1, &m_renderID);

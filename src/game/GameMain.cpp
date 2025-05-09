@@ -6,10 +6,111 @@
 #include "Controller.hpp"
 #include <chrono>
 #include <thread>
+#include <memory>
 #include "utils/Model.hpp"
 
 constexpr float CAMERA_SPEED = 10;
 
+using Textures_t = std::initializer_list<std::pair<std::filesystem::path, std::string>>;
+template <typename ...Components_t>
+ecs::Entity_t createModel(std::filesystem::path const &filepath, int flags = model::LoadFlags::LOAD_DRAWABLE | model::LoadFlags::FLIP_TEXTURES);
+void addTextures(ecs::Entity_t const &modelEntity, Textures_t const &textures, bool flipTextures = true);
+void registerEcs();
+ecs::Entity_t createCamera(GLFWwindow *window);
+void addShader(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader);
+void loop(GLFWwindow *window);
+
+void game::gameMain(GLFWwindow *window) 
+{ // TODO: blend animations, do something when animation.aianimation is nullptr
+    opengl::ShaderProgram colorTextureShader{"shaders/colorTexture", true};
+    opengl::ShaderProgram plainColorShader{"shaders/plainColor", true};
+    opengl::ShaderProgram textureShader{"shaders/colorTexture", true};
+    text::Font mainFont{"res/fonts/OpenSans-Light.ttf", basicLatin};
+    registerEcs();
+    glfwSetKeyCallback(window, game::key_callback);
+    auto cache = std::make_unique<Cache>();
+    globalCache = &*cache;
+    // ====================
+
+    ecs::Entity_t modelEntity = createModel<opengl::ShaderProgram>("res/models/suzanne.glb");
+    addTextures(modelEntity, {
+        {"res/materials/wood1/Wood049_1K-JPG_Color.jpg", "diffuse"},
+        {"res/materials/wood1/Wood049_1K-JPG_NormalGL.jpg", "normal"},
+        {"res/materials/wood1/Wood049_1K-JPG_Roughness.jpg", "rough"}
+    });
+    addShader(modelEntity, colorTextureShader);
+
+    // ecs::Entity_t cameraEntity = 
+    createCamera(window);
+    
+    loop(window);
+}
+
+template <typename... Components_t>
+ecs::Entity_t createModel(std::filesystem::path const &filepath, int flags)
+{
+    if(game::globalCache->modelCache.find(filepath) == game::globalCache->modelCache.end()) {
+        game::globalCache->modelCache.insert(std::make_pair(filepath, model::Model{filepath, flags}));
+    }
+    model::Model &model = game::globalCache->modelCache.at(filepath);
+
+    ecs::Entity_t entity = ecs::makeEntity<model::Model, Components_t...>();
+    ecs::get<model::Model>(entity) = model;
+
+    if(model.getScene()->HasAnimations()) {
+        game::Animation animation;
+
+        ecs::addComponent<game::Animation>(entity);
+        ecs::get<game::Animation>(entity) = animation;
+    }
+    ecs::getSystemManager().addEntity(entity);
+
+    return entity;
+}
+void loop(GLFWwindow *window)
+{
+    // ! all deltatime is in seconds
+    double deltatime = 0.0001;
+    std::thread fpsShower{
+        [&deltatime, &window]() {
+            while(!glfwWindowShouldClose(window)) {
+                glfwSetWindowTitle(window, ("breakout -- " + std::to_string((int) std::round(1 / deltatime)) + " FPS").c_str()); 
+                std::this_thread::sleep_for(std::chrono::milliseconds{500}); 
+            }
+        }  
+    }; 
+    fpsShower.detach();
+    while (!glfwWindowShouldClose(window))
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+        
+        ecs::getSystemManager().update(deltatime);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+        deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
+    }
+}
+void addTextures(ecs::Entity_t const &modelEntity, Textures_t const &textures, bool flipTextures)
+{
+    if(!ecs::entityHasComponent<model::Model>(modelEntity)) return;
+    model::Model &model = ecs::get<model::Model>(modelEntity);
+
+    for(auto const & [path, type] : textures) {
+        opengl::Texture *texture;
+        if(game::globalCache->textureCache.find(path) != game::globalCache->textureCache.end()) {
+            texture = &game::globalCache->textureCache.at(path);
+        } else {
+            game::globalCache->textureCache.insert({path, opengl::Texture{path, flipTextures, type == "diffuse", GL_NEAREST, GL_CLAMP_TO_EDGE, type}});
+            texture = &game::globalCache->textureCache.rbegin()->second;
+        }
+        assert(texture);
+        for(model::Mesh &mesh : model.getMeshes()) {
+            mesh.textures.push_back(*texture);
+            game::globalCache->textureCache.rbegin()->second.type = type;
+        }
+    }
+}
 void registerEcs()
 {
     using namespace game;
@@ -30,9 +131,9 @@ void registerEcs()
 ecs::Entity_t createCamera(GLFWwindow *window)
 {
     using namespace game;
-    ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, PerspectiveProjection, ControllableCamera, RenderTarget, Position, RotationQuaternion>(); // QuaternionRotation is also available
+    ecs::Entity_t cameraEntity = ecs::makeEntity<Camera, PerspectiveProjection, ControllableCamera, RenderTarget, Position, Rotation>();
     ecs::get<Position>(cameraEntity).position = {0, 0, 1};
-    // ecs::get<Rotation>(cameraEntity).rotation = {0, -90, 0};
+    ecs::get<Rotation>(cameraEntity).rotation = {0, -90, 0};
     ecs::get<ControllableCamera>(cameraEntity) = {
         window,
         CAMERA_SPEED,
@@ -43,74 +144,15 @@ ecs::Entity_t createCamera(GLFWwindow *window)
     ecs::get<RenderTarget>(cameraEntity).clearColor = {0.2, 0.2, 0.2, 1};
     ecs::get<Camera>(cameraEntity) = {};
 
+    ecs::getSystemManager().addEntity(cameraEntity);
     return cameraEntity;
 }
-template <typename ...Components_t>
-ecs::Entity_t createModel(std::filesystem::path const &filepath, int flags = model::LoadFlags::LOAD_DRAWABLE | model::LoadFlags::FLIP_TEXTURES)
+void addShader(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader)
 {
-    static std::map<std::filesystem::path, model::Model> modelCache;
-
-    if(modelCache.find(filepath) == modelCache.end()) {
-        modelCache.insert(std::make_pair(filepath, model::Model{filepath, flags}));
+    if(!ecs::entityHasComponent<opengl::ShaderProgram>(entity)) {
+        ecs::addComponent<opengl::ShaderProgram>(entity);
     }
-    model::Model &model = modelCache.at(filepath);
-
-    ecs::Entity_t entity = ecs::makeEntity<model::Model, Components_t...>();
-    ecs::get<model::Model>(entity) = model;
-
-    if(model.getScene()->HasAnimations()) {
-        game::Animation animation;
-
-        ecs::addComponent<game::Animation>(entity);
-        ecs::get<game::Animation>(entity) = animation;
-    }
-
-    return entity;
+    ecs::get<opengl::ShaderProgram>(entity) = shader;
 }
 
-void game::gameMain(GLFWwindow *window) 
-{ // TODO: blend animations, do something when animation.aianimation is nullptr
-    opengl::ShaderProgram colorTextureShader{"shaders/colorTexture", true};
-    opengl::ShaderProgram plainColorShader{"shaders/plainColor", true};
-    opengl::ShaderProgram textureShader{"shaders/colorTexture", true};
-    text::Font mainFont{"res/fonts/OpenSans-Light.ttf", basicLatin};
-    registerEcs();
-    // ====================
-
-    ecs::Entity_t modelEntity = createModel<opengl::ShaderProgram, Scale>("res/models/gorilla/Gorilla_hd.fbx");
-    ecs::getSystemManager().addEntity(modelEntity);
-    ecs::get<opengl::ShaderProgram>(modelEntity) = colorTextureShader;
-    ecs::get<Scale>(modelEntity).scale = glm::vec3{1};
-    ecs::get<game::Animation>(modelEntity).aianimation = ecs::get<model::Model>(modelEntity).getScene()->mAnimations[0];
-
-    ecs::Entity_t cameraEntity = createCamera(window);
-    ecs::getSystemManager().addEntity(cameraEntity);
-    
-    // ! all deltatime is in seconds
-    double deltatime = 0.0001;
-    std::thread test{[&](){
-        std::this_thread::sleep_for(std::chrono::seconds{2});
-        std::cout << "chaning animation from " << ecs::get<model::Model>(modelEntity).getScene()->mAnimations[0]->mName.C_Str() << " to " << ecs::get<model::Model>(modelEntity).getScene()->mAnimations[1]->mName.C_Str() << "...\n";
-        AnimationTransition transition;
-        transition.to.aianimation = ecs::get<model::Model>(modelEntity).getScene()->mAnimations[1];
-        const float changeTime = 0.5;
-        transition.factorPerSecond = 1.0 / changeTime;
-        transition.easeFunction = easeFunc::inExpo;
-        ecs::addComponent(modelEntity, transition);
-        std::this_thread::sleep_for(std::chrono::milliseconds{(int) (changeTime * 1000)});
-        std::cout << "should have changed!\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds{100});
-    }}; test.detach();
-        
-    std::thread fpsShower{[&deltatime, &window](){while(!glfwWindowShouldClose(window)) {glfwSetWindowTitle(window, ("breakout -- " + std::to_string((int) std::round(1 / deltatime)) + " FPS").c_str()); std::this_thread::sleep_for(std::chrono::milliseconds{500}); }}}; fpsShower.detach();
-    while (!glfwWindowShouldClose(window))
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-        
-        ecs::getSystemManager().update(deltatime);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-        deltatime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1.0E-6;
-    }
-}
+game::Cache *game::globalCache = nullptr;

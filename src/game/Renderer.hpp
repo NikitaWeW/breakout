@@ -59,12 +59,17 @@ namespace game
     class Renderer : public ecs::ISystem
     {
     private:
-        opengl::Texture m_notfound{"res/textures/notfound.png", false, true};
-        opengl::Texture m_whiteTexture{"res/textures/white.png", false, false};
+        std::map<std::string, opengl::Texture> m_defaultTextures{
+            {"", opengl::Texture{"res/textures/white.png", false, false}},
+            {"diffuse", opengl::Texture{"res/textures/notfound.png", false, true}},
+            {"normal", opengl::Texture{"res/textures/blue.png", false, false}}
+        };
         opengl::ShaderProgram m_screenShader{"shaders/hdrImage"};
         opengl::ShaderProgram m_defaultShader{"shaders/plainColor"};
+
+        void render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget);
     public:
         Renderer() = default;
         void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;
     };
-} // namespace game
+}
