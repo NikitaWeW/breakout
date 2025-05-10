@@ -179,13 +179,10 @@ namespace ecs
         template <typename System_t> void removeSystem();
         void update(double deltatime);
         /**
-         * adds the entity to the list of entities given to the systems.
+         * get the lists of entities
          */
-        void addEntity(Entity_t const &entity);
-        /**
-         * removes the entity from the list of entities given to the systems.
-         */
-        void removeEntity(Entity_t const &entity);
+        inline std::set<Entity_t> const &getEntities() const { return m_entities; }
+        inline std::set<Entity_t> &getEntities() { return m_entities; }
     };
 
     // singleton getters
@@ -377,16 +374,6 @@ inline void ecs::SystemManager::update(double deltatime)
     }
 }
 
-inline void ecs::SystemManager::addEntity(Entity_t const &entity)
-{
-    m_entities.insert(entity);
-}
-
-inline void ecs::SystemManager::removeEntity(Entity_t const &entity)
-{
-    m_entities.erase(entity);
-}
-
 template <typename Component_t> 
 inline bool ecs::entityHasComponent(Entity_t const &entity) 
 { 
@@ -396,7 +383,7 @@ template <typename Component_t>
 inline Component_t &ecs::get(Entity_t const &entity) 
 {
     return getComponentManager().getComponent<Component_t>(entity);
-};
+}
 template <typename ...Components_t>
 inline ecs::Entity_t ecs::makeEntity() 
 {

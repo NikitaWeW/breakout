@@ -6,9 +6,12 @@
 
 namespace game
 {
+    struct Window 
+    {
+        GLFWwindow *glfwwindow;
+    };
     struct ControllableCamera
     {
-        GLFWwindow *window;
         float speedUnitsPerSecond;
         float sensitivity;
         bool locked = true;

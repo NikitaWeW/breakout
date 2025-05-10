@@ -333,9 +333,9 @@ void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial *ma
 }
 model::Mesh model::Model::processMesh(aiMesh const *aimesh, int flags, aiScene const *scene)
 {
+    assert(aimesh->HasTextureCoords(0));
     assert(aimesh->HasNormals());
     assert(aimesh->HasTangentsAndBitangents());
-    assert(aimesh->HasTextureCoords(0));
 
     Mesh mesh{};
     mesh.data.emplace();

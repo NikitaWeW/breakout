@@ -55,6 +55,14 @@ namespace game
         unsigned mainFBOid = 0;
         int prevWidth = -1, prevHeight = -1;
     };
+    struct Name
+    {
+        std::string str;
+    };
+    struct RepeatTexture
+    {
+        unsigned num = 1;
+    };
 
     class Renderer : public ecs::ISystem
     {

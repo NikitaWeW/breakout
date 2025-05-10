@@ -1,0 +1,82 @@
+{
+    "name": "plane with props",
+    "entities": [
+        {
+            "type": "prop",
+            "path": "res/models/cube.obj",
+            "textures": [
+                {
+                    "type": "diffuse",
+                    "path": "res/materials/stoneTiles0/PavingStones127_1K-JPG_Color.jpg"
+                },
+                {
+                    "type": "normal",
+                    "path": "res/materials/stoneTiles0/PavingStones127_1K-JPG_NormalGL.jpg"
+                }
+            ],
+            "repeat textures": 5,
+            "flip textures": false,
+            "flip winding order": true,
+            "position": [0, 0, 0],
+            "scale": [100, 0.05, 100],
+            "rotation": [0, 0, 0]
+        },
+        {
+            "type": "prop",
+            "path": "res/models/suzanne.glb",
+            "textures": [
+                {
+                    "type": "diffuse",
+                    "path": "res/materials/wood1/Wood049_1K-JPG_Color.jpg"
+                },
+                {
+                    "type": "normal",
+                    "path": "res/materials/wood1/Wood049_1K-JPG_NormalGL.jpg"
+                }
+            ],
+            "position": [-4, 1, -3.5],
+            "scale": [1, 1, 1],
+            "rotation": [0, 0, 0]
+        },
+        {
+            "type": "prop",
+            "path": "res/models/cube.obj",
+            "textures": [
+                {
+                    "type": "diffuse",
+                    "path": "res/materials/wood2/Planks037A_1K-JPG_Color.jpg"
+                },
+                {
+                    "type": "normal",
+                    "path": "res/materials/wood2/Planks037A_1K-JPG_NormalGL.jpg"
+                }
+            ],
+            "position": [0, 1, -3],
+            "scale": [2, 2, 2],
+            "rotation": [0, 0, 0]
+        },
+        {
+            "type": "prop",
+            "path": "res/models/sphere.obj",
+            "textures": [
+                {
+                    "type": "diffuse",
+                    "path": "res/materials/fabric0/Fabric066_1K-JPG_Color.jpg"
+                },
+                {
+                    "type": "normal",
+                    "path": "res/materials/fabric0/Fabric066_1K-JPG_NormalGL.jpg"
+                }
+            ],
+            "position": [5, 1, -2],
+            "scale": [1, 1, 1],
+            "rotation": [0, 0, 0]
+        },
+        {
+            "type": "controllable camera",
+            "position": [0, 3, 6.5],
+            "rotation": [-25, -90, 0],
+            "speed": 10
+        }
+    ]
+}

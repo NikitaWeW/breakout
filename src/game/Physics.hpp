@@ -10,7 +10,7 @@ namespace game
     {
         glm::vec3 position;
     };
-    struct Rotation
+    struct OrientationEuler
     {
         glm::vec3 rotation;
     };
@@ -22,9 +22,13 @@ namespace game
     {
         glm::vec3 velocity;
     };
-    struct RotationQuaternion
+    struct OrientationQuaternion
     {
         glm::quat quat;
+    };
+    struct Direction
+    {
+        glm::vec3 dir;
     };
 
     class MovementSystem : public ecs::ISystem

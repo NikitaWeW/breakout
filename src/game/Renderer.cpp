@@ -18,12 +18,12 @@ glm::mat4 getProjMat(ecs::Entity_t const &entity)
 glm::mat4 getViewMat(ecs::Entity_t const &entity) 
 {
     using namespace game;
-    if(ecs::entityHasComponent<RotationQuaternion>(entity)) {
+    if(ecs::entityHasComponent<OrientationQuaternion>(entity)) {
         glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
-        return glm::translate(glm::mat4_cast(glm::normalize(ecs::get<RotationQuaternion>(entity).quat)), -position);
-    } else if(ecs::entityHasComponent<Rotation>(entity)) {
+        return glm::translate(glm::mat4_cast(glm::normalize(ecs::get<OrientationQuaternion>(entity).quat)), -position);
+    } else if(ecs::entityHasComponent<OrientationEuler>(entity)) {
         glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
-        glm::vec3 orientation = glm::radians(ecs::get<Rotation>(entity).rotation);
+        glm::vec3 orientation = glm::radians(ecs::get<OrientationEuler>(entity).rotation);
         glm::vec3 forward = glm::normalize(glm::vec3(
             cos(orientation.y) * cos(orientation.x),
             sin(orientation.x),
@@ -51,13 +51,13 @@ glm::mat4 getModelMat(ecs::Entity_t const &entity)
     if(ecs::entityHasComponent<game::Position>(entity)) {
         modelMat = glm::translate(modelMat, ecs::get<game::Position>(entity).position);
     }
-    if(ecs::entityHasComponent<game::Rotation>(entity)) {
-        glm::vec3 const &rotation = ecs::get<game::Rotation>(entity).rotation;
+    if(ecs::entityHasComponent<game::OrientationEuler>(entity)) {
+        glm::vec3 const &rotation = ecs::get<game::OrientationEuler>(entity).rotation;
         modelMat = glm::rotate<float>(modelMat, rotation.x, {1, 0, 0});
         modelMat = glm::rotate<float>(modelMat, rotation.y, {0, 1, 0});
         modelMat = glm::rotate<float>(modelMat, rotation.z, {0, 0, 1});
-    } else if(ecs::entityHasComponent<game::RotationQuaternion>(entity)) {
-        modelMat = modelMat * glm::mat4_cast(ecs::get<game::RotationQuaternion>(entity).quat);
+    } else if(ecs::entityHasComponent<game::OrientationQuaternion>(entity)) {
+        modelMat = modelMat * glm::mat4_cast(ecs::get<game::OrientationQuaternion>(entity).quat);
     }
     if(ecs::entityHasComponent<game::Scale>(entity)) {
         modelMat = glm::scale(modelMat, ecs::get<game::Scale>(entity).scale);
@@ -90,7 +90,7 @@ std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t cons
 
     return boneMatrices;
 }
-void setDefaultTexture(std::string const &type, std::set<std::string> boundTextureTypes, std::map<std::string, opengl::Texture> const &defaultTextures, size_t &textureCounter, opengl::ShaderProgram const &shader)
+void setDefaultTexture(std::string const &type, std::set<std::string> const &boundTextureTypes, std::map<std::string, opengl::Texture> const &defaultTextures, size_t &textureCounter, opengl::ShaderProgram const &shader)
 {
     if(boundTextureTypes.find(type) == boundTextureTypes.end()) {
         glUniform1i(shader.getUniform("u_material." + type), textureCounter);
@@ -118,6 +118,7 @@ void setTextures(model::Mesh const &mesh, opengl::ShaderProgram const &shader, s
     setDefaultTexture("rough",    boundTextureTypes, defaultTextures, textureCount, shader);
     setDefaultTexture("specular", boundTextureTypes, defaultTextures, textureCount, shader);
     setDefaultTexture("AO",       boundTextureTypes, defaultTextures, textureCount, shader);
+    setDefaultTexture("height",   boundTextureTypes, defaultTextures, textureCount, shader);
 }
 
 void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
@@ -147,6 +148,11 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                     glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
                 if(boneMatrices.has_value() != 0) {
                     glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), boneMatrices.value()->size(), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
+                }
+                if(ecs::entityHasComponent<RepeatTexture>(entity)) {
+                    glUniform1ui(shader.getUniform("u_texCoordMult"), ecs::get<RepeatTexture>(entity).num);
+                } else {
+                    glUniform1ui(shader.getUniform("u_texCoordMult"), 1);
                 }
                 glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
                 glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
