@@ -126,7 +126,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glm::vec3 cameraPosition = glm::vec4{0, 0, 0, 1} * camera.viewMat;
+    glm::vec3 cameraPosition = camera.viewMat * glm::vec4{0, 0, 0, 1};
 
     auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
     std::optional<opengl::UniformBuffer> lightsUBO = lightsUBOEntity != entities.end() ? ecs::get<LightUBO>(*lightsUBOEntity).ubo : std::optional<opengl::UniformBuffer>{};
@@ -158,7 +158,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                 ecs::entityHasComponent<Color>(entity) ?
                     glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
                     glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
-                if(boneMatrices.has_value() != 0) {
+                if(boneMatrices.has_value()) {
                     glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), boneMatrices.value()->size(), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
                 }
                 if(ecs::entityHasComponent<RepeatTexture>(entity)) {
