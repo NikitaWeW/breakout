@@ -49,7 +49,6 @@ void main()
     vec2 texCoords = fs_in.texCoords;
     vec3 viewDir = normalize(u_camPos - fs_in.fragPos);
     vec3 normal = normalize(fs_in.TBN * normalize(texture(u_material.normal, texCoords).rgb * 2.0 - 1.0));
-    normal = fs_in.TBN[2];
     vec3 fragPos = fs_in.fragPos;
 
     vec3 lightColor = vec3(0);
