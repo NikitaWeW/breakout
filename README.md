@@ -1,5 +1,6 @@
 # breakout
-my first game.
+~~my first game.~~
+right now im setting up an environment for the development (ecs, renderer, scenes, etc.)
 
 # building
 uses cmake:

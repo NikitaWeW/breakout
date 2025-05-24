@@ -1,4 +1,3 @@
-#include "GameMain.hpp"
 #include "glm/glm.hpp"
 #include "Renderer.hpp"
 #include "Physics.hpp"
@@ -8,13 +7,17 @@
 #include <thread>
 #include <memory>
 #include "utils/Model.hpp"
-#include "LevelParcer.hpp"
+#include "LevelParser.hpp"
 
 constexpr float CAMERA_SPEED = 10;
 
 void registerEcs();
-ecs::Entity_t createCamera(GLFWwindow *window);
-void loop(GLFWwindow *window);
+#define basicLatin text::charRange(L'!', L'~')
+
+namespace game
+{
+    void gameMain(GLFWwindow *mainWindow);
+} // namespace game
 
 void game::gameMain(GLFWwindow *window) 
 {
@@ -30,7 +33,7 @@ void game::gameMain(GLFWwindow *window)
     };
     ecs::getSystemManager().getEntities().insert(windowEntity);
 
-    LevelParcer parcer;
+    LevelParser parcer;
     auto sceneEntities = parcer.parceScene("res/scenes/plane.json");
     if(parcer.getErrorString() != "") {
         std::cout << "failed to load scene at \"res/scenes/plane.json\": " << parcer.getErrorString() << '\n';
@@ -92,4 +95,6 @@ void registerEcs()
     ecs::getComponentManager().registerComponent<AnimationTransition>();
     ecs::getComponentManager().registerComponent<RepeatTexture>();
     ecs::getComponentManager().registerComponent<Animation>();
+    ecs::getComponentManager().registerComponent<Direction>();
+    ecs::getComponentManager().registerComponent<MaterialProperties>();
 }

@@ -3,7 +3,6 @@
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
 #include "utils/ECS.hpp"
-#include "game/GameMain.hpp"
 #include <csignal>
 
 #ifdef NDEBUG
@@ -164,6 +163,11 @@ bool init(GLFWwindow** window) {
 
     return true;
 }
+
+namespace game
+{
+    void gameMain(GLFWwindow *mainWindow);
+} // namespace game
 
 int main(int argc, char **argv) {
     std::unique_ptr<Deallocator> cleanup{new Deallocator};

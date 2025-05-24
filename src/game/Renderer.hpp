@@ -62,22 +62,29 @@ namespace game
     {
         unsigned num = 1;
     };
+    struct MaterialProperties 
+    {
+        float shininess;
+    };
     struct LightUBO
     {
         opengl::UniformBuffer ubo;
     };
     struct Light {
         glm::vec3 color;
+    };
+    struct PointLight {
         float attenuation;
     };
-    struct PointLight {};
     struct DirectionalLight {};
     struct SpotLight {
         float innerConeAngle;
         float outerConeAngle;
+        float attenuation;
     };
     // TODO: implement
     struct AreaLight {
+        float attenuation;
         glm::vec2 scale;
     };
 
@@ -102,14 +109,14 @@ namespace game
     private:
     public:
         // lighting shader side light structs
-        struct PointLightShader
+        struct ShaderPointLight
         {
             glm::vec3 color;
             float attenuation;
             glm::vec3 position;
             float _pad0;
         };
-        struct DirLightShader
+        struct ShaderDirLight
         {
             glm::vec3 direction;
             float _pad0;
@@ -120,7 +127,10 @@ namespace game
         {
             unsigned numPointLights;
             glm::vec3 _pad0;
-            std::array<PointLightShader, MAX_LIGHTS> pointLights;
+            std::array<ShaderPointLight, MAX_LIGHTS> pointLights;
+            unsigned numDirLights;
+            glm::vec3 _pad1;
+            std::array<ShaderDirLight, MAX_LIGHTS> dirLights;
         };
     public:
         LightUpdater() = default;

@@ -6,7 +6,7 @@
 
 namespace game
 {
-    class LevelParcer
+    class LevelParser
     {
     private:
         std::string m_errorStr = "";
@@ -15,8 +15,8 @@ namespace game
         ecs::Entity_t createModel(std::filesystem::path const &filepath, bool flipWindingOrder, bool flipTextures);
         void addTexture(ecs::Entity_t const &modelEntity, std::filesystem::path const &path, std::string const &type, bool flipTextures);
     public:
-        LevelParcer() = default;
-        ~LevelParcer();
+        LevelParser() = default;
+        ~LevelParser();
         std::optional<std::vector<ecs::Entity_t>> parceScene(std::filesystem::path const &filepath);
         inline std::string const &getErrorString() const { return m_errorStr; }
         inline void clearError() { m_errorStr = ""; }

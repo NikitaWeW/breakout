@@ -23,7 +23,8 @@
             "flip winding order": true,
             "position": [0, 0, 0],
             "scale": [100, 0.05, 100],
-            "rotation": [0, 0, 0]
+            "rotation": [0, 0, 0],
+            "shininess": 128
         },
         {
             "type": "prop",
@@ -98,6 +99,11 @@
             "type": "point light",
             "position": [2, 3, -2],
             "attenuation": 0.1,
+            "color": [0.1, 1, 1]
+        },
+        {
+            "type": "directional light",
+            "direction": [1, -1, -1],
             "color": [1, 1, 1]
         }
     ]

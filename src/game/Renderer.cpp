@@ -166,6 +166,10 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                 } else {
                     glUniform1ui(shader.getUniform("u_texCoordMult"), 1);
                 }
+                if(ecs::entityHasComponent<MaterialProperties>(entity)) {
+                    MaterialProperties &materialProperties = ecs::get<MaterialProperties>(entity);
+                    glUniform1f(shader.getUniform("u_material.shininess"), materialProperties.shininess);
+                }
                 glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
                 glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
                 glUniformMatrix4fv(shader.getUniform("u_normalMat"),      1, GL_FALSE, &glm::transpose(glm::inverse(modelMat))[0][0]);
@@ -215,21 +219,30 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
         }
 
         storage.numPointLights = 0;
+        storage.numDirLights = 0;
         for(ecs::Entity_t const &lightEntity : entities) {
             if(!ecs::entityHasComponent<Light>(lightEntity)) continue;
             Light &light = ecs::get<Light>(lightEntity);
 
             if(ecs::entityHasComponent<PointLight>(lightEntity)) {
-                PointLightShader &shaderPointLight = storage.pointLights[0];
-                // PointLight &pointLight = ecs::get<PointLight>(lightEntity);
+                ShaderPointLight &shaderPointLight = storage.pointLights[storage.numPointLights];
+                PointLight &pointLight = ecs::get<PointLight>(lightEntity);
 
-                shaderPointLight.attenuation = light.attenuation;
+                shaderPointLight.attenuation = pointLight.attenuation;
                 shaderPointLight.color = light.color;
                 shaderPointLight.position = ecs::entityHasComponent<Position>(lightEntity) ?
                     ecs::get<Position>(lightEntity).position :
                     glm::vec3{0};
                 ++storage.numPointLights;
             } else if(ecs::entityHasComponent<DirectionalLight>(lightEntity)) {
+                ShaderDirLight &shaderDirLight = storage.dirLights[storage.numDirLights];
+                // DirectionalLight &dirLight = ecs::get<DirectionalLight>(lightEntity);
+
+                shaderDirLight.direction = ecs::entityHasComponent<Direction>(lightEntity) ?
+                    ecs::get<Direction>(lightEntity).dir :
+                    glm::vec3{0, 0, -1};
+                shaderDirLight.color = light.color;
+                ++storage.numDirLights;
             }
         }
         
