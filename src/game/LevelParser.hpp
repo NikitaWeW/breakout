@@ -17,7 +17,7 @@ namespace game
     public:
         LevelParser() = default;
         ~LevelParser();
-        std::optional<std::vector<ecs::Entity_t>> parceScene(std::filesystem::path const &filepath);
+        std::optional<std::vector<ecs::Entity_t>> parseScene(std::filesystem::path const &filepath);
         inline std::string const &getErrorString() const { return m_errorStr; }
         inline void clearError() { m_errorStr = ""; }
     };

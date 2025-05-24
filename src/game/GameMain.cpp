@@ -34,7 +34,7 @@ void game::gameMain(GLFWwindow *window)
     ecs::getSystemManager().getEntities().insert(windowEntity);
 
     LevelParser parcer;
-    auto sceneEntities = parcer.parceScene("res/scenes/plane.json");
+    auto sceneEntities = parcer.parseScene("res/scenes/plane.json");
     if(parcer.getErrorString() != "") {
         std::cout << "failed to load scene at \"res/scenes/plane.json\": " << parcer.getErrorString() << '\n';
     }

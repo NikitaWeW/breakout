@@ -70,7 +70,7 @@ GLFWwindow * findWindow() {
     }
 }
 
-std::optional<std::vector<ecs::Entity_t>> game::LevelParser::parceScene(std::filesystem::path const &filepath)
+std::optional<std::vector<ecs::Entity_t>> game::LevelParser::parseScene(std::filesystem::path const &filepath)
 {
     assert(filepath.extension().string() == ".json");
     std::ifstream filestream{filepath};
@@ -186,7 +186,7 @@ std::optional<std::vector<ecs::Entity_t>> game::LevelParser::parceScene(std::fil
                     ecs::addComponent<game::Direction>(entity, {glm::normalize(static_cast<glm::vec3>(getVecFromJSON(jsonentity["direction"])))});
                 }
             } else {
-                m_errorStr.append("warn: uncrecognised type: " + type);
+                m_errorStr.append("warn: unrecognized type: " + type);
             }
             result.value().push_back(entity);
         }
