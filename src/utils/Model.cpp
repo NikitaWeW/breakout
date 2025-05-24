@@ -324,7 +324,7 @@ void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial *ma
         if(!alreadyLoaded) {
             std::string filepath{textureDirectory.string() + '/' + str.C_Str()};
             std::replace_if(filepath.begin(), filepath.end(), [](char c){ return c == '\\'; }, '/');
-            opengl::Texture texture{filepath, (flags & model::FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, GL_NEAREST, GL_CLAMP_TO_EDGE, typeName};
+            opengl::Texture texture{filepath, (flags & model::FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, typeName};
             texture.type = typeName;
             textures.push_back(texture);
             loadedTextureCache.push_back(std::make_pair(filepath, texture));

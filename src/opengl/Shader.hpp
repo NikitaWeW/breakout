@@ -28,6 +28,8 @@ namespace opengl
         bool collectShaders(std::string const &directory) noexcept;
         bool compileShaders() noexcept;
         int getUniform(std::string const &name) const noexcept;
+        int getUniformBlock(std::string const &name) const noexcept;
+        int getStorageBlock(std::string const &name) const noexcept;
         void bind(unsigned slot = 0) const noexcept;
 
         inline std::vector<Shader> const &getShaders() const noexcept { return m_shaders; }

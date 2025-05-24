@@ -6,8 +6,9 @@ namespace opengl
 {
     class UniformBuffer : public Object 
     {
+    public:
         UniformBuffer() = default;
-        UniformBuffer(size_t size) noexcept;
+        UniformBuffer(int) noexcept;
         ~UniformBuffer();
 
         void bind(unsigned slot = 0) const noexcept;
@@ -16,8 +17,9 @@ namespace opengl
 
     class SSBO : public Object
     {
+    public:
         SSBO() = default;
-        SSBO(size_t size) noexcept;
+        SSBO(int) noexcept;
         ~SSBO();
 
         void bind(unsigned slot = 0) const noexcept;

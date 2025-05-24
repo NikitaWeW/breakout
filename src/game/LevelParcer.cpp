@@ -35,7 +35,7 @@ void game::LevelParcer::addTexture(ecs::Entity_t const &modelEntity, std::filesy
     model::Model &model = ecs::get<model::Model>(modelEntity);
 
     if(m_textureCache.find(path) == m_textureCache.end()) {
-        m_textureCache.insert({path, opengl::Texture{path, flipTextures, type == "diffuse", GL_LINEAR, GL_REPEAT, type}});
+        m_textureCache.insert({path, opengl::Texture{path, flipTextures, type == "diffuse", type}});
     }
     opengl::Texture &texture = m_textureCache.at(path);
     texture.type = type;
@@ -151,6 +151,15 @@ std::optional<std::vector<ecs::Entity_t>> game::LevelParcer::parceScene(std::fil
                 }
                 if(jsonentity.find("rotation") != jsonentity.end()) {
                     ecs::addComponent<game::OrientationEuler>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["rotation"]))});
+                }
+            } else if(type == "point light") {
+                entity = ecs::makeEntity<Light, PointLight>();
+                ecs::get<Light>(entity) = {
+                    .color = jsonentity.find("color") != jsonentity.end() && jsonentity.at("color").is_array() ? static_cast<glm::vec3>(getVecFromJSON(jsonentity["color"])) : glm::vec3{1},
+                    .attenuation = jsonentity.find("attenuation") != jsonentity.end() && jsonentity.at("attenuation").is_number() ? jsonentity.at("attenuation").get<float>() : 10.0f
+                };
+                if(jsonentity.find("position") != jsonentity.end()) {
+                    ecs::addComponent<game::Position>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["position"]))});
                 }
             } else {
                 m_errorStr.append("uncrecognised type: " + type);

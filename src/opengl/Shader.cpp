@@ -146,4 +146,16 @@ int opengl::ShaderProgram::getUniform(std::string const &name) const noexcept
     return location;
 }
 
+int opengl::ShaderProgram::getUniformBlock(std::string const &name) const noexcept
+{
+    int location = glGetUniformBlockIndex(m_renderID, name.c_str());
+    return location;
+}
+
+int opengl::ShaderProgram::getStorageBlock(std::string const &name) const noexcept
+{
+    int location = glGetProgramResourceIndex(m_renderID, GL_SHADER_STORAGE_BLOCK, name.c_str());
+    return location;
+}
+
 void opengl::ShaderProgram::bind(unsigned slot) const noexcept { glUseProgram(m_renderID); }

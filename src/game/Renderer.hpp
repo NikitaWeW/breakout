@@ -6,11 +6,14 @@
 #include "glm/glm.hpp"
 #include "opengl/IndexBuffer.hpp"
 #include "utils/Text.hpp"
+#include "opengl/ShaderStorage.hpp"
 
 #include <optional>
 
 namespace game
 {
+    constexpr size_t MAX_LIGHTS = 100;
+
     struct Drawable
     {
         opengl::VertexBuffer vb;
@@ -55,13 +58,27 @@ namespace game
         unsigned mainFBOid = 0;
         int prevWidth = -1, prevHeight = -1;
     };
-    struct Name
-    {
-        std::string str;
-    };
     struct RepeatTexture
     {
         unsigned num = 1;
+    };
+    struct LightUBO
+    {
+        opengl::UniformBuffer ubo;
+    };
+    struct Light {
+        glm::vec3 color;
+        float attenuation;
+    };
+    struct PointLight {};
+    struct DirectionalLight {};
+    struct SpotLight {
+        float innerConeAngle;
+        float outerConeAngle;
+    };
+    // TODO: implement
+    struct AreaLight {
+        glm::vec2 scale;
     };
 
     class Renderer : public ecs::ISystem
@@ -78,6 +95,35 @@ namespace game
         void render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget);
     public:
         Renderer() = default;
+        void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;
+    };
+    class LightUpdater : public ecs::ISystem
+    {
+    private:
+    public:
+        // lighting shader side light structs
+        struct PointLightShader
+        {
+            glm::vec3 color;
+            float attenuation;
+            glm::vec3 position;
+            float _pad0;
+        };
+        struct DirLightShader
+        {
+            glm::vec3 direction;
+            float _pad0;
+            glm::vec3 color;
+            float _pad1;
+        };
+        struct LightStorage
+        {
+            unsigned numPointLights;
+            glm::vec3 _pad0;
+            std::array<PointLightShader, MAX_LIGHTS> pointLights;
+        };
+    public:
+        LightUpdater() = default;
         void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;
     };
 }

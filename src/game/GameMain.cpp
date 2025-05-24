@@ -17,7 +17,7 @@ ecs::Entity_t createCamera(GLFWwindow *window);
 void loop(GLFWwindow *window);
 
 void game::gameMain(GLFWwindow *window) 
-{ // TODO: blend animations, do something when animation.aianimation is nullptr
+{
     opengl::ShaderProgram propShader{"shaders/prop", true};
     text::Font mainFont{"res/fonts/OpenSans-Light.ttf", basicLatin};
     registerEcs();
@@ -31,9 +31,9 @@ void game::gameMain(GLFWwindow *window)
     ecs::getSystemManager().getEntities().insert(windowEntity);
 
     LevelParcer parcer;
-    auto sceneEntities = parcer.parceScene("res/levels-scenes/plane.json");
+    auto sceneEntities = parcer.parceScene("res/scenes/plane.json");
     if(parcer.getErrorString() != "") {
-        std::cout << "failed to load scene at \"res/levels-scenes/plane.json\": " << parcer.getErrorString() << '\n';
+        std::cout << "failed to load scene at \"res/scenes/plane.json\": " << parcer.getErrorString() << '\n';
     }
     if(sceneEntities.has_value()) {
         for(ecs::Entity_t const &entity : sceneEntities.value()) {
@@ -43,6 +43,10 @@ void game::gameMain(GLFWwindow *window)
             ecs::getSystemManager().getEntities().insert(entity);
         }
     }
+    ecs::Entity_t lightStorageEntity = ecs::makeEntity<LightUBO, LightUpdater::LightStorage>();
+    ecs::get<LightUBO>(lightStorageEntity) = {};
+    ecs::get<LightUpdater::LightStorage>(lightStorageEntity) = {};
+    ecs::getSystemManager().getEntities().insert(lightStorageEntity);
     
     // ! all deltatime is in seconds
     double deltatime = 0.0001;
@@ -73,6 +77,7 @@ void registerEcs()
     ecs::getSystemManager().registerSystem<Renderer>();
     ecs::getSystemManager().registerSystem<CameraController>();
     ecs::getSystemManager().registerSystem<Animator>();
+    ecs::getSystemManager().registerSystem<LightUpdater>();
     // ====================
     ecs::getComponentManager().registerComponent<Color>();
     ecs::getComponentManager().registerComponent<Position>();

@@ -5,7 +5,6 @@
 #include "game/Physics.hpp"
 #include "utils/Model.hpp"
 
-#define NUM_DEPTH_PEEL_PASSES 4
 
 glm::mat4 getProjMat(ecs::Entity_t const &entity) 
 {
@@ -129,20 +128,33 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glm::vec3 cameraPosition = glm::vec4{0, 0, 0, 1} * camera.viewMat;
 
+    auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
+    std::optional<opengl::UniformBuffer> lightsUBO = lightsUBOEntity != entities.end() ? ecs::get<LightUBO>(*lightsUBOEntity).ubo : std::optional<opengl::UniformBuffer>{};
+
+
     for(ecs::Entity_t const &entity : entities) {
         if(ecs::entityHasComponent<model::Model>(entity)) {
             model::Model const &model = ecs::get<model::Model>(entity);
             glm::mat4 modelMat = getModelMat(entity);
             std::optional<std::vector<glm::mat4> const *> boneMatrices = getBoneMatrices(entity);
             opengl::ShaderProgram &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
+
             for(auto const &mesh : model.getMeshes()) {
                 if(!mesh.drawable.has_value()) continue;
 
                 Drawable const &drawable = mesh.drawable.value();
-
                 
                 shader.bind();
                 setTextures(mesh, shader, m_defaultTextures);
+
+                if(lightsUBO.has_value()) {
+                    int location = shader.getUniformBlock("u_lights");
+                    if(location) {
+                        lightsUBO.value().bind();
+                        glUniformBlockBinding(shader.getRenderID(), location, 0);
+                    }
+                }
+                
                 ecs::entityHasComponent<Color>(entity) ?
                     glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
                     glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
@@ -156,6 +168,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                 }
                 glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
                 glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
+                glUniformMatrix4fv(shader.getUniform("u_normalMat"),      1, GL_FALSE, &glm::transpose(glm::inverse(modelMat))[0][0]);
                 glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
                 glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
                 glUniform3fv(      shader.getUniform("u_cameraPosition"), 1, &cameraPosition.x);
@@ -170,7 +183,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
 }
 
 void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double deltatime)
-{ // good luck reading it
+{
     for(ecs::Entity_t const &cameraEntity : entities) {
         if(!ecs::entityHasComponent<Camera>(cameraEntity) || !ecs::entityHasComponent<RenderTarget>(cameraEntity)) continue;
 
@@ -188,4 +201,39 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
 
         render(entities, deltatime, camera, rtarget);
     } // for(auto &cameraEntity : entities)
+}
+
+void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double deltatime)
+{
+    for(ecs::Entity_t const &storageEntity : entities) {
+        if(!ecs::entityHasComponent<LightStorage>(storageEntity) || !ecs::entityHasComponent<LightUBO>(storageEntity)) continue;
+        LightStorage &storage = ecs::get<LightStorage>(storageEntity);
+        opengl::UniformBuffer &ubo = ecs::get<LightUBO>(storageEntity).ubo;
+        if(ubo.getRenderID() == 0) {
+            ubo = opengl::UniformBuffer{0}; // dummy argument
+            ubo.bindingPoint(0);
+        }
+
+        storage.numPointLights = 0;
+        for(ecs::Entity_t const &lightEntity : entities) {
+            if(!ecs::entityHasComponent<Light>(lightEntity)) continue;
+            Light &light = ecs::get<Light>(lightEntity);
+
+            if(ecs::entityHasComponent<PointLight>(lightEntity)) {
+                PointLightShader &shaderPointLight = storage.pointLights[0];
+                // PointLight &pointLight = ecs::get<PointLight>(lightEntity);
+
+                shaderPointLight.attenuation = light.attenuation;
+                shaderPointLight.color = light.color;
+                shaderPointLight.position = ecs::entityHasComponent<Position>(lightEntity) ?
+                    ecs::get<Position>(lightEntity).position :
+                    glm::vec3{0};
+                ++storage.numPointLights;
+            } else if(ecs::entityHasComponent<DirectionalLight>(lightEntity)) {
+            }
+        }
+        
+        ubo.bind();
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(storage), &storage, GL_DYNAMIC_DRAW);
+    }
 }
