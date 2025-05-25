@@ -9,6 +9,7 @@
 glm::mat4 getProjMat(ecs::Entity_t const &entity) 
 {
     game::Camera &camera = ecs::get<game::Camera>(entity);
+    assert(camera.width > 0 && camera.height > 0);
     if(ecs::entityHasComponent<game::PerspectiveProjection>(entity))
         return glm::perspective<float>(glm::radians(camera.fov), (float) camera.width / camera.height, camera.znear, camera.zfar);
     else
@@ -126,7 +127,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glm::vec3 cameraPosition = camera.viewMat * glm::vec4{0, 0, 0, 1};
+    glm::vec3 cameraPosition = glm::vec3{glm::inverse(camera.viewMat) * glm::vec4{0, 0, 0, 1}};
 
     auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
     std::optional<opengl::UniformBuffer> lightsUBO = lightsUBOEntity != entities.end() ? ecs::get<LightUBO>(*lightsUBOEntity).ubo : std::optional<opengl::UniformBuffer>{};
@@ -149,7 +150,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
 
                 if(lightsUBO.has_value()) {
                     int location = shader.getUniformBlock("u_lights");
-                    if(location) {
+                    if(location >= 0) {
                         lightsUBO.value().bind();
                         glUniformBlockBinding(shader.getRenderID(), location, 0);
                     }
@@ -175,7 +176,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                 glUniformMatrix4fv(shader.getUniform("u_normalMat"),      1, GL_FALSE, &glm::transpose(glm::inverse(modelMat))[0][0]);
                 glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
                 glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
-                glUniform3fv(      shader.getUniform("u_cameraPosition"), 1, &cameraPosition.x);
+                glUniform3fv(      shader.getUniform("u_camPos"), 1, &cameraPosition.x);
                 glEnable(GL_DEPTH_TEST);
                 glEnable(GL_CULL_FACE);
                 draw(drawable);
@@ -220,6 +221,7 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
 
         storage.numPointLights = 0;
         storage.numDirLights = 0;
+        storage.numSpotLights = 0;
         for(ecs::Entity_t const &lightEntity : entities) {
             if(!ecs::entityHasComponent<Light>(lightEntity)) continue;
             Light &light = ecs::get<Light>(lightEntity);
@@ -243,6 +245,24 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
                     glm::vec3{0, 0, -1};
                 shaderDirLight.color = light.color;
                 ++storage.numDirLights;
+            } else if(ecs::entityHasComponent<SpotLight>(lightEntity)) {
+                ShaderSpotLight &shaderSpotLight = storage.spotLights[storage.numSpotLights];
+                SpotLight &spotLight = ecs::get<SpotLight>(lightEntity);
+
+                shaderSpotLight = {
+                    .position = ecs::entityHasComponent<Position>(lightEntity) ?
+                        ecs::get<Position>(lightEntity).position :
+                        glm::vec3{0, 0, -1},
+                    .innerConeAngle = glm::cos(glm::radians(spotLight.innerConeAngle)),
+                    .direction = ecs::entityHasComponent<Direction>(lightEntity) ?
+                        ecs::get<Direction>(lightEntity).dir :
+                        glm::vec3{0, 0, -1},
+                    .outerConeAngle = glm::cos(glm::radians(spotLight.outerConeAngle)),
+                    .attenuation = spotLight.attenuation,
+                    .color = light.color,
+                };
+                shaderSpotLight.color = light.color;
+                ++storage.numSpotLights;
             }
         }
         

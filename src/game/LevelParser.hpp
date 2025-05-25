@@ -6,6 +6,11 @@
 
 namespace game
 {
+    struct Scene
+    {
+        std::set<ecs::Entity_t> containedEntities;
+        std::filesystem::path filePath;
+    };
     class LevelParser
     {
     private:
@@ -17,10 +22,13 @@ namespace game
     public:
         LevelParser() = default;
         ~LevelParser();
-        std::optional<std::vector<ecs::Entity_t>> parseScene(std::filesystem::path const &filepath);
+        Scene parseScene(std::filesystem::path const &filepath);
         inline std::string const &getErrorString() const { return m_errorStr; }
         inline void clearError() { m_errorStr = ""; }
     };
-    
+    inline LevelParser &getLevelParser() {
+        static LevelParser *parser = new LevelParser;
+        return *parser;
+    }
 } // namespace game
 

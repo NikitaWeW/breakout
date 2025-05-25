@@ -70,18 +70,18 @@ GLFWwindow * findWindow() {
     }
 }
 
-std::optional<std::vector<ecs::Entity_t>> game::LevelParser::parseScene(std::filesystem::path const &filepath)
+game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
 {
     assert(filepath.extension().string() == ".json");
     std::ifstream filestream{filepath};
     if(!filestream) {
         m_errorStr = "failed to open file";
     }
-    std::optional<std::vector<ecs::Entity_t>> result;
+    Scene scene{};
+    scene.filePath = filepath;
     
     json data = json::parse(filestream);
     if(data.contains("entities")) {
-        result.emplace();
         json jsonentities = data["entities"];
         for(auto entityIter = jsonentities.cbegin(); entityIter != jsonentities.cend(); ++entityIter) {
             json const &jsonentity = entityIter.value();
@@ -185,11 +185,27 @@ std::optional<std::vector<ecs::Entity_t>> game::LevelParser::parseScene(std::fil
                 if(jsonentity.contains("direction")) {
                     ecs::addComponent<game::Direction>(entity, {glm::normalize(static_cast<glm::vec3>(getVecFromJSON(jsonentity["direction"])))});
                 }
+            } else if(type == "spot light") {
+                entity = ecs::makeEntity<game::Light, game::SpotLight>();
+                ecs::get<Light>(entity) = {
+                    .color = jsonentity.contains("color") && jsonentity.at("color").is_array() ? static_cast<glm::vec3>(getVecFromJSON(jsonentity["color"])) : glm::vec3{1},
+                };
+                ecs::get<SpotLight>(entity) = {
+                    .innerConeAngle = jsonentity.contains("inner cone angle") && jsonentity.at("inner cone angle").is_number() ? jsonentity.at("inner cone angle").get<float>() : 35.0f,
+                    .outerConeAngle = jsonentity.contains("outer cone angle") && jsonentity.at("outer cone angle").is_number() ? jsonentity.at("outer cone angle").get<float>() : 45.0f,
+                    .attenuation = jsonentity.contains("attenuation") && jsonentity.at("attenuation").is_number() ? jsonentity.at("attenuation").get<float>() : 10.0f
+                };
+                if(jsonentity.contains("position")) {
+                    ecs::addComponent<game::Position>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["position"]))});
+                }
+                if(jsonentity.contains("direction")) {
+                    ecs::addComponent<game::Direction>(entity, {glm::normalize(static_cast<glm::vec3>(getVecFromJSON(jsonentity["direction"])))});
+                }
             } else {
                 m_errorStr.append("warn: unrecognized type: " + type);
             }
-            result.value().push_back(entity);
+            scene.containedEntities.insert(entity);
         }
     }
-    return result;
+    return scene;
 }

@@ -207,7 +207,7 @@ namespace ecs
 
 
 // ===============
-// Implimentation
+// Implementation
 // ===============
 
 inline ecs::EntityManager::EntityManager()
@@ -227,7 +227,7 @@ inline ecs::Entity_t ecs::EntityManager::createEntity(Signature_t signature)
 }
 inline void ecs::EntityManager::destroyEntity(Entity_t const &entity)
 {
-    assert(entity <= MAX_ENTITIES && "entity out of range");
+    assert(entity < MAX_ENTITIES && "entity out of range");
     --m_livingEntitiesCount;
     m_availableEntityIDs.push(entity);
 
@@ -235,18 +235,18 @@ inline void ecs::EntityManager::destroyEntity(Entity_t const &entity)
 }
 inline void ecs::EntityManager::setSignature(Entity_t const &entity, Signature_t signature)
 {
-    assert(entity <= MAX_ENTITIES && "entity out of range");
+    assert(entity < MAX_ENTITIES && "entity out of range");
     m_signatures[entity] = signature;
 }
 inline ecs::Signature_t const &ecs::EntityManager::getSignature(Entity_t const &entity) const
 {
-    assert(entity <= MAX_ENTITIES && "entity out of range");
+    assert(entity < MAX_ENTITIES && "entity out of range");
     return m_signatures.at(entity); 
 }
 
 inline ecs::Signature_t &ecs::EntityManager::getSignature(Entity_t const &entity)
 {
-    assert(entity <= MAX_ENTITIES && "entity out of range");
+    assert(entity < MAX_ENTITIES && "entity out of range");
     return m_signatures.at(entity);
 }
 
@@ -272,7 +272,7 @@ inline void ecs::ComponentArray<Component_t>::remove(Entity_t const &entity)
     m_components[removedEntityIndex] = m_components[lastEntityIndex];
 
     Entity_t lastEntity = m_indexToEntity.at(lastEntityIndex);
-    m_entityToIndex.at(lastEntityIndex) = removedEntityIndex;
+    m_entityToIndex.at(lastEntity) = removedEntityIndex;
     m_indexToEntity.at(removedEntityIndex) = lastEntity;
     m_components.pop_back();
 }
@@ -334,7 +334,7 @@ inline Component_t &ecs::ComponentManager::getComponent(Entity_t const &entity)
 template <typename Component_t>
 inline Component_t const &ecs::ComponentManager::getComponent(Entity_t const &entity) const
 {
-    getComponentArray<Component_t>()->getComponent(entity);
+    return getComponentArray<Component_t>()->getComponent(entity);
 }
 template <typename Component_t>
 inline std::shared_ptr<ecs::ComponentArray<Component_t>> ecs::ComponentManager::getComponentArray()

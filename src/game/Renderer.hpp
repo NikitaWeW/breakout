@@ -123,6 +123,17 @@ namespace game
             glm::vec3 color;
             float _pad1;
         };
+        struct ShaderSpotLight
+        {
+            glm::vec3 position;
+            float innerConeAngle;
+            glm::vec3 direction;
+            float outerConeAngle;
+            glm::vec3 _pad1;
+            float attenuation;
+            glm::vec3 color;
+            float _pad0;
+        };
         struct LightStorage
         {
             unsigned numPointLights;
@@ -131,6 +142,9 @@ namespace game
             unsigned numDirLights;
             glm::vec3 _pad1;
             std::array<ShaderDirLight, MAX_LIGHTS> dirLights;
+            unsigned numSpotLights;
+            glm::vec3 _pad2;
+            std::array<ShaderSpotLight, MAX_LIGHTS> spotLights;
         };
     public:
         LightUpdater() = default;

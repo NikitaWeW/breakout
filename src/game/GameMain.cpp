@@ -19,38 +19,57 @@ namespace game
     void gameMain(GLFWwindow *mainWindow);
 } // namespace game
 
+ecs::Entity_t makeSceneEntity(std::filesystem::path const &filepath, opengl::ShaderProgram const *modelShader = nullptr)
+{
+    ecs::Entity_t result = ecs::makeEntity<game::Scene>();
+    game::Scene &scene = ecs::get<game::Scene>(result);
+    scene = game::getLevelParser().parseScene(filepath);
+    if(scene.containedEntities.size() == 0) {
+        std::cout << "failed to load scene \"" << filepath << "\"!\n";
+    }
+    if(game::getLevelParser().getErrorString() != "") {
+        std::cout << game::getLevelParser().getErrorString() << '\n';
+    }
+    for(ecs::Entity_t const &entity : scene.containedEntities) {
+        if(modelShader) {
+            if(ecs::entityHasComponent<model::Model>(entity)) {
+                ecs::addComponent(entity, *modelShader);
+            }
+        }
+        ecs::getSystemManager().getEntities().insert(entity);
+    }
+    return result;
+}
+ecs::Entity_t makeWindowEntity(GLFWwindow *window) 
+{
+    ecs::Entity_t windowEntity = ecs::makeEntity<game::Window>();
+    ecs::get<game::Window>(windowEntity) = {
+        .glfwwindow = window
+    };
+    return windowEntity;
+}
+ecs::Entity_t makeLightStorageEntity() 
+{
+    using namespace game;
+    ecs::Entity_t lightStorageEntity = ecs::makeEntity<LightUBO, LightUpdater::LightStorage>();
+    ecs::get<LightUBO>(lightStorageEntity) = {};
+    ecs::get<LightUpdater::LightStorage>(lightStorageEntity) = {};
+    return lightStorageEntity;
+}
+
 void game::gameMain(GLFWwindow *window) 
 {
     opengl::ShaderProgram propShader{"shaders/prop", true};
     text::Font mainFont{"res/fonts/OpenSans-Light.ttf", basicLatin};
     registerEcs();
     glfwSetKeyCallback(window, game::key_callback);
+
+    ecs::getSystemManager().getEntities().insert(makeWindowEntity(window));
+    ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json", &propShader));
+    ecs::getSystemManager().getEntities().insert(makeLightStorageEntity());
+    
     // ====================
 
-    ecs::Entity_t windowEntity = ecs::makeEntity<Window>();
-    ecs::get<Window>(windowEntity) = {
-        .glfwwindow = window
-    };
-    ecs::getSystemManager().getEntities().insert(windowEntity);
-
-    LevelParser parcer;
-    auto sceneEntities = parcer.parseScene("res/scenes/plane.json");
-    if(parcer.getErrorString() != "") {
-        std::cout << "failed to load scene at \"res/scenes/plane.json\": " << parcer.getErrorString() << '\n';
-    }
-    if(sceneEntities.has_value()) {
-        for(ecs::Entity_t const &entity : sceneEntities.value()) {
-            if(ecs::entityHasComponent<model::Model>(entity)) {
-                ecs::addComponent(entity, propShader);
-            }
-            ecs::getSystemManager().getEntities().insert(entity);
-        }
-    }
-    ecs::Entity_t lightStorageEntity = ecs::makeEntity<LightUBO, LightUpdater::LightStorage>();
-    ecs::get<LightUBO>(lightStorageEntity) = {};
-    ecs::get<LightUpdater::LightStorage>(lightStorageEntity) = {};
-    ecs::getSystemManager().getEntities().insert(lightStorageEntity);
-    
     // ! all deltatime is in seconds
     double deltatime = 0.0001;
     std::thread fpsShower{

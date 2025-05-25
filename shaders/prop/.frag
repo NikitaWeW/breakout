@@ -17,14 +17,25 @@ struct PointLight
     float attenuation;
     vec3 position;
     float _pad0;
-};
+}; // 32 bytes
 struct DirLight
 {
     vec3 direction;
     float _pad0;
     vec3 color;
     float _pad1;
-};
+}; // 32 bytes
+struct SpotLight
+{
+    vec3 position;
+    float innerConeAngle;
+    vec3 direction;
+    float outerConeAngle;
+    vec3 _pad1;
+    float attenuation;
+    vec3 color;
+    float _pad0;
+}; // 64 bytes
 
 in VS_OUT {
     vec2 texCoords;
@@ -39,10 +50,13 @@ layout(std140) uniform u_lights {
     PointLight pointLights[MAX_LIGHTS];
     uint numDirLights;
     DirLight dirLights[MAX_LIGHTS];
+    uint numSpotLights;
+    SpotLight spotLights[MAX_LIGHTS];
 };
 
 vec4 calculateLight(PointLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 vec4 calculateLight(DirLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
+vec4 calculateLight(SpotLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 
 void main() 
 {
@@ -57,6 +71,9 @@ void main()
     }
     for(uint i = 0u; i < numDirLights; ++i) {
         lightColor += calculateLight(dirLights[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
+    }
+    for(uint i = 0u; i < numSpotLights; ++i) {
+        lightColor += calculateLight(spotLights[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
     }
 
     o_color = texture(u_material.diffuse, texCoords) * vec4(lightColor, 1);
@@ -106,5 +123,37 @@ vec4 calculateLight(DirLight light, Material material, vec3 normal, vec3 viewDir
     float shadow = 0;
 
     return vec4(ambient + (1 - shadow) * (diffuse + specular), 1.0);
+}
+vec4 calculateLight(SpotLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos)
+{
+    vec3 lightDir = normalize(light.position - fragPos);
+    float distanceLightFragment = length(light.position - fragPos);
+    float attenuation = 1.0 / (light.attenuation * distanceLightFragment * distanceLightFragment);
+
+    vec3 ambient = 
+        light.color * 0.125 * 
+        attenuation;
+    float theta = dot(lightDir, normalize(-light.direction));
+    if(theta > light.outerConeAngle) {
+        float epsilon = light.innerConeAngle - light.outerConeAngle;
+        float intensity = clamp((theta - light.outerConeAngle) / epsilon, 0.0, 1.0);
+
+        vec3 diffuse = 
+            light.color * 
+            intensity *
+            attenuation *
+            vec3(max(dot(normal, lightDir), 0.0));
+        vec3 specular = 
+            light.color *
+            intensity * 
+            attenuation *
+            pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.shininess) * 
+            vec3(1 - texture(material.rough, texCoords));
+        float shadow = 0;
+
+        return vec4(ambient + (1 - shadow) * (diffuse + specular), 1.0);
+    } else {
+        return vec4(ambient, 1.0);
+    }
 }
 

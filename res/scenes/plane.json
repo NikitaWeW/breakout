@@ -113,8 +113,12 @@
             "color": [1, 1, 1]
         },
         {
-            "type": "directional light",
+            "type": "spot light",
             "direction": [0, -1, 0],
+            "position": [-3, 3, -3],
+            "inner cone angle": 35,
+            "outer cone angle": 55,
+            "attenuation": 0.05,
             "color": [1, 1, 0.1]
         }
     ]

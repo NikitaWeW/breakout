@@ -3,7 +3,7 @@
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
 #include "utils/ECS.hpp"
-#include <csignal>
+#include "game/LevelParser.hpp"
 
 #ifdef NDEBUG
 extern constexpr bool DEBUG = false;
@@ -117,6 +117,7 @@ public:
         delete &ecs::getEntityManager(); // needed to explicitly deallocate opengl entities such as textures before context termination
         delete &ecs::getComponentManager();
         delete &ecs::getSystemManager();
+        delete &game::getLevelParser();
         glfwTerminate();
     }
 };
