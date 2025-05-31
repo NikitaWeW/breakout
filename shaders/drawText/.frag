@@ -1,9 +1,10 @@
 #version 330 core
 out vec4 o_color;
-in vec2 v_texCoord;
 
-uniform vec4 u_color;
-uniform sampler2DMS u_atlas;
+uniform vec4 u_fgColor;
+uniform vec4 u_bgColor;
+uniform sampler2D u_atlas;
+uniform float u_screenPxRange;
 
 in VS_OUT {
     vec2 texCoord;
@@ -11,20 +12,16 @@ in VS_OUT {
     vec2 glyphSize;
 } fs_in;
 
-vec4 textureMultisample(sampler2DMS sampler, vec2 texCoord, int numSamples)
-{
-    ivec2 size = textureSize(sampler);
-    vec4 color = vec4(0.0);
-
-    for (int i = 0; i < numSamples; i++)
-        color += texelFetch(sampler, ivec2(size * texCoord), i);
-
-    color /= float(numSamples);
-
-    return color;
+float median(float r, float g, float b) {
+    return max(min(r, g), min(max(r, g), b));
 }
 
 void main() {
-    o_color = u_color * textureMultisample(u_atlas, fs_in.glyphOffset + fs_in.texCoord * fs_in.glyphSize, 4).r;
-    if(o_color.a < 1e-5) discard;
+    vec2 glyphTexCoord = fs_in.glyphOffset + fs_in.texCoord * fs_in.glyphSize;
+    vec3 msd = texture(u_atlas, glyphTexCoord).rgb;
+    float sd = median(msd.r, msd.g, msd.b);
+    float screenPxDistance = u_screenPxRange * (sd - 0.5);
+    float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+    o_color = mix(u_bgColor, u_fgColor, opacity);
+    gl_FragDepth = 0;
 }

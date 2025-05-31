@@ -120,6 +120,50 @@
             "outer cone angle": 55,
             "attenuation": 0.05,
             "color": [1, 1, 0.1]
+        },
+        {
+            "type": "text",
+            "string": "text rendering still works?",
+            "foreground color": [1, 1, 1, 1],
+            "position": [-1.4, 0.9],
+            "size": 0.35,
+            "font": {
+                "atlas": "res/msdf-fonts/OpenSans-Light.png",
+                "metadata": "res/msdf-fonts/OpenSans-Light.json"
+            }
+        },
+        {
+            "type": "text",
+            "string": "unpleasant, bad-looking,\nabsolutely not convenient,\nspagetti-code, god-knows-why-it-even-works,\nfew features, broken projection, broken metrics,\nhorrible way of storing and generating the atlas,\nbroken pixel range (wth is that), etc.",
+            "foreground color": [0.1, 1, 0.4, 1],
+            "position": [0, 0],
+            "size": 0.4,
+            "font": {
+                "atlas": "res/msdf-fonts/roboto.png",
+                "metadata": "res/msdf-fonts/roboto.json"
+            }
+        },
+        {
+            "type": "text",
+            "string": "I hate text rendering pt. 2",
+            "foreground color": [1, 0.1, 0.4, 1],
+            "position": [-1, -0.8],
+            "size": 0.5,
+            "font": {
+                "atlas": "res/msdf-fonts/JetBrainsMono-Bold.png",
+                "metadata": "res/msdf-fonts/JetBrainsMono-Bold.json"
+            }
+        },
+        {
+            "type": "text",
+            "string": "Only 2d text.",
+            "foreground color": [0.4, 0.2, 1, 1],
+            "position": [1, 0.8],
+            "size": 0.5,
+            "font": {
+                "atlas": "res/msdf-fonts/JetBrainsMono-Bold.png",
+                "metadata": "res/msdf-fonts/JetBrainsMono-Bold.json"
+            }
         }
     ]
 }

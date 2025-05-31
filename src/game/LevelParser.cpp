@@ -29,6 +29,14 @@ ecs::Entity_t game::LevelParser::createModel(std::filesystem::path const &filepa
 
     return entity;
 }
+text::Font &game::LevelParser::createFont(std::filesystem::path atlas, std::filesystem::path metadata)
+{
+    auto pair = std::make_pair(atlas, metadata);
+    if(m_fontCache.find(pair) == m_fontCache.end()) {
+        m_fontCache.try_emplace(pair, text::Font{atlas, metadata});
+    }
+    return m_fontCache.at(pair);
+}
 void game::LevelParser::addTexture(ecs::Entity_t const &modelEntity, std::filesystem::path const &path, std::string const &type, bool flipTextures)
 {
     if(!ecs::entityHasComponent<model::Model>(modelEntity)) return;
@@ -72,7 +80,6 @@ GLFWwindow * findWindow() {
 
 game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
 {
-    assert(filepath.extension().string() == ".json");
     std::ifstream filestream{filepath};
     if(!filestream) {
         m_errorStr = "failed to open file";
@@ -201,6 +208,25 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                 if(jsonentity.contains("direction")) {
                     ecs::addComponent<game::Direction>(entity, {glm::normalize(static_cast<glm::vec3>(getVecFromJSON(jsonentity["direction"])))});
                 }
+            } else if(type == "text") {
+                entity = ecs::makeEntity<game::Text>();
+                assert(jsonentity.contains("font") && jsonentity.at("font").is_object());
+                assert(jsonentity["font"].contains("atlas") && jsonentity["font"].at("atlas").is_string());
+                assert(jsonentity["font"].contains("metadata") && jsonentity["font"].at("metadata").is_string());
+                std::string text = jsonentity.contains("string") && jsonentity.at("string").is_string() ? jsonentity["string"].get<std::string>() : "text";
+                glm::vec2 position = jsonentity.contains("position") && jsonentity.at("position").is_array() ? getVecFromJSON<2>(jsonentity["position"]) : glm::vec2{0};
+                float size = jsonentity.contains("size") && jsonentity.at("size").is_number() ? jsonentity["size"].get<float>() : 1;
+                glm::vec4 fgColor = jsonentity.contains("foreground color") && jsonentity.at("foreground color").is_array() ? getVecFromJSON<4>(jsonentity["foreground color"]) : glm::vec4{1};
+                glm::vec4 bgColor = jsonentity.contains("background color") && jsonentity.at("background color").is_array() ? getVecFromJSON<4>(jsonentity["background color"]) : glm::vec4{0};
+                
+                ecs::get<Text>(entity) = Text{
+                    .font = &createFont(jsonentity["font"]["atlas"].get<std::string>(), jsonentity["font"]["metadata"].get<std::string>()),
+                    .text = text,
+                    .position = position,
+                    .size = size,
+                    .fgColor = fgColor,
+                    .bgColor = bgColor
+                };
             } else {
                 m_errorStr.append("warn: unrecognized type: " + type);
             }

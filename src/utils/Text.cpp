@@ -1,10 +1,65 @@
 #include <iostream>
-
+#include <fstream>
+#include "json.hpp"
 #include "Text.hpp"
-#include "ttf2mesh.h"
 
-void text::Font::drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &color, glm::mat4 const &projectionMatrix)
+constexpr float magicValue = 6; // ??
+
+text::Font::Font(std::filesystem::path const &atlas, std::filesystem::path const &metadata)
 {
+    // TODO: better atlas storage?
+    // TODO: kerning
+    m_textShader = opengl::ShaderProgram{"shaders/drawText", true};
+    // ========
+    
+    m_atlas.texture = opengl::Texture{atlas, true, false, "msdf-atlas"};
+    
+    using json = nlohmann::json;
+    std::ifstream metadataFileStream{metadata};
+    if(!metadataFileStream) {
+        std::cout << "failed to open \"" << metadata << "\" metadata file!\n";
+        throw std::runtime_error{"unable to open file"};
+    }
+
+    json jsonMetadata = json::parse(metadataFileStream);
+    
+    json jsonAtlas = jsonMetadata.at("atlas");
+    json jsonMetrics = jsonMetadata.at("metrics");
+    json jsonGlyphs = jsonMetadata.at("glyphs");
+
+    glm::vec2 atlasDimensions{jsonAtlas.at("width").get<float>(), jsonAtlas.at("height").get<float>()};
+
+    m_newLineSize = jsonMetrics.at("lineHeight").get<float>() / magicValue;
+    m_spaceSize = 0.05f;
+
+    assert(atlasDimensions.x == atlasDimensions.y);
+    float size = jsonAtlas.at("size").get<float>();
+    float range = jsonAtlas.at("distanceRange").get<float>();
+    m_pixelRange = atlasDimensions.x / size * range;
+
+    m_atlas.glyphs = {};
+    for(json &jsonGlyph : jsonGlyphs) {
+        auto unicode = static_cast<wchar_t>(jsonGlyph.at("unicode").get<int>());
+        if(unicode == 32) {
+            m_spaceSize = jsonGlyph.at("advance").get<float>() / magicValue;
+            continue;
+        }
+        json jsonAtlasBounds = jsonGlyph.at("atlasBounds");
+        json jsonPlaneBounds = jsonGlyph.at("planeBounds");
+
+        auto glyphData = GlyphData{
+            .offset = glm::vec2{jsonAtlasBounds.at("left").get<float>(), jsonAtlasBounds[jsonAtlas.at("yOrigin").get<std::string>()].get<float>()} / atlasDimensions,
+            .size = glm::abs(glm::vec2{jsonAtlasBounds.at("left").get<float>() - jsonAtlasBounds.at("right").get<float>(), jsonAtlasBounds.at("top").get<float>() - jsonAtlasBounds.at("bottom").get<float>()}) / atlasDimensions,
+            .verticalOffset = jsonPlaneBounds.at("bottom").get<float>() / magicValue,
+            .advance = jsonGlyph.at("advance").get<float>() / magicValue
+        };
+
+        m_atlas.glyphs.try_emplace(unicode, glyphData);
+    }
+}
+
+void text::Font::drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &fgColor, glm::vec4 const &bgColor, glm::mat4 const &projectionMatrix)
+{ // FIXME: text only works without any objects in the scene
     struct GlyphRenderData {
         glm::vec2 quadPosition;
         glm::vec2 quadSize;
@@ -14,18 +69,18 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
     std::vector<GlyphRenderData> renderData;
     {
         glm::vec2 currentPosition = {position.x, position.y};
-        for(auto it = text.begin(); it != text.end(); ++it) { // fuck that shit
-            if(*it == L' ') {
-                currentPosition.x += size * spaceSize;
+        for(auto const &character : text) { // fuck that shit
+            if(character == L' ') {
+                currentPosition.x += size * m_spaceSize;
                 continue;
-            } else if(*it == L'\n') {
+            } else if(character == L'\n') {
                 currentPosition.x = position.x;
-                currentPosition.y -= newLineSize * size;
+                currentPosition.y -= m_newLineSize * size;
                 continue;
             }
-            auto dataIter = atlas.glyphs.find(*it);
-            if(dataIter == atlas.glyphs.end()) {
-                std::cout << "failed to find glyph for char \'" << (wchar_t) *it << "\'!\n";
+            auto dataIter = m_atlas.glyphs.find(character);
+            if(dataIter == m_atlas.glyphs.end()) {
+                std::cout << "failed to find glyph for char \'" << character << "\'!\n";
             }
             GlyphData const &data = dataIter->second;
 
@@ -37,15 +92,20 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
             
             renderData.push_back(currentRenderData);
     
-            currentPosition.x += data.size.x * size + spacing;
+            currentPosition.x += data.size.x * size + m_spacing;
         }
     }
 
-    textShader.bind();
-    glUniform4fv(textShader.getUniform("u_color"), 1, &color.r);
-    glUniform1i (textShader.getUniform("u_atlas"), 0);
-    glUniformMatrix4fv(textShader.getUniform("u_projMat"), 1, GL_FALSE, &projectionMatrix[0][0]);
-    atlas.texture.bind(0);
+    m_textShader.bind();
+    glDisable(GL_DEPTH_TEST);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glUniform4fv(m_textShader.getUniform("u_fgColor"), 1, &fgColor.r);
+    glUniform4fv(m_textShader.getUniform("u_bgColor"), 1, &bgColor.r);
+    glUniform1i (m_textShader.getUniform("u_atlas"), 0);
+    glUniform1f (m_textShader.getUniform("u_screenPxRange"), m_pixelRange);
+    glUniformMatrix4fv(m_textShader.getUniform("u_projMat"), 1, GL_FALSE, &projectionMatrix[0][0]);
+    m_atlas.texture.bind(0);
     opengl::VertexBuffer renderDataBuffer{renderData.size() * sizeof(GlyphRenderData), renderData.data()};
     opengl::VertexArray quadVAO{renderDataBuffer, opengl::InterleavedInstancingVertexBufferLayout{ 
         {2, GL_FLOAT, 1},
@@ -53,101 +113,10 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
         {2, GL_FLOAT, 1},
         {2, GL_FLOAT, 1}
     }};
-    glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, renderData.size());
+    glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, static_cast<int>(renderData.size()));
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
     glUseProgram(0);
-}
-
-text::Font::Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, int atlasSize)
-{
-    // TODO: export and cache atlas using stb image write
-    // TODO: nuke this shit and use msdfgen or stb_truetype
-
-    textShader = opengl::ShaderProgram{"shaders/drawText", true};
-    atlasShader = opengl::ShaderProgram{"shaders/fontAtlas", true};
-    blurShader = opengl::ShaderProgram{"shaders/blur", true};
-    
-    // ========================================================
-
-    atlas.size = atlasSize;
-    atlas.texture = opengl::TextureMS{GL_LINEAR};
-    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RED, atlasSize, atlasSize, GL_TRUE);
-
-    unsigned numRows = glm::ceil(glm::sqrt(chars.size()));
-    unsigned numCols = glm::ceil((float)chars.size() / numRows);
-    unsigned cellWidth = glm::ceil((float) atlasSize / numRows);
-    unsigned cellHeight = glm::ceil((float) atlasSize / numCols);
-
-    glm::vec2 currentPos = {0, 0};
-    
-    opengl::Framebuffer atlasFBO;
-    atlasFBO.bind();
-    atlasFBO.attach(atlas.texture, GL_COLOR_ATTACHMENT0);
-    assert(atlasFBO.isComplete());
-
-    ttf_t *font;
-    ttf_load_from_file(filepath.string().c_str(), &font, false);
-    assert(font);
-    unsigned largestHeightInCurrentRow = 0;
-    for(uint16_t currentChar : chars) {
-        // get the glyph mesh
-        int index = ttf_find_glyph(font, currentChar);
-        if(index < 0) {
-            std::cout << "WARNING: failed to find \'" << currentChar << "\' glyph!\n";
-            continue;
-        }
-        ttf_glyph_t *glyph = &font->glyphs[index];
-        ttf_mesh_t *mesh;
-        if(ttf_glyph2mesh(glyph, &mesh, TTF_QUALITY_NORMAL, TTF_FEATURES_DFLT) != TTF_DONE) {
-            std::cout << "WARNING: failed to convert glyph \'" << (char) currentChar << "\' to mesh!\n";
-            continue;
-        }
-
-        // draw the mesh to the atlas. that's the stupidest aproach ever.
-        glBindVertexArray(0);
-        atlasFBO.bind();
-        atlasShader.bind();
-
-        // setup cell dimensions
-        float glyphWidth = glyph->xbounds[1] - glyph->xbounds[0];
-        float glyphHeight = glyph->ybounds[1] - glyph->ybounds[0];
-        unsigned glyphCellWidth = glm::floor(glm::min<float>(cellWidth, glyphWidth * cellWidth));
-        unsigned glyphCellHeight = glm::floor(glm::min<float>(cellHeight, glyphHeight * cellWidth));
-        largestHeightInCurrentRow = glm::max(largestHeightInCurrentRow, glyphCellHeight);
-        glViewport(currentPos.x, currentPos.y, glyphCellWidth, glyphCellHeight); 
-
-        // draw the (stupid) mesh 
-        opengl::VertexBuffer meshVBO{mesh->nvert * sizeof(mesh->vert[0]), mesh->vert};
-        opengl::IndexBuffer meshIBO{mesh->nfaces * sizeof(mesh->faces[0]), mesh->faces};
-        glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * sizeof(float), reinterpret_cast<void const *>(0));
-        glEnableVertexAttribArray(0);
-        glUniform2f(atlasShader.getUniform("u_glyphMin"), glyph->xbounds[0], glyph->ybounds[0]);
-        glUniform2f(atlasShader.getUniform("u_glyphMax"), glyph->xbounds[1], glyph->ybounds[1]);
-        glDrawElements(GL_TRIANGLES, mesh->nfaces * 3, GL_UNSIGNED_INT, nullptr);
-
-        // make an entry in the glyph lookup map
-        atlas.glyphs[currentChar] = {
-            currentPos / (float) atlasSize,
-            {
-                (float) glyphCellWidth / atlasSize, 
-                (float) largestHeightInCurrentRow / atlasSize
-            },
-            glyph->ybounds[0] / 10
-        };
-
-        // process current position
-        currentPos.x += glyphCellWidth + 1;
-        if(currentPos.x + cellWidth > atlasSize) {
-            currentPos.x = 0;
-            currentPos.y += largestHeightInCurrentRow + 1;
-            assert(currentPos.y + largestHeightInCurrentRow < atlasSize);
-        }
-
-        ttf_free_mesh(mesh);
-    }
-    ttf_free(font);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glEnable(GL_DEPTH_TEST);
 }

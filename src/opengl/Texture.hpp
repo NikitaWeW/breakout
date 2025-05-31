@@ -11,7 +11,6 @@ namespace opengl
     public:
         std::string type = "";
         Texture() = default;
-        explicit Texture(GLenum filter, GLenum wrap = GL_CLAMP_TO_EDGE) noexcept;
         explicit Texture(GLenum filtermin, GLenum filtermag, GLenum wrap = GL_CLAMP_TO_EDGE) noexcept;
         explicit Texture(std::filesystem::path const &filepath, bool flip = false, bool srgb = false, std::string const &type = "");
         ~Texture();

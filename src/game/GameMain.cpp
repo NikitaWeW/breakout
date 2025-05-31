@@ -12,7 +12,6 @@
 constexpr float CAMERA_SPEED = 10;
 
 void registerEcs();
-#define basicLatin text::charRange(L'!', L'~')
 
 namespace game
 {
@@ -60,7 +59,6 @@ ecs::Entity_t makeLightStorageEntity()
 void game::gameMain(GLFWwindow *window) 
 {
     opengl::ShaderProgram propShader{"shaders/prop", true};
-    text::Font mainFont{"res/fonts/OpenSans-Light.ttf", basicLatin};
     registerEcs();
     glfwSetKeyCallback(window, game::key_callback);
 
@@ -116,4 +114,9 @@ void registerEcs()
     ecs::getComponentManager().registerComponent<Animation>();
     ecs::getComponentManager().registerComponent<Direction>();
     ecs::getComponentManager().registerComponent<MaterialProperties>();
+    ecs::getComponentManager().registerComponent<model::Model>();
+    ecs::getComponentManager().registerComponent<Light>();
+    ecs::getComponentManager().registerComponent<PointLight>();
+    ecs::getComponentManager().registerComponent<SpotLight>();
+    ecs::getComponentManager().registerComponent<DirectionalLight>();
 }

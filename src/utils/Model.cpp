@@ -3,7 +3,7 @@
 #include "assimp/postprocess.h"
 #include <iostream>
 
-constexpr inline glm::mat4 toMat4(aiMatrix4x4 const &from)
+constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
 {
     glm::mat4 to{};
     //the a,b,c,d in assimp is the row ; the 1,2,3,4 is the column
@@ -14,20 +14,20 @@ constexpr inline glm::mat4 toMat4(aiMatrix4x4 const &from)
     return to;
 }
 template<typename aiVector3X> 
-constexpr inline glm::vec3 toVec3(aiVector3X const &aivector)
+constexpr glm::vec3 toVec3(aiVector3X const &aivector)
 {
     return glm::vec3{(float) aivector.x, (float) aivector.y, (float) aivector.z};
 }
-constexpr inline glm::quat toQuat(aiQuaternion const &aiquaternion)
+constexpr glm::quat toQuat(aiQuaternion const &aiquaternion)
 {
     return glm::quat{aiquaternion.w, aiquaternion.x, aiquaternion.y, aiquaternion.z};
 }
 
-aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string const &nodeName)
+aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string_view nodeName)
 {
     for(unsigned i = 0; i < animation->mNumChannels; ++i) {
         aiNodeAnim const *node = animation->mChannels[i];
-        if(std::string{node->mNodeName.C_Str()} == nodeName) return node;
+        if(std::string_view{node->mNodeName.C_Str()} == nodeName) return node;
     }
 
     return nullptr;
@@ -226,7 +226,7 @@ void makeDrawable(game::Drawable &drawable, model::MeshData &data)
         data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]), 
         data.tangents.size() * sizeof(data.tangents[0]), 
         data.tangents.data());
-    if(data.boneIDs.size() != 0) {
+    if(!data.boneIDs.empty()) {
         glBufferSubData(GL_ARRAY_BUFFER, 
             data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]) + data.tangents.size() * sizeof(data.tangents[0]), 
             data.boneIDs.size() * sizeof(data.boneIDs[0]), 
@@ -236,16 +236,6 @@ void makeDrawable(game::Drawable &drawable, model::MeshData &data)
             data.weights.size() * sizeof(data.weights[0]), 
             data.weights.data());
     }
-    /*
-        Index|Name
-        -----|----------
-          0  | positions
-          1  | normals
-          2  | texCoords
-          3  | tangents
-          4  | boneIDs
-          5  | weights
-    */
 
     drawable.ib = opengl::IndexBuffer{data.indices.size() * sizeof(data.indices[0]), data.indices.data()};
     drawable.va = opengl::VertexArray{drawable.vb, opengl::VertexBufferLayout{
@@ -256,7 +246,7 @@ void makeDrawable(game::Drawable &drawable, model::MeshData &data)
         {4, GL_FLOAT, data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]) + data.tangents.size() * sizeof(data.tangents[0])},
         {4, GL_FLOAT, data.positions.size() * sizeof(data.positions[0]) + data.normals.size() * sizeof(data.normals[0]) + data.textureCoords.size() * sizeof(data.textureCoords[0]) + data.tangents.size() * sizeof(data.tangents[0]) + data.boneIDs.size() * sizeof(data.boneIDs[0])},
     }};
-    drawable.count = data.indices.size();
+    drawable.count = static_cast<unsigned>(data.indices.size());
 }
 void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMap, std::vector<glm::mat4> &boneTransformations, aiMesh const *aimesh, aiScene const *scene) 
 {
@@ -265,14 +255,15 @@ void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMa
     std::array<float, model::MAX_BONES_PER_VERTEX> weights{}; weights.fill(-1); data.weights.resize(data.positions.size(), weights);
     for(unsigned boneIndex = 0; boneIndex < aimesh->mNumBones; ++boneIndex) {
         int boneID = -1;
-        aiBone *bone = aimesh->mBones[boneIndex];
+        aiBone const *bone = aimesh->mBones[boneIndex];
         std::string boneName = bone->mName.C_Str();
         if(boneMap.find(boneName) == boneMap.end()) {
-            unsigned id = boneCounter++;
+            unsigned id = boneCounter;
             boneTransformations.push_back(toMat4(bone->mOffsetMatrix));
             assert(boneTransformations.size() - 1 == id);
-            boneMap.insert({boneName, id});
+            boneMap.try_emplace(boneName, id);
             boneID = id;
+            ++boneCounter;
         } else {
             boneID = boneMap.at(boneName);
         }
@@ -291,7 +282,7 @@ void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMa
         }
     }
 }
-void extractVertexData(model::MeshData &data, aiMesh const *aimesh, aiScene const *scene)
+void extractVertexData(model::MeshData &data, aiMesh const *aimesh)
 {
     for(unsigned i = 0; i < aimesh->mNumVertices; ++i) {
         // i use vec4's for potential byte alignment. lets hope it wont be that bad on large models
@@ -308,15 +299,15 @@ void extractVertexData(model::MeshData &data, aiMesh const *aimesh, aiScene cons
     }
 }
 
-void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial *material, aiTextureType const type, std::string const &typeName, int flags, std::vector<std::pair<std::string, opengl::Texture>> &loadedTextureCache, std::filesystem::path const &textureDirectory)
+void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial const *material, aiTextureType const type, std::string const &typeName, int flags, std::vector<std::pair<std::string, opengl::Texture>> &loadedTextureCache, std::filesystem::path const &textureDirectory)
 {
     aiString str;
     for(unsigned int i = 0; i < material->GetTextureCount(type); i++) {
         material->GetTexture(type, i, &str);
         bool alreadyLoaded = false;
-        for(auto &loadedTexturePair : loadedTextureCache) {
-            if(loadedTexturePair.first == textureDirectory.string() + '/' + str.C_Str()) {
-                textures.push_back(loadedTexturePair.second);
+        for(auto const &[path, texture] : loadedTextureCache) {
+            if(path == textureDirectory.string() + '/' + str.C_Str()) {
+                textures.push_back(texture);
                 alreadyLoaded = true;
                 break;
             }
@@ -327,7 +318,7 @@ void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial *ma
             opengl::Texture texture{filepath, (flags & model::FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, typeName};
             texture.type = typeName;
             textures.push_back(texture);
-            loadedTextureCache.push_back(std::make_pair(filepath, texture));
+            loadedTextureCache.emplace_back(filepath, texture);
         }
     }
 }
@@ -339,7 +330,7 @@ model::Mesh model::Model::processMesh(aiMesh const *aimesh, int flags, aiScene c
 
     Mesh mesh{};
     mesh.data.emplace();
-    extractVertexData(mesh.data.value(), aimesh, scene);
+    extractVertexData(mesh.data.value(), aimesh);
     if(aimesh->HasBones()) {
         extractBones(mesh.data.value(), m_boneMap, m_tposeTransform, aimesh, scene);
         m_boneTransformations.resize(m_tposeTransform.size());
@@ -350,13 +341,11 @@ model::Mesh model::Model::processMesh(aiMesh const *aimesh, int flags, aiScene c
         makeDrawable(mesh.drawable.value(), mesh.data.value());
     }
 
-    if(aimesh->mMaterialIndex >= 0) {
-        aiMaterial *material = scene->mMaterials[aimesh->mMaterialIndex];
-        loadMaterialTextures(mesh.textures, material, aiTextureType_DIFFUSE,  "diffuse",  flags, m_loadedTextures, m_directory);
-        loadMaterialTextures(mesh.textures, material, aiTextureType_SPECULAR, "specular", flags, m_loadedTextures, m_directory);
-        loadMaterialTextures(mesh.textures, material, aiTextureType_HEIGHT,   "normal",   flags, m_loadedTextures, m_directory);
-        loadMaterialTextures(mesh.textures, material, aiTextureType_NORMALS,  "normal",   flags, m_loadedTextures, m_directory);
-    }
+    aiMaterial const *material = scene->mMaterials[aimesh->mMaterialIndex];
+    loadMaterialTextures(mesh.textures, material, aiTextureType_DIFFUSE,  "diffuse",  flags, m_loadedTextures, m_directory);
+    loadMaterialTextures(mesh.textures, material, aiTextureType_SPECULAR, "specular", flags, m_loadedTextures, m_directory);
+    loadMaterialTextures(mesh.textures, material, aiTextureType_HEIGHT,   "normal",   flags, m_loadedTextures, m_directory);
+    loadMaterialTextures(mesh.textures, material, aiTextureType_NORMALS,  "normal",   flags, m_loadedTextures, m_directory);
 
     if(!(flags & LOAD_DATA)) { // deallocate data
         mesh.data = {};

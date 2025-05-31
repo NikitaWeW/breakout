@@ -2,10 +2,6 @@
 #include "stb_image.h"
 #include <stdexcept>
 
-opengl::Texture::Texture(GLenum filter, GLenum wrap) noexcept : Texture(filter, filter, wrap)
-{
-}
-
 opengl::Texture::Texture(GLenum filtermin, GLenum filtermag, GLenum wrap) noexcept
 {
     glGenTextures(1, &m_renderID);

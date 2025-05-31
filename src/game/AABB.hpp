@@ -3,7 +3,6 @@
 
 template <typename vec_t = glm::vec3>
 class AABB {
-private:
 public:
     vec_t min = vec_t{0};
     vec_t max = vec_t{0};

@@ -28,6 +28,8 @@ namespace game
         std::string text;
         glm::vec2 position;
         float size;
+        glm::vec4 fgColor;
+        glm::vec4 bgColor;
         std::optional<glm::mat4> matrix;
     };
     struct Camera

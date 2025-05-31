@@ -8,12 +8,12 @@
 
 glm::mat4 getProjMat(ecs::Entity_t const &entity) 
 {
-    game::Camera &camera = ecs::get<game::Camera>(entity);
+    game::Camera const &camera = ecs::get<game::Camera>(entity);
     assert(camera.width > 0 && camera.height > 0);
     if(ecs::entityHasComponent<game::PerspectiveProjection>(entity))
-        return glm::perspective<float>(glm::radians(camera.fov), (float) camera.width / camera.height, camera.znear, camera.zfar);
+        return glm::perspective<float>(glm::radians(camera.fov), (float) camera.width / (float) camera.height, camera.znear, camera.zfar);
     else
-        return glm::ortho<float>((float) -camera.width / camera.height, (float) camera.width / camera.height, -1, 1, camera.znear, camera.zfar); // FIXME: smashed random shit here
+        return glm::ortho<float>((float) -camera.width / (float) camera.height, (float) camera.width / (float) camera.height, -1, 1, camera.znear, camera.zfar); // FIXME: smashed random shit here
 }
 glm::mat4 getViewMat(ecs::Entity_t const &entity) 
 {
@@ -73,13 +73,16 @@ void draw(game::Drawable const &drawable) {
         glDrawArrays(drawable.mode, 0, drawable.count);
     }
 }
-void drawText(ecs::Entity_t const &textEntity) {
+void drawText(ecs::Entity_t const &textEntity, game::Camera const &camera) {
     using namespace game;
     assert(ecs::entityHasComponent<Text>(textEntity));
     Text const &text = ecs::get<Text>(textEntity);
-    glm::vec4 color = ecs::entityHasComponent<Color>(textEntity) ? ecs::get<Color>(textEntity).color : glm::vec4{0.5, 0.5, 0.5, 1};
-    glm::mat4 matrix = text.matrix.value_or(glm::mat4{1.0f});
-    text.font->drawText(text.text, text.position, text.size, color, matrix);
+    glm::mat4 matrix = text.matrix.value_or(glm::ortho<float>(
+        (float) -camera.width / (float) camera.height, 
+        (float) camera.width / (float) camera.height, 
+        -1, 1, camera.znear, camera.zfar
+    ));
+    text.font->drawText(text.text, text.position, text.size, text.fgColor, text.bgColor, matrix);
 }
 std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t const &entity)
 {
@@ -93,13 +96,13 @@ std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t cons
 void setDefaultTexture(std::string const &type, std::set<std::string> const &boundTextureTypes, std::map<std::string, opengl::Texture> const &defaultTextures, size_t &textureCounter, opengl::ShaderProgram const &shader)
 {
     if(boundTextureTypes.find(type) == boundTextureTypes.end()) {
-        glUniform1i(shader.getUniform("u_material." + type), textureCounter);
+        glUniform1i(shader.getUniform("u_material." + type), static_cast<int>(textureCounter));
         opengl::Texture const *texture = defaultTextures.find(type) != defaultTextures.end() ? 
             &defaultTextures.at(type) : 
             &defaultTextures.at("");
 
         assert(texture);
-        texture->bind(textureCounter);
+        texture->bind(static_cast<unsigned>(textureCounter));
         ++textureCounter;
     }
 }
@@ -108,8 +111,8 @@ void setTextures(model::Mesh const &mesh, opengl::ShaderProgram const &shader, s
     size_t textureCount = 0;
     std::set<std::string> boundTextureTypes;
     for(auto const &texture : mesh.textures) {
-        glUniform1i(shader.getUniform("u_material." + texture.type), textureCount);
-        texture.bind(textureCount);
+        glUniform1i(shader.getUniform("u_material." + texture.type), static_cast<int>(textureCount));
+        texture.bind(static_cast<unsigned>(textureCount));
         boundTextureTypes.insert(texture.type);
         ++textureCount;
     }
@@ -127,6 +130,8 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
     glm::vec3 cameraPosition = glm::vec3{glm::inverse(camera.viewMat) * glm::vec4{0, 0, 0, 1}};
 
     auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
@@ -138,7 +143,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
             model::Model const &model = ecs::get<model::Model>(entity);
             glm::mat4 modelMat = getModelMat(entity);
             std::optional<std::vector<glm::mat4> const *> boneMatrices = getBoneMatrices(entity);
-            opengl::ShaderProgram &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
+            opengl::ShaderProgram const &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
 
             for(auto const &mesh : model.getMeshes()) {
                 if(!mesh.drawable.has_value()) continue;
@@ -160,7 +165,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                     glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
                     glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
                 if(boneMatrices.has_value()) {
-                    glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), boneMatrices.value()->size(), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
+                    glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), static_cast<int>(boneMatrices.value()->size()), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
                 }
                 if(ecs::entityHasComponent<RepeatTexture>(entity)) {
                     glUniform1ui(shader.getUniform("u_texCoordMult"), ecs::get<RepeatTexture>(entity).num);
@@ -168,7 +173,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                     glUniform1ui(shader.getUniform("u_texCoordMult"), 1);
                 }
                 if(ecs::entityHasComponent<MaterialProperties>(entity)) {
-                    MaterialProperties &materialProperties = ecs::get<MaterialProperties>(entity);
+                    MaterialProperties const &materialProperties = ecs::get<MaterialProperties>(entity);
                     glUniform1f(shader.getUniform("u_material.shininess"), materialProperties.shininess);
                 }
                 glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
@@ -182,8 +187,6 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
                 draw(drawable);
             }
         }
-
-        if(ecs::entityHasComponent<game::Text>(entity)) drawText(entity);
     } // for(auto &entity : entities) 
 }
 
@@ -205,6 +208,10 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         camera.viewMat = getViewMat(cameraEntity);
 
         render(entities, deltatime, camera, rtarget);
+
+        for(ecs::Entity_t const &entity : entities) {
+            if(ecs::entityHasComponent<game::Text>(entity)) drawText(entity, camera);
+        } // for(auto &entity : entities) 
     } // for(auto &cameraEntity : entities)
 }
 
@@ -224,11 +231,11 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
         storage.numSpotLights = 0;
         for(ecs::Entity_t const &lightEntity : entities) {
             if(!ecs::entityHasComponent<Light>(lightEntity)) continue;
-            Light &light = ecs::get<Light>(lightEntity);
+            Light const &light = ecs::get<Light>(lightEntity);
 
             if(ecs::entityHasComponent<PointLight>(lightEntity)) {
                 ShaderPointLight &shaderPointLight = storage.pointLights[storage.numPointLights];
-                PointLight &pointLight = ecs::get<PointLight>(lightEntity);
+                PointLight const &pointLight = ecs::get<PointLight>(lightEntity);
 
                 shaderPointLight.attenuation = pointLight.attenuation;
                 shaderPointLight.color = light.color;
@@ -238,7 +245,6 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
                 ++storage.numPointLights;
             } else if(ecs::entityHasComponent<DirectionalLight>(lightEntity)) {
                 ShaderDirLight &shaderDirLight = storage.dirLights[storage.numDirLights];
-                // DirectionalLight &dirLight = ecs::get<DirectionalLight>(lightEntity);
 
                 shaderDirLight.direction = ecs::entityHasComponent<Direction>(lightEntity) ?
                     ecs::get<Direction>(lightEntity).dir :
@@ -247,7 +253,7 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
                 ++storage.numDirLights;
             } else if(ecs::entityHasComponent<SpotLight>(lightEntity)) {
                 ShaderSpotLight &shaderSpotLight = storage.spotLights[storage.numSpotLights];
-                SpotLight &spotLight = ecs::get<SpotLight>(lightEntity);
+                SpotLight const &spotLight = ecs::get<SpotLight>(lightEntity);
 
                 shaderSpotLight = {
                     .position = ecs::entityHasComponent<Position>(lightEntity) ?

@@ -157,10 +157,7 @@ bool init(GLFWwindow** window) {
         return false;
     }
     glDebugMessageCallback(debugCallback, nullptr);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glEnable(GL_BLEND);
-    glEnable(GL_MULTISAMPLE);  
+    glEnable(GL_MULTISAMPLE);
 
     return true;
 }

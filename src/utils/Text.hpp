@@ -14,6 +14,9 @@
 
 namespace text
 {
+    /**
+     * a font class that abstracts loading and drawing of a font (currently only [Artery Atlas Fonts](https://github.com/Chlumsky/artery-font-format) are supported)
+     */
     class Font 
     {
     public:
@@ -21,29 +24,27 @@ namespace text
             glm::vec2 offset;
             glm::vec2 size;
             float verticalOffset;
+            float advance;
         };
         struct Atlas {
-            opengl::TextureMS texture;
-            int size;
-            unsigned glyfCount;
-            std::map<char, GlyphData> glyphs;
+            opengl::Texture texture;
+            std::map<wchar_t, GlyphData> glyphs;
         };
     private:
-        opengl::ShaderProgram textShader;
-        opengl::ShaderProgram atlasShader;
-        opengl::ShaderProgram blurShader;
-        Atlas atlas;
+        opengl::ShaderProgram m_textShader;
+        Atlas m_atlas;
+        float m_newLineSize = 0;
+        float m_spacing = 0;
+        float m_spaceSize = 0;
+        float m_pixelRange = 0;
     public:
-        float spaceSize = 0.05f;
-        float newLineSize = 0.1f;
-        float spacing = 0.005f;
-
         Font() = default;
         ~Font() = default;
-        Font(std::filesystem::path const &filepath, std::vector<wchar_t> const &chars, int atlasSize = 2048);
-        void drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &color = {1, 1, 1, 1}, glm::mat4 const &projectionMatrix = glm::mat4{1.0f});
-        inline void drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec3 const &color = {1, 1, 1}, glm::mat4 const &projectionMatrix = glm::mat4{1.0f}) { drawText(text, position, size, glm::vec4(color, 1), projectionMatrix); }
-        inline Atlas const &getAtlas() const { return atlas; }
+        Font(std::filesystem::path const &atlas, std::filesystem::path const &metadata);
+
+        void drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &fgColor = {1, 1, 1, 1}, glm::vec4 const &bgColor = {0, 0, 0, 0}, glm::mat4 const &projectionMatrix = glm::mat4{1.0f});
+
+        inline Atlas const &getAtlas() const { return m_atlas; }
     };
     template <typename T> std::vector<T> charRange(T first, T last)
     {

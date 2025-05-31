@@ -140,7 +140,7 @@ namespace ecs
         template <typename Component_t> void removeComponent(Entity_t const &entity);
         template <typename Component_t> Component_t &getComponent(Entity_t const &entity);
         template <typename Component_t> Component_t const &getComponent(Entity_t const &entity) const;
-        void entityDestroyed(Entity_t const &entity);
+        void entityDestroyed(Entity_t const &entity) const;
     private:
         template <typename Component_t> std::shared_ptr<ComponentArray<Component_t>> getComponentArray();
     };
@@ -177,7 +177,7 @@ namespace ecs
          */
         template <typename System_t> std::shared_ptr<System_t> registerSystem();
         template <typename System_t> void removeSystem();
-        void update(double deltatime);
+        void update(double deltatime) const;
         /**
          * get the lists of entities
          */
@@ -187,7 +187,7 @@ namespace ecs
 
     // singleton getters
     inline EntityManager &getEntityManager() {
-        static EntityManager *manager = new EntityManager{}; // needed to explicitly deallocate opengl entities such as textures before context termination.
+        static EntityManager *manager = new EntityManager{}; // needed to explicitly deallocate opengl entities such as textures before context termination. replace it with something else
         return *manager;
     }
     inline ComponentManager &getComponentManager() {
@@ -343,10 +343,10 @@ inline std::shared_ptr<ecs::ComponentArray<Component_t>> ecs::ComponentManager::
     assert(m_componentIDs.find(name) != m_componentIDs.end() && "component not registered before use");
     return std::static_pointer_cast<ComponentArray<Component_t>>(m_componentArrays.at(name));
 }
-inline void ecs::ComponentManager::entityDestroyed(Entity_t const &entity)
+inline void ecs::ComponentManager::entityDestroyed(Entity_t const &entity) const
 {
-    for(auto const &pair : m_componentArrays) {
-        pair.second->onEntityDestroyed(entity);
+    for(auto const &[name, componentArray] : m_componentArrays) {
+        componentArray->onEntityDestroyed(entity);
     }
 }
 
@@ -367,10 +367,10 @@ inline void ecs::SystemManager::removeSystem()
     assert(m_systems.find(name) != m_systems.end() && "system not registered before use");
     m_systems.erase(name);
 }
-inline void ecs::SystemManager::update(double deltatime)
+inline void ecs::SystemManager::update(double deltatime) const
 {
-    for(auto const &pair : m_systems) {
-        pair.second->update(m_entities, deltatime);
+    for(auto const &[name, system] : m_systems) {
+        system->update(m_entities, deltatime);
     }
 }
 
