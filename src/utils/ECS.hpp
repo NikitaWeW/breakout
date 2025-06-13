@@ -2,11 +2,19 @@
  * \file ECS.hpp
  * \brief My Entity Component System implimentation.
  * 
- * thanks to this post: https://austinmorlan.com/posts/entity_component_system
+ * thanks to this article: https://austinmorlan.com/posts/entity_component_system
  * 
  * \copyright Copyright (c) 2024 Nikita Martynau
  */
 /*
+    ______ _____  _____ 
+    |  ____/ ____|/ ____|
+    | |__ | |    | (___  
+    |  __|| |     \___ \ 
+    | |___| |____ ____) |
+    |______\_____|_____/ 
+
+
 Copyright (c) 2024 Nikita Martynau
 https://opensource.org/license/mit
 
@@ -26,7 +34,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <memory>
 #include <set>
 #include <cassert>
-#include <iostream>
 
 namespace ecs
 {
@@ -85,7 +92,7 @@ namespace ecs
     };
 
     /**
-     * Every instanced ComponentArray derived from that polymorphic class.
+     * Every instanced ComponentArray is derived from this polymorphic class.
      */
     class IComponentArray 
     {
@@ -253,10 +260,7 @@ inline ecs::Signature_t &ecs::EntityManager::getSignature(Entity_t const &entity
 template <typename Component_t>
 inline void ecs::ComponentArray<Component_t>::insert(Entity_t const &entity, Component_t component)
 {
-    if(m_entityToIndex.find(entity) != m_entityToIndex.end()) {
-        std::cout << "WARNING: component added to the same entity more than once!\n";
-        return;
-    }
+    assert(m_entityToIndex.find(entity) == m_entityToIndex.end() && "component added to the same entity more than once!");
 
     size_t index = m_components.size();
     m_entityToIndex[entity] = index;

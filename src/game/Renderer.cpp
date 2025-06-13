@@ -123,71 +123,140 @@ void setTextures(model::Mesh const &mesh, opengl::ShaderProgram const &shader, s
     setDefaultTexture("AO",       boundTextureTypes, defaultTextures, textureCount, shader);
     setDefaultTexture("height",   boundTextureTypes, defaultTextures, textureCount, shader);
 }
+void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const
+{
+    assert(ecs::entityHasComponent<model::Model>(entity));
+    model::Model const &model = ecs::get<model::Model>(entity);
+    glm::mat4 modelMat = getModelMat(entity);
+    std::optional<std::vector<glm::mat4> const *> boneMatrices = getBoneMatrices(entity);
+    
+    for(auto const &mesh : model.getMeshes()) {
+        if(!mesh.drawable.has_value()) continue;
+
+        game::Drawable const &drawable = mesh.drawable.value();
+        
+        setTextures(mesh, shader, m_defaultTextures);
+
+        if(m_lightsUBO.has_value()) {
+            int location = shader.getUniformBlock("u_lights");
+            if(location >= 0) {
+                m_lightsUBO.value()->bind();
+                glUniformBlockBinding(shader.getRenderID(), location, 0);
+            }
+        }
+        
+        ecs::entityHasComponent<game::Color>(entity) ?
+            glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<game::Color>(entity).color.r) :
+            glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
+        if(boneMatrices.has_value()) {
+            glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), static_cast<int>(boneMatrices.value()->size()), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
+        }
+        if(ecs::entityHasComponent<game::RepeatTexture>(entity)) {
+            glUniform1ui(shader.getUniform("u_texCoordMult"), ecs::get<game::RepeatTexture>(entity).num);
+        } else {
+            glUniform1ui(shader.getUniform("u_texCoordMult"), 1);
+        }
+        if(ecs::entityHasComponent<game::MaterialProperties>(entity)) {
+            game::MaterialProperties const &materialProperties = ecs::get<game::MaterialProperties>(entity);
+            glUniform1f(shader.getUniform("u_material.shininess"), materialProperties.shininess);
+        }
+        glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
+        glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
+        glUniformMatrix4fv(shader.getUniform("u_normalMat"),      1, GL_FALSE, &glm::transpose(glm::inverse(modelMat))[0][0]);
+        draw(drawable);
+    }
+}
 
 void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
 {
     glViewport(0, 0, camera.width, camera.height);
+    
+    glm::vec3 cameraPosition = glm::vec3{glm::inverse(camera.viewMat) * glm::vec4{0, 0, 0, 1}};
+    {
+        auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
+        m_lightsUBO = lightsUBOEntity != entities.end() ? &ecs::get<LightUBO>(*lightsUBOEntity).ubo : std::optional<opengl::UniformBuffer *>{};
+    }
+
+    // ===================
+    // SOLID OBJECTS PASS
+    // ===================
+
+    // set up render states
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_LESS);
+
     glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-    glm::vec3 cameraPosition = glm::vec3{glm::inverse(camera.viewMat) * glm::vec4{0, 0, 0, 1}};
 
-    auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
-    std::optional<opengl::UniformBuffer> lightsUBO = lightsUBOEntity != entities.end() ? ecs::get<LightUBO>(*lightsUBOEntity).ubo : std::optional<opengl::UniformBuffer>{};
-
-
+    // draw opaque objects
     for(ecs::Entity_t const &entity : entities) {
-        if(ecs::entityHasComponent<model::Model>(entity)) {
-            model::Model const &model = ecs::get<model::Model>(entity);
-            glm::mat4 modelMat = getModelMat(entity);
-            std::optional<std::vector<glm::mat4> const *> boneMatrices = getBoneMatrices(entity);
+        if(ecs::entityHasComponent<model::Model>(entity) && !ecs::entityHasComponent<Transparent>(entity)) {
             opengl::ShaderProgram const &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
-
-            for(auto const &mesh : model.getMeshes()) {
-                if(!mesh.drawable.has_value()) continue;
-
-                Drawable const &drawable = mesh.drawable.value();
-                
-                shader.bind();
-                setTextures(mesh, shader, m_defaultTextures);
-
-                if(lightsUBO.has_value()) {
-                    int location = shader.getUniformBlock("u_lights");
-                    if(location >= 0) {
-                        lightsUBO.value().bind();
-                        glUniformBlockBinding(shader.getRenderID(), location, 0);
-                    }
-                }
-                
-                ecs::entityHasComponent<Color>(entity) ?
-                    glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<Color>(entity).color.r) :
-                    glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
-                if(boneMatrices.has_value()) {
-                    glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), static_cast<int>(boneMatrices.value()->size()), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
-                }
-                if(ecs::entityHasComponent<RepeatTexture>(entity)) {
-                    glUniform1ui(shader.getUniform("u_texCoordMult"), ecs::get<RepeatTexture>(entity).num);
-                } else {
-                    glUniform1ui(shader.getUniform("u_texCoordMult"), 1);
-                }
-                if(ecs::entityHasComponent<MaterialProperties>(entity)) {
-                    MaterialProperties const &materialProperties = ecs::get<MaterialProperties>(entity);
-                    glUniform1f(shader.getUniform("u_material.shininess"), materialProperties.shininess);
-                }
-                glUniform1i(       shader.getUniform("u_animated"),       boneMatrices.has_value());
-                glUniformMatrix4fv(shader.getUniform("u_modelMat"),       1, GL_FALSE, &modelMat[0][0]);
-                glUniformMatrix4fv(shader.getUniform("u_normalMat"),      1, GL_FALSE, &glm::transpose(glm::inverse(modelMat))[0][0]);
-                glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
-                glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
-                glUniform3fv(      shader.getUniform("u_camPos"), 1, &cameraPosition.x);
-                glEnable(GL_DEPTH_TEST);
-                glEnable(GL_CULL_FACE);
-                draw(drawable);
-            }
+            shader.bind();
+            glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
+            glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
+            glUniform3fv(      shader.getUniform("u_camPos"), 1, &cameraPosition.x);
+            drawModel(entity, shader);
         }
     } // for(auto &entity : entities) 
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(0);
+
+    // =====================
+    // OIT TRANSPARENT PASS
+    // =====================
+
+    // configure render states
+    glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+    glBlendFunci(0, GL_ONE, GL_ONE); // accumulation
+    glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // revelage
+    glBlendEquation(GL_FUNC_ADD);
+
+    rtarget.oitFBO.bind();
+    {
+        constexpr glm::vec4 zeroFiller{0};
+        constexpr glm::vec4 oneFiller{1};
+        glClearBufferfv(GL_COLOR, 0, &zeroFiller.r);
+        glClearBufferfv(GL_COLOR, 1, &oneFiller.r);
+    }
+
+    // draw transparent objects
+    m_oitShader.bind();
+    glUniformMatrix4fv(m_oitShader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
+    glUniformMatrix4fv(m_oitShader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
+    glUniform3fv(      m_oitShader.getUniform("u_camPos"), 1, &cameraPosition.x);
+    for(ecs::Entity_t const &entity : entities) {
+        if(ecs::entityHasComponent<model::Model>(entity) && ecs::entityHasComponent<Transparent>(entity)) {
+            drawModel(entity, m_oitShader);
+        }
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(0);
+
+    // ===================
+    // OIT COMPOSITE PASS
+    // ===================
+
+    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_ALWAYS);
+    glDepthMask(GL_FALSE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
+    m_oitCompositeShader.bind();
+    rtarget.oitAccumTexture.bind(0);
+    rtarget.oitRevelageTexture.bind(1);
+
+    // draw a quad (hard-coded in VSh)
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(0);
 }
 
 void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double deltatime)
@@ -198,8 +267,18 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         game::Camera &camera = ecs::get<game::Camera>(cameraEntity);
         game::RenderTarget &rtarget = ecs::get<game::RenderTarget>(cameraEntity);
         if(rtarget.prevWidth != camera.width || rtarget.prevHeight != camera.height) { // resize or initialize buffers / textures
+            rtarget.oitAccumTexture.bind(); glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, camera.width, camera.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+            rtarget.oitRevelageTexture.bind(); glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, camera.width, camera.height, 0, GL_RED, GL_FLOAT, nullptr);
         }
         if(rtarget.prevWidth == -1) { // initialize render target
+            rtarget.oitFBO.bind();
+            rtarget.oitFBO.attach(rtarget.oitAccumTexture, GL_COLOR_ATTACHMENT0);
+            rtarget.oitFBO.attach(rtarget.oitRevelageTexture, GL_COLOR_ATTACHMENT1);
+            {
+                GLenum const drawbuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+                glDrawBuffers(sizeof(drawbuffers) / sizeof(*drawbuffers), drawbuffers);
+            }
+            assert(rtarget.oitFBO.isComplete());
         }
         rtarget.prevWidth = camera.width;
         rtarget.prevHeight = camera.height;

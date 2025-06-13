@@ -8,7 +8,7 @@ namespace opengl
     class Renderbuffer : public Object {
     public:
         Renderbuffer() = default;
-        Renderbuffer(unsigned width, unsigned height, GLenum format);
+        Renderbuffer(unsigned); // dummy argument, constructor generates object
         ~Renderbuffer();
     
         void bind(unsigned slot = 0) const noexcept;
@@ -16,7 +16,7 @@ namespace opengl
     class RenderbufferMS : public Object {
     public:
         RenderbufferMS() = default;
-        RenderbufferMS(unsigned width, unsigned height, unsigned samples, GLenum format);
+        RenderbufferMS(unsigned); // dummy argument, constructor generates object
         ~RenderbufferMS();
     
         void bind(unsigned slot = 0) const noexcept;
@@ -27,6 +27,7 @@ namespace opengl
         mutable unsigned m_renderID = 0;
     public:
         Framebuffer() = default;
+        Framebuffer(unsigned); // dummy argument, constructor generates object
         ~Framebuffer();
         void bind(unsigned slot = 0) const noexcept;
         bool isComplete();

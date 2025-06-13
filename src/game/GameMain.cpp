@@ -6,10 +6,10 @@
 #include <chrono>
 #include <thread>
 #include <memory>
+#include <random>
+#include <iostream>
 #include "utils/Model.hpp"
 #include "LevelParser.hpp"
-
-constexpr float CAMERA_SPEED = 10;
 
 void registerEcs();
 
@@ -119,4 +119,5 @@ void registerEcs()
     ecs::getComponentManager().registerComponent<PointLight>();
     ecs::getComponentManager().registerComponent<SpotLight>();
     ecs::getComponentManager().registerComponent<DirectionalLight>();
+    ecs::getComponentManager().registerComponent<game::Transparent>();
 }

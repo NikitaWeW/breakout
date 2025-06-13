@@ -56,6 +56,12 @@ namespace game
     };
     struct RenderTarget
     {
+        opengl::Framebuffer oitFBO{0}; // 0 -- dummy argument, constructor generates ogl object. TODO: find a better way avoiding dummy arguments
+        opengl::Texture oitAccumTexture{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_BORDER};
+        opengl::Texture oitRevelageTexture{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_BORDER};
+
+        // opengl::ShaderProgram *propShader; // TODO: move the shader handle from model entity to render target
+
         glm::vec4 clearColor{0, 0, 0, 1};
         unsigned mainFBOid = 0;
         int prevWidth = -1, prevHeight = -1;
@@ -100,8 +106,13 @@ namespace game
         };
         opengl::ShaderProgram m_screenShader{"shaders/hdrImage"};
         opengl::ShaderProgram m_defaultShader{"shaders/plainColor"};
+        opengl::ShaderProgram m_oitShader{"shaders/oitTransparent"};
+        opengl::ShaderProgram m_oitCompositeShader{"shaders/oitComposite"};
+
+        std::optional<opengl::UniformBuffer *> m_lightsUBO;
 
         void render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget);
+        void drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const;
     public:
         Renderer() = default;
         void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;

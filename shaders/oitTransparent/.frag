@@ -1,5 +1,4 @@
 #version 330 core
-out vec4 o_color;
 
 const uint MAX_LIGHTS = 100u;
 const float ambientKoeffitient = 0.125;
@@ -55,6 +54,9 @@ layout(std140) uniform u_lights {
 };
 uniform vec4 u_color;
 
+layout (location = 0) out vec4 o_accum;
+layout (location = 1) out float o_revelage;
+
 vec4 calculateLight(PointLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 vec4 calculateLight(DirLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 vec4 calculateLight(SpotLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
@@ -77,10 +79,17 @@ void main()
         lightColor += calculateLight(spotLights[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
     }
 
-    o_color = texture(u_material.diffuse, texCoords) * vec4(lightColor, 1) * u_color;
+    vec4 color = texture(u_material.diffuse, texCoords) * vec4(lightColor, 1) * u_color;
 
-    if(o_color.a < 1e-5) discard;
-    o_color.rgb = pow(o_color.rgb, vec3(1/2.2)); // apply gamma correction
+    color.rgb = pow(color.rgb, vec3(1/2.2)); // apply gamma correction
+
+    // weight function
+    float weight = clamp(pow(min(1.0, color.a * 10.0) + 0.01, 3.0) * 1e8 * pow(1.0 - gl_FragCoord.z * 0.9, 3.0), 1e-2, 3e3);
+
+    // store pixel color accumulation
+    o_accum = vec4(color.rgb * color.a, color.a) * weight;
+    // store pixel revealage threshold
+    o_revelage = color.a;
 }
 
 vec4 calculateLight(PointLight light, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos) 

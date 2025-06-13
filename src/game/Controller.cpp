@@ -1,3 +1,4 @@
+#include <iostream>
 #include "Controller.hpp"
 #include "Physics.hpp"
 #include "Renderer.hpp"

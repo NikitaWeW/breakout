@@ -79,7 +79,7 @@ GLFWwindow * findWindow() {
 }
 
 game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
-{
+{ // FIXME: good luck reading it. 
     std::ifstream filestream{filepath};
     if(!filestream) {
         m_errorStr = "failed to open file";
@@ -94,7 +94,7 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
             json const &jsonentity = entityIter.value();
             ecs::Entity_t entity;
             std::string type = jsonentity.contains("type") && jsonentity.at("type").is_string() ? jsonentity["type"].get<std::string>() : "";
-            if(type == "prop") {
+                   if(type == "prop") {
                 std::filesystem::path path = jsonentity.contains("path") && jsonentity.at("path").is_string() ? jsonentity["path"].get<std::string>() : "";
                 if(path == "") {
                     m_errorStr.append("\nno path specified for prop");
@@ -149,6 +149,19 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                 if(materialProperties.shininess == 0)  {
                     materialProperties.shininess = 16;
                 }
+                if(jsonentity.contains("color") && jsonentity.at("color").is_array() && jsonentity.at("color").at(0).is_number()) {
+                    Color color;
+                    color.color = glm::vec4{0, 0, 0, 1};
+
+                    for(size_t i = 0; i < jsonentity.at("color").size(); ++i) {
+                        color.color[i] = jsonentity.at("color").at(i);
+                    }
+                    ecs::addComponent(entity, color);
+                }
+                if(
+                    (jsonentity.contains("transparent") && jsonentity.at("transparent").is_boolean() && jsonentity.at("transparent").get<bool>()) || 
+                    (ecs::entityHasComponent<Color>(entity) && ecs::get<Color>(entity).color.a < 1)
+                ) ecs::addComponent<Transparent>(entity);
             } else if(type == "controllable camera") {
                 GLFWwindow *window = findWindow();
                 if(!window) {
@@ -165,6 +178,18 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                 ecs::get<RenderTarget>(entity).clearColor = {0.2, 0.2, 0.2, 1};
                 ecs::get<Camera>(entity) = {};
                 ecs::get<Window>(entity) = {window};
+
+                if(jsonentity.contains("position")) {
+                    ecs::addComponent<game::Position>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["position"]))});
+                }
+                if(jsonentity.contains("rotation")) {
+                    ecs::addComponent<game::OrientationEuler>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["rotation"]))});
+                }
+            } else if(type == "camera") {
+                entity = ecs::makeEntity<Camera, PerspectiveProjection, RenderTarget>();
+                ecs::get<RenderTarget>(entity) = {};
+                ecs::get<RenderTarget>(entity).clearColor = {0.2, 0.2, 0.2, 1};
+                ecs::get<Camera>(entity) = {};
 
                 if(jsonentity.contains("position")) {
                     ecs::addComponent<game::Position>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["position"]))});
