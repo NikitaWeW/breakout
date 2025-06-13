@@ -1,0 +1,56 @@
+{
+    "name": "sponza",
+    "entities": [
+        {
+            "type": "prop",
+            "path": "res/models/sponza/sponza.obj",
+            "flip textures": true,
+            "flip winding order": false,
+            "scale": [0.01, 0.01, 0.01],
+            "semi-transparent": true
+        },
+        {
+            "type": "controllable camera",
+            "position": [0, 3, 0],
+            "rotation": [-25, 0, 0],
+            "speed": 10
+        },
+        {
+            "type": "point light",
+            "position": [2, 3, -2],
+            "attenuation": 0.1,
+            "color": [0.1, 1, 1]
+        },
+        {
+            "type": "point light",
+            "position": [-2, 2, -3],
+            "attenuation": 0.2,
+            "color": [1, 0.1, 1]
+        },
+        {
+            "type": "directional light",
+            "direction": [1, -1, -1],
+            "color": [1, 1, 1]
+        },
+        {
+            "type": "spot light",
+            "direction": [0, -1, 0],
+            "position": [-3, 3, -3],
+            "inner cone angle": 35,
+            "outer cone angle": 55,
+            "attenuation": 0.05,
+            "color": [1, 1, 0.1]
+        },
+        {
+            "type": "text",
+            "string": "text rendering still works?",
+            "foreground color": [1, 1, 1, 0.1],
+            "position": [-1.4, 0.9],
+            "size": 0.5,
+            "font": {
+                "atlas": "res/msdf-fonts/JetBrainsMono-Bold.png",
+                "metadata": "res/msdf-fonts/JetBrainsMono-Bold.json"
+            }
+        }
+    ]
+}

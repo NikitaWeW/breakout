@@ -19,7 +19,7 @@ namespace game
         std::map<std::filesystem::path, model::Model> m_modelCache;
         std::map<std::filesystem::path, opengl::Texture> m_textureCache;
         std::map<std::pair<std::filesystem::path, std::filesystem::path>, text::Font> m_fontCache;
-        ecs::Entity_t createModel(std::filesystem::path const &filepath, bool flipWindingOrder, bool flipTextures);
+        std::pair<ecs::Entity_t, std::set<ecs::Entity_t>> createModel(std::filesystem::path const &filepath, bool flipWindingOrder, bool flipTextures);
         text::Font &createFont(std::filesystem::path atlas, std::filesystem::path metadata);
         void addTexture(ecs::Entity_t const &modelEntity, std::filesystem::path const &path, std::string const &type, bool flipTextures);
     public:

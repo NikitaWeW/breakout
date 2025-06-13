@@ -7,7 +7,8 @@ using json = nlohmann::json;
 
 game::LevelParser::~LevelParser() = default;
 
-ecs::Entity_t game::LevelParser::createModel(std::filesystem::path const &filepath, bool flipWindingOrder, bool flipTextures) {
+// pair(model entity, set of light entities)
+std::pair<ecs::Entity_t, std::set<ecs::Entity_t>> game::LevelParser::createModel(std::filesystem::path const &filepath, bool flipWindingOrder, bool flipTextures) {
     if(m_modelCache.find(filepath) == m_modelCache.end()) {
         m_modelCache.insert({filepath, model::Model{filepath, 
             model::FLIP_TEXTURES | 
@@ -17,17 +18,65 @@ ecs::Entity_t game::LevelParser::createModel(std::filesystem::path const &filepa
     }
     model::Model &model = m_modelCache.at(filepath);
 
-    ecs::Entity_t entity = ecs::makeEntity<model::Model>();
-    ecs::get<model::Model>(entity) = model;
+    ecs::Entity_t modelEntity = ecs::makeEntity<model::Model>();
+    ecs::get<model::Model>(modelEntity) = model;
 
     if(model.getScene()->HasAnimations()) {
         game::Animation animation;
 
-        ecs::addComponent<game::Animation>(entity);
-        ecs::get<game::Animation>(entity) = animation;
+        ecs::addComponent<game::Animation>(modelEntity);
+        ecs::get<game::Animation>(modelEntity) = animation;
+    }
+    std::set<ecs::Entity_t> lights;
+    for(size_t i = 0; i < model.getScene()->mNumLights; ++i) {
+        ecs::Entity_t lightEntity = ecs::makeEntity<Light, PointLight, Position>();
+        aiLight const *assimpLight = model.getScene()->mLights[i];
+
+        if(assimpLight->mType == aiLightSource_POINT) {
+            ecs::get<Light>(lightEntity) = {
+                .color = glm::vec3{assimpLight->mColorDiffuse.r, assimpLight->mColorDiffuse.g, assimpLight->mColorDiffuse.b}
+            };
+            ecs::get<PointLight>(lightEntity) = {
+                .attenuation = assimpLight->mAttenuationQuadratic
+            };
+            ecs::get<Position>(lightEntity).position = glm::vec3{assimpLight->mPosition.x, assimpLight->mPosition.y, assimpLight->mPosition.z};
+            lights.insert(lightEntity);
+        } else if(assimpLight->mType == aiLightSource_DIRECTIONAL) {
+            ecs::Entity_t lightEntity = ecs::makeEntity<Light, DirectionalLight, Direction>();
+            ecs::get<Light>(lightEntity) = {
+                .color = glm::vec3{assimpLight->mColorDiffuse.r, assimpLight->mColorDiffuse.g, assimpLight->mColorDiffuse.b}
+            };
+            ecs::get<Direction>(lightEntity).dir = glm::vec3{assimpLight->mDirection.x, assimpLight->mDirection.y, assimpLight->mDirection.z};
+            lights.insert(lightEntity);
+        } else if(assimpLight->mType == aiLightSource_SPOT) {
+            ecs::Entity_t lightEntity = ecs::makeEntity<Light, SpotLight, Position, Direction>();
+            ecs::get<Light>(lightEntity) = {
+                .color = glm::vec3{assimpLight->mColorDiffuse.r, assimpLight->mColorDiffuse.g, assimpLight->mColorDiffuse.b}
+            };
+            ecs::get<SpotLight>(lightEntity) = {
+                .innerConeAngle = glm::degrees(assimpLight->mAngleInnerCone),
+                .outerConeAngle = glm::degrees(assimpLight->mAngleOuterCone),
+                .attenuation = assimpLight->mAttenuationQuadratic
+            };
+            ecs::get<Position>(lightEntity).position = glm::vec3{assimpLight->mPosition.x, assimpLight->mPosition.y, assimpLight->mPosition.z};
+            ecs::get<Direction>(lightEntity).dir = glm::vec3{assimpLight->mDirection.x, assimpLight->mDirection.y, assimpLight->mDirection.z};
+            lights.insert(lightEntity);
+        } else if(assimpLight->mType == aiLightSource_AREA) {
+            ecs::Entity_t lightEntity = ecs::makeEntity<Light, AreaLight, Position, Direction>();
+            ecs::get<Light>(lightEntity) = {
+                .color = glm::vec3{assimpLight->mColorDiffuse.r, assimpLight->mColorDiffuse.g, assimpLight->mColorDiffuse.b}
+            };
+            ecs::get<AreaLight>(lightEntity) = {
+                .attenuation = assimpLight->mAttenuationQuadratic,
+                .size = glm::vec2{assimpLight->mSize.x, assimpLight->mSize.y}
+            };
+            ecs::get<Position>(lightEntity).position = glm::vec3{assimpLight->mPosition.x, assimpLight->mPosition.y, assimpLight->mPosition.z};
+            ecs::get<Direction>(lightEntity).dir = glm::vec3{assimpLight->mDirection.x, assimpLight->mDirection.y, assimpLight->mDirection.z};
+            lights.insert(lightEntity);
+        }
     }
 
-    return entity;
+    return std::make_pair(modelEntity, lights);
 }
 text::Font &game::LevelParser::createFont(std::filesystem::path atlas, std::filesystem::path metadata)
 {
@@ -108,7 +157,9 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                     jsonentity.contains("flip winding order") && jsonentity.at("flip winding order").is_boolean() ? 
                     jsonentity["flip winding order"].get<bool>() :
                     false;
-                entity = createModel(path, flipWindingOrder, flipTextures);
+                std::set<ecs::Entity_t> lights;
+                std::tie(entity, lights) = createModel(path, flipWindingOrder, flipTextures);
+                scene.containedEntities.insert(lights.begin(), lights.end());
                 ecs::addComponent(entity, MaterialProperties{});
                 MaterialProperties &materialProperties = ecs::get<MaterialProperties>(entity);
 
@@ -162,6 +213,10 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                     (jsonentity.contains("transparent") && jsonentity.at("transparent").is_boolean() && jsonentity.at("transparent").get<bool>()) || 
                     (ecs::entityHasComponent<Color>(entity) && ecs::get<Color>(entity).color.a < 1)
                 ) ecs::addComponent<Transparent>(entity);
+                if(
+                    (jsonentity.contains("semi-transparent") && jsonentity.at("semi-transparent").is_boolean() && jsonentity.at("semi-transparent").get<bool>()) || 
+                    (ecs::entityHasComponent<Color>(entity) && ecs::get<Color>(entity).color.a < 1)
+                ) ecs::addComponent<SemiTransparent>(entity);
             } else if(type == "controllable camera") {
                 GLFWwindow *window = findWindow();
                 if(!window) {
@@ -226,6 +281,21 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                     .innerConeAngle = jsonentity.contains("inner cone angle") && jsonentity.at("inner cone angle").is_number() ? jsonentity.at("inner cone angle").get<float>() : 35.0f,
                     .outerConeAngle = jsonentity.contains("outer cone angle") && jsonentity.at("outer cone angle").is_number() ? jsonentity.at("outer cone angle").get<float>() : 45.0f,
                     .attenuation = jsonentity.contains("attenuation") && jsonentity.at("attenuation").is_number() ? jsonentity.at("attenuation").get<float>() : 10.0f
+                };
+                if(jsonentity.contains("position")) {
+                    ecs::addComponent<game::Position>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["position"]))});
+                }
+                if(jsonentity.contains("direction")) {
+                    ecs::addComponent<game::Direction>(entity, {glm::normalize(static_cast<glm::vec3>(getVecFromJSON(jsonentity["direction"])))});
+                }
+            } else if(type == "area light") {
+                entity = ecs::makeEntity<game::Light, game::AreaLight>();
+                ecs::get<Light>(entity) = {
+                    .color = jsonentity.contains("color") && jsonentity.at("color").is_array() ? static_cast<glm::vec3>(getVecFromJSON(jsonentity["color"])) : glm::vec3{1},
+                };
+                ecs::get<AreaLight>(entity) = {
+                    .attenuation = jsonentity.contains("attenuation") && jsonentity.at("attenuation").is_number() ? jsonentity.at("attenuation").get<float>() : 10.0f,
+                    .size = jsonentity.contains("size") && jsonentity.at("size").is_array() ? getVecFromJSON<2>(jsonentity.at("size")) : glm::vec2{1}
                 };
                 if(jsonentity.contains("position")) {
                     ecs::addComponent<game::Position>(entity, {static_cast<glm::vec3>(getVecFromJSON(jsonentity["position"]))});

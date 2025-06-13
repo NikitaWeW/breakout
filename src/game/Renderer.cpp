@@ -167,7 +167,7 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
     }
 }
 
-void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
+void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
 {
     glViewport(0, 0, camera.width, camera.height);
     
@@ -178,7 +178,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     }
 
     // ===================
-    // SOLID OBJECTS PASS
+    // SOLID OBJECTS PASS 
     // ===================
 
     // set up render states
@@ -188,26 +188,25 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
+    rtarget.mainFBO.bind();
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // draw opaque objects
+    m_propShader.bind();
+    glUniformMatrix4fv(m_propShader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
+    glUniformMatrix4fv(m_propShader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
+    glUniform3fv(      m_propShader.getUniform("u_camPos"), 1, &cameraPosition.x);
     for(ecs::Entity_t const &entity : entities) {
-        if(ecs::entityHasComponent<model::Model>(entity) && !ecs::entityHasComponent<Transparent>(entity)) {
-            opengl::ShaderProgram const &shader = ecs::entityHasComponent<opengl::ShaderProgram>(entity) ? ecs::get<opengl::ShaderProgram>(entity) : m_defaultShader;
-            shader.bind();
-            glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
-            glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
-            glUniform3fv(      shader.getUniform("u_camPos"), 1, &cameraPosition.x);
-            drawModel(entity, shader);
+        if(ecs::entityHasComponent<model::Model>(entity) && (!ecs::entityHasComponent<Transparent>(entity) || ecs::entityHasComponent<SemiTransparent>(entity))) {
+            drawModel(entity, m_propShader);
         }
     } // for(auto &entity : entities) 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
 
     // =====================
-    // OIT TRANSPARENT PASS
+    // OIT TRANSPARENT PASS 
     // =====================
 
     // configure render states
@@ -232,7 +231,7 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     glUniformMatrix4fv(m_oitShader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
     glUniform3fv(      m_oitShader.getUniform("u_camPos"), 1, &cameraPosition.x);
     for(ecs::Entity_t const &entity : entities) {
-        if(ecs::entityHasComponent<model::Model>(entity) && ecs::entityHasComponent<Transparent>(entity)) {
+        if(ecs::entityHasComponent<model::Model>(entity) && (ecs::entityHasComponent<Transparent>(entity) || ecs::entityHasComponent<SemiTransparent>(entity))) {
             drawModel(entity, m_oitShader);
         }
     }
@@ -240,17 +239,35 @@ void game::Renderer::render(std::set<ecs::Entity_t> const &entities, double delt
     glUseProgram(0);
 
     // ===================
-    // OIT COMPOSITE PASS
+    // OIT COMPOSITE PASS 
     // ===================
 
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBindFramebuffer(GL_FRAMEBUFFER, rtarget.mainFBOid);
+    rtarget.mainFBO.bind();
     m_oitCompositeShader.bind();
     rtarget.oitAccumTexture.bind(0);
     rtarget.oitRevelageTexture.bind(1);
+
+    // draw a quad (hard-coded in VSh)
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(0);
+
+    // ======================================
+    // HDR IMAGE / OTHER POSTPROCESSING PASS 
+    // ======================================
+
+    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_ALWAYS);
+    glDepthMask(GL_FALSE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBindFramebuffer(GL_FRAMEBUFFER, rtarget.outputFBOid);
+    m_screenShader.bind();
+    rtarget.mainFBOColor.bind(0);
 
     // draw a quad (hard-coded in VSh)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -267,18 +284,27 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         game::Camera &camera = ecs::get<game::Camera>(cameraEntity);
         game::RenderTarget &rtarget = ecs::get<game::RenderTarget>(cameraEntity);
         if(rtarget.prevWidth != camera.width || rtarget.prevHeight != camera.height) { // resize or initialize buffers / textures
-            rtarget.oitAccumTexture.bind(); glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, camera.width, camera.height, 0, GL_RGBA, GL_FLOAT, nullptr);
-            rtarget.oitRevelageTexture.bind(); glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, camera.width, camera.height, 0, GL_RED, GL_FLOAT, nullptr);
+            rtarget.oitAccumTexture.bind();     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, camera.width, camera.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+            rtarget.oitRevelageTexture.bind();  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, camera.width, camera.height, 0, GL_RED, GL_FLOAT, nullptr);
+
+            rtarget.mainFBOColor.bind();        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, camera.width, camera.height, 0, GL_RGBA, GL_FLOAT, nullptr);
+            rtarget.mainFBORBO.bind();          glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, camera.width, camera.height);
         }
         if(rtarget.prevWidth == -1) { // initialize render target
             rtarget.oitFBO.bind();
             rtarget.oitFBO.attach(rtarget.oitAccumTexture, GL_COLOR_ATTACHMENT0);
             rtarget.oitFBO.attach(rtarget.oitRevelageTexture, GL_COLOR_ATTACHMENT1);
+            rtarget.oitFBO.attach(rtarget.mainFBORBO, GL_DEPTH_STENCIL_ATTACHMENT);
             {
                 GLenum const drawbuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
                 glDrawBuffers(sizeof(drawbuffers) / sizeof(*drawbuffers), drawbuffers);
             }
             assert(rtarget.oitFBO.isComplete());
+
+            rtarget.mainFBO.bind();
+            rtarget.mainFBO.attach(rtarget.mainFBOColor, GL_COLOR_ATTACHMENT0);
+            rtarget.mainFBO.attach(rtarget.mainFBORBO, GL_DEPTH_STENCIL_ATTACHMENT);
+            assert(rtarget.mainFBO.isComplete());
         }
         rtarget.prevWidth = camera.width;
         rtarget.prevHeight = camera.height;
@@ -286,7 +312,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         camera.projMat = getProjMat(cameraEntity);
         camera.viewMat = getViewMat(cameraEntity);
 
-        render(entities, deltatime, camera, rtarget);
+        renderMain(entities, deltatime, camera, rtarget);
 
         for(ecs::Entity_t const &entity : entities) {
             if(ecs::entityHasComponent<game::Text>(entity)) drawText(entity, camera);

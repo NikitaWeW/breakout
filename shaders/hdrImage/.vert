@@ -1,10 +1,10 @@
 #version 330 core
 
 vec2 vertices[4] = vec2[4](
-    vec2(-1,  1),
-    vec2( 1,  1),
     vec2( 1, -1),
-    vec2(-1, -1) 
+    vec2( 1,  1),
+    vec2(-1, -1),
+    vec2(-1,  1)
 );
 
 void main() {

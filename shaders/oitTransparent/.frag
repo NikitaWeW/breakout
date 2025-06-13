@@ -2,6 +2,7 @@
 
 const uint MAX_LIGHTS = 100u;
 const float ambientKoeffitient = 0.125;
+const float opaqueTreshold = 0.9;
 
 struct Material
 {
@@ -68,6 +69,9 @@ void main()
     vec3 normal = normalize(fs_in.TBN * normalize(texture(u_material.normal, texCoords).rgb * 2.0 - 1.0));
     vec3 fragPos = fs_in.fragPos;
 
+    vec4 color = texture(u_material.diffuse, texCoords) * u_color;
+    if(opaqueTreshold < color.a) discard;
+
     vec3 lightColor = vec3(0);
     for(uint i = 0u; i < numPointLights; ++i) {
         lightColor += calculateLight(pointLights[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
@@ -79,9 +83,7 @@ void main()
         lightColor += calculateLight(spotLights[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
     }
 
-    vec4 color = texture(u_material.diffuse, texCoords) * vec4(lightColor, 1) * u_color;
-
-    color.rgb = pow(color.rgb, vec3(1/2.2)); // apply gamma correction
+    color *= vec4(lightColor, 1);
 
     // weight function
     float weight = clamp(pow(min(1.0, color.a * 10.0) + 0.01, 3.0) * 1e8 * pow(1.0 - gl_FragCoord.z * 0.9, 3.0), 1e-2, 3e3);

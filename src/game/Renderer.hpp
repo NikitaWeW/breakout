@@ -46,6 +46,7 @@ namespace game
     };
     struct PerspectiveProjection {}; // marker component
     struct Transparent {}; // also a marker component
+    struct SemiTransparent {};
     struct Color
     {
         glm::vec4 color;
@@ -60,10 +61,14 @@ namespace game
         opengl::Texture oitAccumTexture{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_BORDER};
         opengl::Texture oitRevelageTexture{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_BORDER};
 
+        opengl::Framebuffer mainFBO{0};
+        opengl::Texture mainFBOColor{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_BORDER};
+        opengl::Renderbuffer mainFBORBO{0};
+
         // opengl::ShaderProgram *propShader; // TODO: move the shader handle from model entity to render target
 
         glm::vec4 clearColor{0, 0, 0, 1};
-        unsigned mainFBOid = 0;
+        unsigned outputFBOid = 0;
         int prevWidth = -1, prevHeight = -1;
     };
     struct RepeatTexture
@@ -93,7 +98,7 @@ namespace game
     // TODO: implement
     struct AreaLight {
         float attenuation;
-        glm::vec2 scale;
+        glm::vec2 size;
     };
 
     class Renderer : public ecs::ISystem
@@ -105,13 +110,13 @@ namespace game
             {"normal", opengl::Texture{"res/textures/blue.png", false, false}}
         };
         opengl::ShaderProgram m_screenShader{"shaders/hdrImage"};
-        opengl::ShaderProgram m_defaultShader{"shaders/plainColor"};
+        opengl::ShaderProgram m_propShader{"shaders/prop"};
         opengl::ShaderProgram m_oitShader{"shaders/oitTransparent"};
         opengl::ShaderProgram m_oitCompositeShader{"shaders/oitComposite"};
 
         std::optional<opengl::UniformBuffer *> m_lightsUBO;
 
-        void render(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget);
+        void renderMain(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget);
         void drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const;
     public:
         Renderer() = default;

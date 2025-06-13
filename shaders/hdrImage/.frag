@@ -1,6 +1,6 @@
-#version 330
+#version 430
 
-uniform sampler2D u_texture;
+layout(binding = 0) uniform sampler2D u_texture;
 uniform float u_exposure = 1;
 
 out vec4 o_color;

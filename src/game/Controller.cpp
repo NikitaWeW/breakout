@@ -8,14 +8,50 @@ game::CameraController *game::CameraController::controllerCallbackUser = nullptr
 void game::key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) 
 { 
     assert(game::CameraController::controllerCallbackUser && "No controller registred and the key callback is called! Register the game::CameraController system or remove this glfw callback.");
-    game::CameraController::controllerCallbackUser->pushKeyEvent({window, key, scancode, action, mods}); 
+    game::CameraController::controllerCallbackUser->pushEvent(game::CameraController::KeyEvent{
+        .window = window, 
+        .key = key, 
+        .scancode = scancode, 
+        .action = action, 
+        .mods = mods
+    }); 
+}
+void game::scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
+    assert(game::CameraController::controllerCallbackUser && "No controller registred and the key callback is called! Register the game::CameraController system or remove this glfw callback.");
+    game::CameraController::controllerCallbackUser->pushEvent(game::CameraController::MouseEvent{
+        .window = window,
+        .xoffset = xoffset,
+        .yoffset = yoffset
+    }); 
+}
+void game::cursor_position_callback(GLFWwindow *window, double xpos, double ypos)
+{
+    assert(game::CameraController::controllerCallbackUser && "No controller registred and the key callback is called! Register the game::CameraController system or remove this glfw callback.");
+    game::CameraController::controllerCallbackUser->pushEvent(game::CameraController::MouseEvent{
+        .window = window,
+        .xpos = xpos,
+        .ypos = ypos
+    }); 
+}
+void game::mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
+{
+    assert(game::CameraController::controllerCallbackUser && "No controller registred and the key callback is called! Register the game::CameraController system or remove this glfw callback.");
+    game::CameraController::controllerCallbackUser->pushEvent(game::CameraController::MouseEvent{
+        .window = window,
+        .button = button, 
+        .action = action, 
+        .mods = mods
+    });
 }
 
-void game::CameraController::pushKeyEvent(KeyEvent const &event) { m_keyQueue.push(event); }
+void game::CameraController::pushEvent(KeyEvent const &event) { m_keyQueue.push(event); }
+void game::CameraController::pushEvent(MouseEvent const &event) { m_mouseQueue.push(event); }
 
 game::CameraController::CameraController()
 {
     game::CameraController::controllerCallbackUser = this;
+    
 }
 
 void game::CameraController::update(std::set<ecs::Entity_t> const &entities, double deltatime)
@@ -131,6 +167,20 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
                 bool &locked = ecs::get<ControllableCamera>(entity).locked;
                 locked = !locked;
             }
+        }
+    }
+
+    for (; !m_mouseQueue.empty(); m_mouseQueue.pop()) {
+        MouseEvent const &event = m_mouseQueue.front();
+        for(ecs::Entity_t const &entity : entities) {
+            if(!ecs::entityHasComponent<Camera>(entity) || !ecs::entityHasComponent<ControllableCamera>(entity) || !ecs::entityHasComponent<Window>(entity)) continue;
+            GLFWwindow *window = ecs::get<Window>(entity).glfwwindow;
+            if(window != event.window) continue;
+            Camera &camera = ecs::get<Camera>(entity);
+            ControllableCamera &controllable = ecs::get<ControllableCamera>(entity);
+
+            camera.fov -= event.yoffset.value_or(0) * controllable.sensitivity * 10;
+            camera.fov = glm::clamp<float>(camera.fov, 0.01, 45);
         }
     }
 }

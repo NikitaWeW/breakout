@@ -18,7 +18,7 @@ namespace game
     void gameMain(GLFWwindow *mainWindow);
 } // namespace game
 
-ecs::Entity_t makeSceneEntity(std::filesystem::path const &filepath, opengl::ShaderProgram const *modelShader = nullptr)
+ecs::Entity_t makeSceneEntity(std::filesystem::path const &filepath)
 {
     ecs::Entity_t result = ecs::makeEntity<game::Scene>();
     game::Scene &scene = ecs::get<game::Scene>(result);
@@ -29,14 +29,7 @@ ecs::Entity_t makeSceneEntity(std::filesystem::path const &filepath, opengl::Sha
     if(game::getLevelParser().getErrorString() != "") {
         std::cout << game::getLevelParser().getErrorString() << '\n';
     }
-    for(ecs::Entity_t const &entity : scene.containedEntities) {
-        if(modelShader) {
-            if(ecs::entityHasComponent<model::Model>(entity)) {
-                ecs::addComponent(entity, *modelShader);
-            }
-        }
-        ecs::getSystemManager().getEntities().insert(entity);
-    }
+    ecs::getSystemManager().getEntities().insert(scene.containedEntities.begin(), scene.containedEntities.end());
     return result;
 }
 ecs::Entity_t makeWindowEntity(GLFWwindow *window) 
@@ -58,12 +51,14 @@ ecs::Entity_t makeLightStorageEntity()
 
 void game::gameMain(GLFWwindow *window) 
 {
-    opengl::ShaderProgram propShader{"shaders/prop", true};
     registerEcs();
     glfwSetKeyCallback(window, game::key_callback);
+    glfwSetMouseButtonCallback(window, game::mouse_button_callback);
+    glfwSetScrollCallback(window, game::scroll_callback);
+    glfwSetCursorPosCallback(window, game::cursor_position_callback);
 
     ecs::getSystemManager().getEntities().insert(makeWindowEntity(window));
-    ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json", &propShader));
+    ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/sponza.json"));
     ecs::getSystemManager().getEntities().insert(makeLightStorageEntity());
     
     // ====================
@@ -120,4 +115,5 @@ void registerEcs()
     ecs::getComponentManager().registerComponent<SpotLight>();
     ecs::getComponentManager().registerComponent<DirectionalLight>();
     ecs::getComponentManager().registerComponent<game::Transparent>();
+    ecs::getComponentManager().registerComponent<game::SemiTransparent>();
 }
