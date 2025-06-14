@@ -5,7 +5,6 @@
 #include "game/Physics.hpp"
 #include "utils/Model.hpp"
 
-
 glm::mat4 getProjMat(ecs::Entity_t const &entity) 
 {
     game::Camera const &camera = ecs::get<game::Camera>(entity);
@@ -13,7 +12,14 @@ glm::mat4 getProjMat(ecs::Entity_t const &entity)
     if(ecs::entityHasComponent<game::PerspectiveProjection>(entity))
         return glm::perspective<float>(glm::radians(camera.fov), (float) camera.width / (float) camera.height, camera.znear, camera.zfar);
     else
-        return glm::ortho<float>((float) -camera.width / (float) camera.height, (float) camera.width / (float) camera.height, -1, 1, camera.znear, camera.zfar); // FIXME: smashed random shit here
+        return glm::ortho<float>(
+            (float) -camera.width / 2, 
+            (float) camera.width / 2, 
+            (float) -camera.height / 2, 
+            (float) camera.height / 2, 
+            camera.znear, 
+            camera.zfar
+        );
 }
 glm::mat4 getViewMat(ecs::Entity_t const &entity) 
 {
@@ -78,11 +84,11 @@ void drawText(ecs::Entity_t const &textEntity, game::Camera const &camera) {
     assert(ecs::entityHasComponent<Text>(textEntity));
     Text const &text = ecs::get<Text>(textEntity);
     glm::mat4 matrix = text.matrix.value_or(glm::ortho<float>(
-        (float) -camera.width / (float) camera.height, 
-        (float) camera.width / (float) camera.height, 
-        -1, 1, camera.znear, camera.zfar
+        0, camera.width, 
+        0, camera.height,
+        -1, 1
     ));
-    text.font->drawText(text.text, text.position, text.size, text.fgColor, text.bgColor, matrix);
+    text.font->drawText(text.text, text.position * glm::vec2{camera.width, camera.height}, text.size * camera.height, text.fgColor, text.bgColor, matrix);
 }
 std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t const &entity)
 {
@@ -166,12 +172,14 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
         draw(drawable);
     }
 }
-
 void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
 {
     glViewport(0, 0, camera.width, camera.height);
     
-    glm::vec3 cameraPosition = glm::vec3{glm::inverse(camera.viewMat) * glm::vec4{0, 0, 0, 1}};
+    glm::mat4 invViewMat = glm::inverse(camera.viewMat);
+    glm::vec3 cameraPosition = glm::vec3{invViewMat * glm::vec4{0, 0, 0, 1}};
+    // glm::vec3 cameraDirection = glm::vec3{invViewMat * glm::vec4{0, 0, -1,0}};
+
     {
         auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
         m_lightsUBO = lightsUBOEntity != entities.end() ? &ecs::get<LightUBO>(*lightsUBOEntity).ubo : std::optional<opengl::UniformBuffer *>{};

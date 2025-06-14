@@ -26,7 +26,7 @@ namespace game
     {
         text::Font *font;
         std::string text;
-        glm::vec2 position;
+        glm::vec2 position; // 
         float size;
         glm::vec4 fgColor;
         glm::vec4 bgColor;

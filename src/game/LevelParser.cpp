@@ -4,7 +4,7 @@
 #include "json.hpp"
 #include "Animator.hpp"
 using json = nlohmann::json;
-
+constexpr glm::vec4 clearColor{0, 0, 0, 1};
 game::LevelParser::~LevelParser() = default;
 
 // pair(model entity, set of light entities)
@@ -230,7 +230,7 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                     .locked = true
                 };
                 ecs::get<RenderTarget>(entity) = {};
-                ecs::get<RenderTarget>(entity).clearColor = {0.2, 0.2, 0.2, 1};
+                ecs::get<RenderTarget>(entity).clearColor = clearColor;
                 ecs::get<Camera>(entity) = {};
                 ecs::get<Window>(entity) = {window};
 
@@ -243,7 +243,7 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
             } else if(type == "camera") {
                 entity = ecs::makeEntity<Camera, PerspectiveProjection, RenderTarget>();
                 ecs::get<RenderTarget>(entity) = {};
-                ecs::get<RenderTarget>(entity).clearColor = {0.2, 0.2, 0.2, 1};
+                ecs::get<RenderTarget>(entity).clearColor = clearColor;
                 ecs::get<Camera>(entity) = {};
 
                 if(jsonentity.contains("position")) {

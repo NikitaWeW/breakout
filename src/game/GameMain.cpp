@@ -58,6 +58,7 @@ void game::gameMain(GLFWwindow *window)
     glfwSetCursorPosCallback(window, game::cursor_position_callback);
 
     ecs::getSystemManager().getEntities().insert(makeWindowEntity(window));
+    // ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json"));
     ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/sponza.json"));
     ecs::getSystemManager().getEntities().insert(makeLightStorageEntity());
     

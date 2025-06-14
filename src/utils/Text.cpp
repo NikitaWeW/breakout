@@ -27,15 +27,15 @@ text::Font::Font(std::filesystem::path const &atlas, std::filesystem::path const
     json jsonMetrics = jsonMetadata.at("metrics");
     json jsonGlyphs = jsonMetadata.at("glyphs");
 
-    glm::vec2 atlasDimensions{jsonAtlas.at("width").get<float>(), jsonAtlas.at("height").get<float>()};
+    m_atlas.dimensions = glm::vec2{jsonAtlas.at("width").get<float>(), jsonAtlas.at("height").get<float>()};
 
     m_newLineSize = jsonMetrics.at("lineHeight").get<float>() / magicValue;
     m_spaceSize = 0.05f;
 
-    assert(atlasDimensions.x == atlasDimensions.y);
+    assert(m_atlas.dimensions.x == m_atlas.dimensions.y);
     float size = jsonAtlas.at("size").get<float>();
     float range = jsonAtlas.at("distanceRange").get<float>();
-    m_pixelRange = atlasDimensions.x / size * range;
+    m_pixelRange = m_atlas.dimensions.x / size * range;
 
     m_atlas.glyphs = {};
     for(json &jsonGlyph : jsonGlyphs) {
@@ -48,8 +48,8 @@ text::Font::Font(std::filesystem::path const &atlas, std::filesystem::path const
         json jsonPlaneBounds = jsonGlyph.at("planeBounds");
 
         auto glyphData = GlyphData{
-            .offset = glm::vec2{jsonAtlasBounds.at("left").get<float>(), jsonAtlasBounds[jsonAtlas.at("yOrigin").get<std::string>()].get<float>()} / atlasDimensions,
-            .size = glm::abs(glm::vec2{jsonAtlasBounds.at("left").get<float>() - jsonAtlasBounds.at("right").get<float>(), jsonAtlasBounds.at("top").get<float>() - jsonAtlasBounds.at("bottom").get<float>()}) / atlasDimensions,
+            .offset = glm::vec2{jsonAtlasBounds.at("left").get<float>(), jsonAtlasBounds[jsonAtlas.at("yOrigin").get<std::string>()].get<float>()} / m_atlas.dimensions,
+            .size = glm::abs(glm::vec2{jsonAtlasBounds.at("left").get<float>() - jsonAtlasBounds.at("right").get<float>(), jsonAtlasBounds.at("top").get<float>() - jsonAtlasBounds.at("bottom").get<float>()}) / m_atlas.dimensions,
             .verticalOffset = jsonPlaneBounds.at("bottom").get<float>() / magicValue,
             .advance = jsonGlyph.at("advance").get<float>() / magicValue
         };
@@ -57,9 +57,8 @@ text::Font::Font(std::filesystem::path const &atlas, std::filesystem::path const
         m_atlas.glyphs.try_emplace(unicode, glyphData);
     }
 }
-
 void text::Font::drawText(std::string const &text, glm::vec2 const &position, float size, glm::vec4 const &fgColor, glm::vec4 const &bgColor, glm::mat4 const &projectionMatrix)
-{ // FIXME: text only works without any objects in the scene
+{
     struct GlyphRenderData {
         glm::vec2 quadPosition;
         glm::vec2 quadSize;

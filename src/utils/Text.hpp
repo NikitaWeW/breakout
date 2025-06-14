@@ -29,6 +29,7 @@ namespace text
         struct Atlas {
             opengl::Texture texture;
             std::map<wchar_t, GlyphData> glyphs;
+            glm::vec2 dimensions;
         };
     private:
         opengl::ShaderProgram m_textShader;
@@ -37,6 +38,7 @@ namespace text
         float m_spacing = 0;
         float m_spaceSize = 0;
         float m_pixelRange = 0;
+        glm::vec2 m_atlasDimensions;
     public:
         Font() = default;
         ~Font() = default;

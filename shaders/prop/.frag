@@ -2,7 +2,7 @@
 out vec4 o_color;
 
 const uint MAX_LIGHTS = 100u;
-const float ambientKoeffitient = 0.125;
+const float ambientKoeffitient = 0.05;
 const float opaqueTreshold = 0.9;
 
 struct Material
@@ -41,7 +41,7 @@ struct SpotLight
 in VS_OUT {
     vec2 texCoords;
     vec3 fragPos;
-    mat3 TBN;
+    flat mat3 TBN;
 } fs_in;
 
 uniform Material u_material;
@@ -94,9 +94,7 @@ vec4 calculateLight(PointLight light, Material material, vec3 normal, vec3 viewD
     float distanceLightFragment = length(light.position - fragPos);
     float attenuation = 1.0 / (light.attenuation * distanceLightFragment * distanceLightFragment);
 
-    vec3 ambient = 
-        light.color * ambientKoeffitient * 
-        attenuation;
+    vec3 ambient = light.color * ambientKoeffitient * attenuation;
     vec3 diffuse = 
         light.color * 
         attenuation *
@@ -132,9 +130,7 @@ vec4 calculateLight(SpotLight light, Material material, vec3 normal, vec3 viewDi
     float distanceLightFragment = length(light.position - fragPos);
     float attenuation = 1.0 / (light.attenuation * distanceLightFragment * distanceLightFragment);
 
-    vec3 ambient = 
-        light.color * 0.125 * 
-        attenuation;
+    vec3 ambient = light.color * ambientKoeffitient * attenuation;
     float theta = dot(lightDir, normalize(-light.direction));
     if(theta > light.outerConeAngle) {
         float epsilon = light.innerConeAngle - light.outerConeAngle;

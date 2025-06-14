@@ -9,7 +9,7 @@ layout(location = 5) in vec4 a_weights;
 out VS_OUT {
     vec2 texCoords;
     vec3 fragPos;
-    mat3 TBN;
+    flat mat3 TBN;
 } vs_out;
 
 const int MAX_BONES = 100;
@@ -49,5 +49,4 @@ void main() {
     tangent = normalize(tangent - dot(tangent, normal) * normal);
     vec3 bitangent = cross(tangent, normal);
     vs_out.TBN = mat3(tangent, bitangent, normal);
-
 }
