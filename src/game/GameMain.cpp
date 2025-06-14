@@ -10,6 +10,7 @@
 #include <iostream>
 #include "utils/Model.hpp"
 #include "LevelParser.hpp"
+#include "utils/Profiler.hpp"
 
 void registerEcs();
 
@@ -78,6 +79,7 @@ void game::gameMain(GLFWwindow *window)
     while (!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
+        profiler::getLogger<profiler::READABLE>("log/profiler.txt").clear();
         
         ecs::getSystemManager().update(deltatime);
 

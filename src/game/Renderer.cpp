@@ -4,6 +4,7 @@
 #include "Animator.hpp"
 #include "game/Physics.hpp"
 #include "utils/Model.hpp"
+#include "utils/Profiler.hpp"
 
 glm::mat4 getProjMat(ecs::Entity_t const &entity) 
 {
@@ -131,6 +132,7 @@ void setTextures(model::Mesh const &mesh, opengl::ShaderProgram const &shader, s
 }
 void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const
 {
+    PROFILER_PROFILE();
     assert(ecs::entityHasComponent<model::Model>(entity));
     model::Model const &model = ecs::get<model::Model>(entity);
     glm::mat4 modelMat = getModelMat(entity);
@@ -174,6 +176,7 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
 }
 void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
 {
+    PROFILER_PROFILE();
     glViewport(0, 0, camera.width, camera.height);
     
     glm::mat4 invViewMat = glm::inverse(camera.viewMat);
@@ -286,6 +289,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
 
 void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double deltatime)
 {
+    PROFILER_PROFILE();
     for(ecs::Entity_t const &cameraEntity : entities) {
         if(!ecs::entityHasComponent<Camera>(cameraEntity) || !ecs::entityHasComponent<RenderTarget>(cameraEntity)) continue;
 
@@ -330,6 +334,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
 
 void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double deltatime)
 {
+    PROFILER_PROFILE();
     for(ecs::Entity_t const &storageEntity : entities) {
         if(!ecs::entityHasComponent<LightStorage>(storageEntity) || !ecs::entityHasComponent<LightUBO>(storageEntity)) continue;
         LightStorage &storage = ecs::get<LightStorage>(storageEntity);
