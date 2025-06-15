@@ -81,6 +81,7 @@ void draw(game::Drawable const &drawable) {
     }
 }
 void drawText(ecs::Entity_t const &textEntity, game::Camera const &camera) {
+    PROFILER_PROFILE();
     using namespace game;
     assert(ecs::entityHasComponent<Text>(textEntity));
     Text const &text = ecs::get<Text>(textEntity);

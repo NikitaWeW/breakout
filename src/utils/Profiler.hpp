@@ -9,9 +9,12 @@
 #include "current_function.hpp"
 
 #ifndef DEBUG
-#define PROFILER_PROFILE() profiler::ScopeTimer<profiler::READABLE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<profiler::READABLE>("log/logger.txt")}
+#define PROFILER_LOG_TYPE profiler::READABLE
+#define PROFILER_PROFILE() profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler.txt")}
+#define PROFILER_PROFILE_IN_FILE(filepath) profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>(filepath)}
 #else
 #define PROFILER_PROFILE()
+#define PROFILER_PROFILE_IN_FILE(filepath)
 #endif
 
 namespace profiler
@@ -80,7 +83,7 @@ inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
 }
 
 template <> 
-inline profiler::Logger<profiler::READABLE>::~Logger()
+inline profiler::Logger<profiler::LogType::READABLE>::~Logger()
 {
     std::time_t result = std::time(nullptr);
     std::string timeDate = std::asctime(std::localtime(&result));
@@ -89,7 +92,7 @@ inline profiler::Logger<profiler::READABLE>::~Logger()
     m_file << m_log.rdbuf();
 }
 template <> 
-inline profiler::Logger<profiler::JSON>::~Logger()
+inline profiler::Logger<profiler::LogType::JSON>::~Logger()
 {
     std::time_t result = std::time(nullptr);
     std::string timeDate = std::asctime(std::localtime(&result));
@@ -99,7 +102,7 @@ inline profiler::Logger<profiler::JSON>::~Logger()
 }
 
 template <> 
-inline void profiler::Logger<profiler::READABLE>::pushFunction(std::string_view name)
+inline void profiler::Logger<profiler::LogType::READABLE>::pushFunction(std::string_view name)
 {
     for(size_t i = 0; i < m_stack.size(); ++i) {
         m_log << "|  ";
@@ -114,9 +117,9 @@ inline void profiler::Logger<profiler::READABLE>::pushFunction(std::string_view 
     m_stack.push_back(std::string{name});
 }
 template <> 
-inline void profiler::Logger<profiler::READABLE>::popFunction(std::chrono::nanoseconds const &time)
+inline void profiler::Logger<profiler::LogType::READABLE>::popFunction(std::chrono::nanoseconds const &time)
 {
-    for(size_t i = 0; i < m_stack.size(); ++i) {
+    for(size_t i = 1; i < m_stack.size(); ++i) {
         m_log << "|  ";
     }
     if(m_stack.size() != 0) {
@@ -128,7 +131,7 @@ inline void profiler::Logger<profiler::READABLE>::popFunction(std::chrono::nanos
 }
 
 template <> 
-inline void profiler::Logger<profiler::JSON>::pushFunction(std::string_view name)
+inline void profiler::Logger<profiler::LogType::JSON>::pushFunction(std::string_view name)
 {
     nlohmann::json entry = {
         {"name",  name},
@@ -147,15 +150,20 @@ inline void profiler::Logger<profiler::JSON>::pushFunction(std::string_view name
     m_stack.push_back(std::string{name});
 }
 template <> 
-inline void profiler::Logger<profiler::JSON>::popFunction(std::chrono::nanoseconds const &time)
+inline void profiler::Logger<profiler::LogType::JSON>::popFunction(std::chrono::nanoseconds const &time)
 {
     m_log.entryStack.back()->at("finished in (ms)") = time.count() * 1e-6f;
     m_stack.pop_back();
     m_log.entryStack.pop_back();
 }
 
-template <profiler::LogType type> 
-inline void profiler::Logger<type>::clear()
+template <> 
+inline void profiler::Logger<profiler::LogType::READABLE>::clear()
+{
+    m_log.str(std::string());
+}
+template <> 
+inline void profiler::Logger<profiler::LogType::JSON>::clear()
 {
     m_log.clear();
 }

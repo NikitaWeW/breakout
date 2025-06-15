@@ -79,7 +79,7 @@ void game::gameMain(GLFWwindow *window)
     while (!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
-        profiler::getLogger<profiler::READABLE>("log/profiler.txt").clear();
+        profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler.txt").clear();
         
         ecs::getSystemManager().update(deltatime);
 
