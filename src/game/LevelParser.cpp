@@ -143,6 +143,7 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
             json const &jsonentity = entityIter.value();
             ecs::Entity_t entity;
             std::string type = jsonentity.contains("type") && jsonentity.at("type").is_string() ? jsonentity["type"].get<std::string>() : "";
+
                    if(type == "prop") {
                 std::filesystem::path path = jsonentity.contains("path") && jsonentity.at("path").is_string() ? jsonentity["path"].get<std::string>() : "";
                 if(path == "") {
@@ -214,8 +215,7 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                     (ecs::entityHasComponent<Color>(entity) && ecs::get<Color>(entity).color.a < 1)
                 ) ecs::addComponent<Transparent>(entity);
                 if(
-                    (jsonentity.contains("semi-transparent") && jsonentity.at("semi-transparent").is_boolean() && jsonentity.at("semi-transparent").get<bool>()) || 
-                    (ecs::entityHasComponent<Color>(entity) && ecs::get<Color>(entity).color.a < 1)
+                    (jsonentity.contains("semi-transparent") && jsonentity.at("semi-transparent").is_boolean() && jsonentity.at("semi-transparent").get<bool>())
                 ) ecs::addComponent<SemiTransparent>(entity);
             } else if(type == "controllable camera") {
                 GLFWwindow *window = findWindow();
@@ -322,6 +322,18 @@ game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
                     .fgColor = fgColor,
                     .bgColor = bgColor
                 };
+            } else if(type == "skybox") {
+                std::filesystem::path path = jsonentity.contains("path") && jsonentity.at("path").is_string() ? jsonentity["path"].get<std::string>() : "";
+                if(path == "") {
+                    m_errorStr.append("\nno path specified for prop");
+                    continue;
+                } 
+                bool flip = 
+                    jsonentity.contains("flip") && jsonentity.at("flip").is_boolean() ? 
+                    jsonentity["flip"].get<bool>() :
+                    false;
+                entity = ecs::makeEntity<opengl::Cubemap, Skybox>();
+                ecs::get<opengl::Cubemap>(entity) = opengl::Cubemap{path, flip};
             } else {
                 m_errorStr.append("warn: unrecognized type: " + type);
             }

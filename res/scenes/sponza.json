@@ -60,6 +60,10 @@
                 "atlas": "res/msdf-fonts/JetBrainsMono-Bold.png",
                 "metadata": "res/msdf-fonts/JetBrainsMono-Bold.json"
             }
+        },
+        {
+            "type": "skybox",
+            "path": "res/textures/qwantani_sunset_2k.hdr"
         }
     ]
 }

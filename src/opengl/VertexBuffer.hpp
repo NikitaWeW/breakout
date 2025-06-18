@@ -12,10 +12,10 @@ namespace opengl
     private:
     public:
         VertexBuffer() = default;
-        VertexBuffer(size_t size, GLenum usage = GL_DYNAMIC_DRAW);
-        VertexBuffer(size_t size, void const *data, GLenum usage = GL_DYNAMIC_DRAW);
+        explicit VertexBuffer(size_t size, GLenum usage = GL_DYNAMIC_DRAW);
+        explicit VertexBuffer(size_t size, void const *data, GLenum usage = GL_DYNAMIC_DRAW);
         ~VertexBuffer();    
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
     };
 
     class InterleavedVertexBufferLayout 
@@ -103,13 +103,13 @@ namespace opengl
     public:
         VertexArray() = default;
         ~VertexArray();
-        template <typename Layout_t> VertexArray(VertexBuffer const &buffer, Layout_t const &layout);
+        template <typename Layout_t> explicit VertexArray(VertexBuffer const &buffer, Layout_t const &layout);
         void addBuffer(VertexBuffer const &buffer, InterleavedVertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, VertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, InterleavedInstancingVertexBufferLayout const &layout);
         void addBuffer(VertexBuffer const &buffer, InstancingVertexBufferLayout const &layout);
 
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
     };
     template <typename Layout_t> inline VertexArray::VertexArray(VertexBuffer const &buffer, Layout_t const &layout) { 
         glGenVertexArrays(1, &m_renderID);

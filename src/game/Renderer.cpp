@@ -175,6 +175,16 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
         draw(drawable);
     }
 }
+void drawSkybox(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) 
+{
+    assert(ecs::entityHasComponent<game::Skybox>(entity) && ecs::entityHasComponent<opengl::Cubemap>(entity));
+    opengl::Cubemap cubemap = ecs::get<opengl::Cubemap>(entity);
+    cubemap.bind(0);
+
+    // draw a cube (hard-coded in VSh)
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 14);
+}
+
 void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
 {
     PROFILER_PROFILE();
@@ -182,7 +192,6 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
     
     glm::mat4 invViewMat = glm::inverse(camera.viewMat);
     glm::vec3 cameraPosition = glm::vec3{invViewMat * glm::vec4{0, 0, 0, 1}};
-    // glm::vec3 cameraDirection = glm::vec3{invViewMat * glm::vec4{0, 0, -1,0}};
 
     {
         auto lightsUBOEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
@@ -198,6 +207,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     glDepthFunc(GL_LESS);
 
     rtarget.mainFBO.bind();
@@ -214,6 +224,21 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
             drawModel(entity, m_propShader);
         }
     } // for(auto &entity : entities) 
+
+    // draw skybox
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE);
+
+    m_skyboxShader.bind();
+    glUniformMatrix4fv(m_skyboxShader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
+    glUniformMatrix4fv(m_skyboxShader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
+    for(ecs::Entity_t const &entity : entities) {
+        if(ecs::entityHasComponent<Skybox>(entity) && ecs::entityHasComponent<opengl::Cubemap>(entity)) {
+            drawSkybox(entity, m_skyboxShader);
+        }
+    } // for(auto &entity : entities) 
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
 
@@ -223,11 +248,13 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
 
     // configure render states
     glDisable(GL_CULL_FACE);
+    glDepthFunc(GL_LESS);
     glDepthMask(GL_FALSE);
     glEnable(GL_BLEND);
     glBlendFunci(0, GL_ONE, GL_ONE); // accumulation
     glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // revelage
     glBlendEquation(GL_FUNC_ADD);
+    glCullFace(GL_BACK);
 
     rtarget.oitFBO.bind();
     {
@@ -255,6 +282,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
     // ===================
 
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -274,6 +302,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
     // ======================================
 
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

@@ -15,7 +15,7 @@ namespace opengl
         explicit Texture(std::filesystem::path const &filepath, bool flip = false, bool srgb = false, std::string const &type = "");
         ~Texture();
 
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
     };
     class TextureMS : public Object
     {
@@ -24,6 +24,15 @@ namespace opengl
         explicit TextureMS(GLenum filter, GLenum wrap = GL_CLAMP_TO_EDGE) noexcept;
         ~TextureMS();
 
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
+    };
+    class Cubemap : public Object
+    {
+    public:
+        Cubemap() = default;
+        explicit Cubemap(unsigned) noexcept;
+        // load equirectangular projection as a cube map
+        explicit Cubemap(std::filesystem::path const &filepath, bool flip = false);
+        void bind(unsigned slot = 0) const noexcept override;
     };
 } // namespace opengl

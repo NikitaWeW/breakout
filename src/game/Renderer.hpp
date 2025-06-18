@@ -47,6 +47,7 @@ namespace game
     struct PerspectiveProjection {}; // marker component
     struct Transparent {}; // also a marker component
     struct SemiTransparent {};
+    struct Skybox {};
     struct Color
     {
         glm::vec4 color;
@@ -64,8 +65,6 @@ namespace game
         opengl::Framebuffer mainFBO{0};
         opengl::Texture mainFBOColor{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_BORDER};
         opengl::Renderbuffer mainFBORBO{0};
-
-        // opengl::ShaderProgram *propShader; // TODO: move the shader handle from model entity to render target
 
         glm::vec4 clearColor{0, 0, 0, 1};
         unsigned outputFBOid = 0;
@@ -113,6 +112,7 @@ namespace game
         opengl::ShaderProgram m_propShader{"shaders/prop"};
         opengl::ShaderProgram m_oitShader{"shaders/oitTransparent"};
         opengl::ShaderProgram m_oitCompositeShader{"shaders/oitComposite"};
+        opengl::ShaderProgram m_skyboxShader{"shaders/skybox"};
 
         std::optional<opengl::UniformBuffer *> m_lightsUBO;
 

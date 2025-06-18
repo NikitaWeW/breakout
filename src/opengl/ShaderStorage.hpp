@@ -8,10 +8,10 @@ namespace opengl
     {
     public:
         UniformBuffer() = default;
-        UniformBuffer(int) noexcept;
+        explicit UniformBuffer(int) noexcept;
         ~UniformBuffer();
 
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
         void bindingPoint(unsigned index) const noexcept;
     };
 
@@ -19,10 +19,10 @@ namespace opengl
     {
     public:
         SSBO() = default;
-        SSBO(int) noexcept;
+        explicit SSBO(int) noexcept;
         ~SSBO();
 
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
         void bindingPoint(unsigned index) const noexcept;
     };
 } // namespace opengl

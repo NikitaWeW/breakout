@@ -8,10 +8,10 @@ namespace opengl
     class Renderbuffer : public Object {
     public:
         Renderbuffer() = default;
-        Renderbuffer(unsigned); // dummy argument, constructor generates object
+        explicit Renderbuffer(unsigned); // dummy argument, constructor generates object
         ~Renderbuffer();
     
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
     };
     class RenderbufferMS : public Object {
     public:
@@ -19,7 +19,7 @@ namespace opengl
         RenderbufferMS(unsigned); // dummy argument, constructor generates object
         ~RenderbufferMS();
     
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
     };
 
     class Framebuffer : public Object {
@@ -27,9 +27,9 @@ namespace opengl
         mutable unsigned m_renderID = 0;
     public:
         Framebuffer() = default;
-        Framebuffer(unsigned); // dummy argument, constructor generates object
+        explicit Framebuffer(unsigned); // dummy argument, constructor generates object
         ~Framebuffer();
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
         bool isComplete();
         void attach(Texture const &texture, GLenum attachment = GL_COLOR_ATTACHMENT0);
         void attach(TextureMS const &texture, GLenum attachment = GL_COLOR_ATTACHMENT0);

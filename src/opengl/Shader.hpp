@@ -23,14 +23,14 @@ namespace opengl
         
         public:
         ShaderProgram() noexcept = default;
-        ShaderProgram(std::string const &directory, bool showLog = true);
+        explicit ShaderProgram(std::string const &directory, bool showLog = true);
         ~ShaderProgram();
         bool collectShaders(std::string const &directory) noexcept;
         bool compileShaders() noexcept;
         int getUniform(std::string const &name) const noexcept;
         int getUniformBlock(std::string const &name) const noexcept;
         int getStorageBlock(std::string const &name) const noexcept;
-        void bind(unsigned slot = 0) const noexcept;
+        void bind(unsigned slot = 0) const noexcept override;
 
         inline std::vector<Shader> const &getShaders() const noexcept { return m_shaders; }
         inline std::vector<Shader> &getShaders() noexcept { return m_shaders; }
