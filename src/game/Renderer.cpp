@@ -71,27 +71,6 @@ glm::mat4 getModelMat(ecs::Entity_t const &entity)
     }
     return modelMat;
 }
-void draw(game::Drawable const &drawable) {
-    drawable.va.bind();
-    if(drawable.ib.has_value()) {
-        drawable.ib.value().bind();
-        glDrawElements(drawable.mode, drawable.count, GL_UNSIGNED_INT, nullptr);
-    } else {
-        glDrawArrays(drawable.mode, 0, drawable.count);
-    }
-}
-void drawText(ecs::Entity_t const &textEntity, game::Camera const &camera) {
-    PROFILER_PROFILE();
-    using namespace game;
-    assert(ecs::entityHasComponent<Text>(textEntity));
-    Text const &text = ecs::get<Text>(textEntity);
-    glm::mat4 matrix = text.matrix.value_or(glm::ortho<float>(
-        0, camera.width, 
-        0, camera.height,
-        -1, 1
-    ));
-    text.font->drawText(text.text, text.position * glm::vec2{camera.width, camera.height}, text.size * camera.height, text.fgColor, text.bgColor, matrix);
-}
 std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t const &entity)
 {
     std::optional<std::vector<glm::mat4> const *> boneMatrices = {};
@@ -101,6 +80,7 @@ std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t cons
 
     return boneMatrices;
 }
+
 void setDefaultTexture(std::string const &type, std::set<std::string> const &boundTextureTypes, std::map<std::string, opengl::Texture> const &defaultTextures, size_t &textureCounter, opengl::ShaderProgram const &shader)
 {
     if(boundTextureTypes.find(type) == boundTextureTypes.end()) {
@@ -130,6 +110,28 @@ void setTextures(model::Mesh const &mesh, opengl::ShaderProgram const &shader, s
     setDefaultTexture("specular", boundTextureTypes, defaultTextures, textureCount, shader);
     setDefaultTexture("AO",       boundTextureTypes, defaultTextures, textureCount, shader);
     setDefaultTexture("height",   boundTextureTypes, defaultTextures, textureCount, shader);
+}
+
+void draw(game::Drawable const &drawable) {
+    drawable.va.bind();
+    if(drawable.ib.has_value()) {
+        drawable.ib.value().bind();
+        glDrawElements(drawable.mode, drawable.count, GL_UNSIGNED_INT, nullptr);
+    } else {
+        glDrawArrays(drawable.mode, 0, drawable.count);
+    }
+}
+void drawText(ecs::Entity_t const &textEntity, game::Camera const &camera) {
+    PROFILER_PROFILE();
+    using namespace game;
+    assert(ecs::entityHasComponent<Text>(textEntity));
+    Text const &text = ecs::get<Text>(textEntity);
+    glm::mat4 matrix = text.matrix.value_or(glm::ortho<float>(
+        0, static_cast<float>(camera.width), 
+        0, static_cast<float>(camera.height),
+        -1, 1
+    ));
+    text.font->drawText(text.text, text.position * glm::vec2{camera.width, camera.height}, text.size * static_cast<float>(camera.height), text.fgColor, text.bgColor, matrix);
 }
 void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const
 {
@@ -175,7 +177,7 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
         draw(drawable);
     }
 }
-void drawSkybox(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) 
+void drawSkybox(ecs::Entity_t const &entity) 
 {
     assert(ecs::entityHasComponent<game::Skybox>(entity) && ecs::entityHasComponent<opengl::Cubemap>(entity));
     opengl::Cubemap cubemap = ecs::get<opengl::Cubemap>(entity);
@@ -185,7 +187,7 @@ void drawSkybox(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 14);
 }
 
-void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget)
+void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget)
 {
     PROFILER_PROFILE();
     glViewport(0, 0, camera.width, camera.height);
@@ -209,6 +211,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glDepthFunc(GL_LESS);
+    glEnable(GL_DEPTH_TEST);
 
     rtarget.mainFBO.bind();
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
@@ -235,7 +238,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
     glUniformMatrix4fv(m_skyboxShader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
     for(ecs::Entity_t const &entity : entities) {
         if(ecs::entityHasComponent<Skybox>(entity) && ecs::entityHasComponent<opengl::Cubemap>(entity)) {
-            drawSkybox(entity, m_skyboxShader);
+            drawSkybox(entity);
         }
     } // for(auto &entity : entities) 
 
@@ -251,6 +254,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, double 
     glDepthFunc(GL_LESS);
     glDepthMask(GL_FALSE);
     glEnable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
     glBlendFunci(0, GL_ONE, GL_ONE); // accumulation
     glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // revelage
     glBlendEquation(GL_FUNC_ADD);
@@ -338,8 +342,8 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
             rtarget.oitFBO.attach(rtarget.oitRevelageTexture, GL_COLOR_ATTACHMENT1);
             rtarget.oitFBO.attach(rtarget.mainFBORBO, GL_DEPTH_STENCIL_ATTACHMENT);
             {
-                GLenum const drawbuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-                glDrawBuffers(sizeof(drawbuffers) / sizeof(*drawbuffers), drawbuffers);
+                std::array<GLenum, 2> const drawbuffers = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+                glDrawBuffers(drawbuffers.size(), drawbuffers.data());
             }
             assert(rtarget.oitFBO.isComplete());
 
@@ -354,7 +358,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         camera.projMat = getProjMat(cameraEntity);
         camera.viewMat = getViewMat(cameraEntity);
 
-        renderMain(entities, deltatime, camera, rtarget);
+        renderMain(entities, camera, rtarget);
 
         for(ecs::Entity_t const &entity : entities) {
             if(ecs::entityHasComponent<game::Text>(entity)) drawText(entity, camera);

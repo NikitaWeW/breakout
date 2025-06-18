@@ -23,7 +23,7 @@ opengl::Texture::Texture(std::filesystem::path const &filepath, bool flip, bool 
     int width = 0, height = 0;
     unsigned char *buffer = nullptr;
     buffer = stbi_load(static_cast<char const *>(filepath.string().c_str()), &width, &height, nullptr, 4);
-    if(!buffer) throw std::runtime_error{"failed to load a texture"};
+    if(!buffer) throw std::runtime_error{"failed to load a texture " + filepath.string()};
 
     glGenTextures(1, &m_renderID);
     bind();
@@ -111,7 +111,7 @@ glm::vec3 faceCoordsToXYZ(unsigned x, unsigned y, unsigned faceID, unsigned face
 // thanks to https://github.com/emeiri/ogldev/blob/master/Common/cubemap_texture.cpp
 void convertEquirectangularToCubemap(Bitmap<float> const &equir, std::array<Bitmap<float>, NUM_FACES_IN_CUBEMAP> &cubemapBitmaps)
 {
-    int faceSize = equir.getWidth() / 4;
+    unsigned faceSize = equir.getWidth() / 4;
 
     for (unsigned i = 0; i < NUM_FACES_IN_CUBEMAP; i++) {
         cubemapBitmaps[i] = Bitmap{faceSize, faceSize, equir.getNumComponents()};

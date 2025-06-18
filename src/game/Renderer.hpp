@@ -68,7 +68,8 @@ namespace game
 
         glm::vec4 clearColor{0, 0, 0, 1};
         unsigned outputFBOid = 0;
-        int prevWidth = -1, prevHeight = -1;
+        int prevWidth = -1;
+        int prevHeight = -1;
     };
     struct RepeatTexture
     {
@@ -116,7 +117,7 @@ namespace game
 
         std::optional<opengl::UniformBuffer *> m_lightsUBO;
 
-        void renderMain(std::set<ecs::Entity_t> const &entities, double deltatime, game::Camera &camera, game::RenderTarget &rtarget);
+        void renderMain(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget);
         void drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const;
     public:
         Renderer() = default;
@@ -124,7 +125,6 @@ namespace game
     };
     class LightUpdater : public ecs::ISystem
     {
-    private:
     public:
         // lighting shader side light structs
         struct ShaderPointLight

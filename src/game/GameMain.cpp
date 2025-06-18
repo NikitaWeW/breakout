@@ -24,11 +24,8 @@ ecs::Entity_t makeSceneEntity(std::filesystem::path const &filepath)
     ecs::Entity_t result = ecs::makeEntity<game::Scene>();
     game::Scene &scene = ecs::get<game::Scene>(result);
     scene = game::getLevelParser().parseScene(filepath);
-    if(scene.containedEntities.size() == 0) {
+    if(scene.containedEntities.empty()) {
         std::cout << "failed to load scene \"" << filepath << "\"!\n";
-    }
-    if(game::getLevelParser().getErrorString() != "") {
-        std::cout << game::getLevelParser().getErrorString() << '\n';
     }
     ecs::getSystemManager().getEntities().insert(scene.containedEntities.begin(), scene.containedEntities.end());
     return result;
@@ -59,8 +56,8 @@ void game::gameMain(GLFWwindow *window)
     glfwSetCursorPosCallback(window, game::cursor_position_callback);
 
     ecs::getSystemManager().getEntities().insert(makeWindowEntity(window));
-    // ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json"));
-    ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/sponza.json"));
+    ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json"));
+    // ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/sponza.json"));
     ecs::getSystemManager().getEntities().insert(makeLightStorageEntity());
     
     // ====================
@@ -119,4 +116,5 @@ void registerEcs()
     ecs::getComponentManager().registerComponent<DirectionalLight>();
     ecs::getComponentManager().registerComponent<game::Transparent>();
     ecs::getComponentManager().registerComponent<game::SemiTransparent>();
+    ecs::getComponentManager().registerComponent<game::Skybox>();
 }

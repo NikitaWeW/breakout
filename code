@@ -1,0 +1,453 @@
+[1/4] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
+FAILED: CMakeFiles/main.dir/src/main.cpp.o 
+/usr/bin/c++  -I/home/nikita/dev/breakout/dependencies/include -I/home/nikita/dev/breakout/src -fdiagnostics-color=always -Wall -g -g -std=gnu++17 -MD -MT CMakeFiles/main.dir/src/main.cpp.o -MF CMakeFiles/main.dir/src/main.cpp.o.d -o CMakeFiles/main.dir/src/main.cpp.o -c /home/nikita/dev/breakout/src/main.cpp
+In file included from /home/nikita/dev/breakout/src/main.cpp:6:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:29: error: ‘json’ has not been declared
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                             ^~~~
+[2/4] Building CXX object CMakeFiles/main.dir/src/game/LevelParser.cpp.o
+FAILED: CMakeFiles/main.dir/src/game/LevelParser.cpp.o 
+/usr/bin/c++  -I/home/nikita/dev/breakout/dependencies/include -I/home/nikita/dev/breakout/src -fdiagnostics-color=always -Wall -g -g -std=gnu++17 -MD -MT CMakeFiles/main.dir/src/game/LevelParser.cpp.o -MF CMakeFiles/main.dir/src/game/LevelParser.cpp.o.d -o CMakeFiles/main.dir/src/game/LevelParser.cpp.o -c /home/nikita/dev/breakout/src/game/LevelParser.cpp
+In file included from /home/nikita/dev/breakout/src/game/LevelParser.cpp:1:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:29: error: ‘json’ has not been declared
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                             ^~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In function ‘T get(const json&, std::string_view, const T&, bool (nlohmann::json_abi_v3_12_0::basic_json<>::*)() const)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:24:71: error: ‘const nlohmann::json_abi_v3_12_0::basic_json<>::value_type’ {aka ‘const class nlohmann::json_abi_v3_12_0::basic_json<>’} has no member named ‘isSomething’ [-Wtemplate-body]
+   24 |     bool isTheThingTheThingThatTheThingIs = !isSomething || j.at(key).isSomething();
+      |                                                                       ^~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In function ‘glm::vec<L, float> get(const json&, std::string_view, const glm::vec<L, float>&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:30:55: error: ‘jsonentity’ was not declared in this scope [-Wtemplate-body]
+   30 |     return j.contains(key) && j.at(key).is_array() && jsonentity.at(key).at(0).is_number() ? getVecFromJSON<L>(j.at(key)) : def;
+      |                                                       ^~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp: At global scope:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:143:10: note:   by ‘void PropCreator::create(const json&, game::Scene&)’
+  143 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘void PropCreator::create(const json&, game::Scene&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:146:85: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_string() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  146 |         std::filesystem::path path = get<std::string>(jsonentity, "path", "", json::is_string);
+      |                                                                                     ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:151:74: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_boolean() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  151 |         bool flipTextures = get(jsonentity, "flip textures", true, json::is_boolean);
+      |                                                                          ^~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:152:84: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_boolean() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  152 |         bool flipWindingOrder = get(jsonentity, "flip winding order", false, json::is_boolean);
+      |                                                                                    ^~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:162:90: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_string() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  162 |                 std::string type = get<std::string>(jsonentity, "type", "diffuse", json::is_string);
+      |                                                                                          ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:163:93: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_string() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  163 |                 std::filesystem::path path = get<std::string>(jsonentity, "path", "", json::is_string);
+      |                                                                                             ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp: At global scope:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:212:10: note:   by ‘void ControllableCameraCreator::create(const json&, game::Scene&)’
+  212 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘void ControllableCameraCreator::create(const json&, game::Scene&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:222:80: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_number() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  222 |             .speedUnitsPerSecond = get<float>(jsonentity, "speed", 1.0f, json::is_number),
+      |                                                                                ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:223:78: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_number() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  223 |             .sensitivity = get<float>(jsonentity, "sensitivity", 0.1f, json::is_number),
+      |                                                                              ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:225:9: error: no match for ‘operator=’ (operand types are ‘game::ControllableCamera’ and ‘<brace-enclosed initializer list>’)
+  225 |         };
+      |         ^
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:225:9: note: there are 2 candidates
+In file included from /home/nikita/dev/breakout/src/game/LevelParser.cpp:3:
+/home/nikita/dev/breakout/src/game/Controller.hpp:14:12: note: candidate 1: ‘constexpr game::ControllableCamera& game::ControllableCamera::operator=(const game::ControllableCamera&)’
+   14 |     struct ControllableCamera
+      |            ^~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/Controller.hpp:14:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘const game::ControllableCamera&’
+/home/nikita/dev/breakout/src/game/Controller.hpp:14:12: note: candidate 2: ‘constexpr game::ControllableCamera& game::ControllableCamera::operator=(game::ControllableCamera&&)’
+/home/nikita/dev/breakout/src/game/Controller.hpp:14:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘game::ControllableCamera&&’
+/home/nikita/dev/breakout/src/game/LevelParser.hpp: At global scope:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:239:10: note:   by ‘void CameraCreator::create(const json&, game::Scene&)’
+  239 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:259:10: note:   by ‘void PointLightCreator::create(const json&, game::Scene&)’
+  259 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘void PointLightCreator::create(const json&, game::Scene&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:267:79: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_number() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  267 |             .attenuation = get<float>(jsonentity, "attenuation", 10.0f, json::is_number)
+      |                                                                               ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:268:9: error: no match for ‘operator=’ (operand types are ‘game::PointLight’ and ‘<brace-enclosed initializer list>’)
+  268 |         };
+      |         ^
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:268:9: note: there are 2 candidates
+In file included from /home/nikita/dev/breakout/src/utils/Model.hpp:2,
+                 from /home/nikita/dev/breakout/src/game/LevelParser.hpp:5:
+/home/nikita/dev/breakout/src/game/Renderer.hpp:89:12: note: candidate 1: ‘constexpr game::PointLight& game::PointLight::operator=(const game::PointLight&)’
+   89 |     struct PointLight {
+      |            ^~~~~~~~~~
+/home/nikita/dev/breakout/src/game/Renderer.hpp:89:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘const game::PointLight&’
+/home/nikita/dev/breakout/src/game/Renderer.hpp:89:12: note: candidate 2: ‘constexpr game::PointLight& game::PointLight::operator=(game::PointLight&&)’
+/home/nikita/dev/breakout/src/game/Renderer.hpp:89:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘game::PointLight&&’
+/home/nikita/dev/breakout/src/game/LevelParser.hpp: At global scope:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:276:10: note:   by ‘void DirLightCreator::create(const json&, game::Scene&)’
+  276 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:290:10: note:   by ‘void SpotLightCreator::create(const json&, game::Scene&)’
+  290 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘void SpotLightCreator::create(const json&, game::Scene&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:298:87: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_number() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  298 |             .innerConeAngle = get<float>(jsonentity, "inner cone angle", 35.0f, json::is_number),
+      |                                                                                       ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:299:87: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_number() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  299 |             .outerConeAngle = get<float>(jsonentity, "outer cone angle", 45.0f, json::is_number),
+      |                                                                                       ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:300:79: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_number() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  300 |             .attenuation = get<float>(jsonentity, "attenuation", 10.0f, json::is_number)
+      |                                                                               ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:301:9: error: no match for ‘operator=’ (operand types are ‘game::SpotLight’ and ‘<brace-enclosed initializer list>’)
+  301 |         };
+      |         ^
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:301:9: note: there are 2 candidates
+/home/nikita/dev/breakout/src/game/Renderer.hpp:93:12: note: candidate 1: ‘constexpr game::SpotLight& game::SpotLight::operator=(const game::SpotLight&)’
+   93 |     struct SpotLight {
+      |            ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/Renderer.hpp:93:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘const game::SpotLight&’
+/home/nikita/dev/breakout/src/game/Renderer.hpp:93:12: note: candidate 2: ‘constexpr game::SpotLight& game::SpotLight::operator=(game::SpotLight&&)’
+/home/nikita/dev/breakout/src/game/Renderer.hpp:93:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘game::SpotLight&&’
+/home/nikita/dev/breakout/src/game/LevelParser.hpp: At global scope:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:310:10: note:   by ‘void AreaLightCreator::create(const json&, game::Scene&)’
+  310 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘void AreaLightCreator::create(const json&, game::Scene&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:318:79: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_number() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  318 |             .attenuation = get<float>(jsonentity, "attenuation", 10.0f, json::is_number),
+      |                                                                               ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:320:9: error: no match for ‘operator=’ (operand types are ‘game::AreaLight’ and ‘<brace-enclosed initializer list>’)
+  320 |         };
+      |         ^
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:320:9: note: there are 2 candidates
+/home/nikita/dev/breakout/src/game/Renderer.hpp:99:12: note: candidate 1: ‘constexpr game::AreaLight& game::AreaLight::operator=(const game::AreaLight&)’
+   99 |     struct AreaLight {
+      |            ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/Renderer.hpp:99:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘const game::AreaLight&’
+/home/nikita/dev/breakout/src/game/Renderer.hpp:99:12: note: candidate 2: ‘constexpr game::AreaLight& game::AreaLight::operator=(game::AreaLight&&)’
+/home/nikita/dev/breakout/src/game/Renderer.hpp:99:12: note: no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘game::AreaLight&&’
+/home/nikita/dev/breakout/src/game/LevelParser.hpp: At global scope:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:340:10: note:   by ‘void TextCreator::create(const json&, game::Scene&)’
+  340 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘void TextCreator::create(const json&, game::Scene&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:344:77: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_string() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  344 |         std::string text = get<std::string>(jsonentity, "string", "", json::is_string);
+      |                                                                             ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp: At global scope:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: warning: ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’ was hidden [-Woverloaded-virtual=]
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:363:10: note:   by ‘void SkyboxCreator::create(const json&, game::Scene&)’
+  363 |     void create(json const &jsonentity, game::Scene &scene)
+      |          ^~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘void SkyboxCreator::create(const json&, game::Scene&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:365:85: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_string() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  365 |         std::filesystem::path path = get<std::string>(jsonentity, "path", "", json::is_string);
+      |                                                                                     ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In member function ‘game::Scene game::LevelParser::parseScene(const std::filesystem::__cxx11::path&)’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:406:86: error: invalid use of non-static member function ‘constexpr bool nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::is_string() const [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+  406 |             std::string type = get<std::string>(jsonentity, "type", "unknown", json::is_string);
+      |                                                                                      ^~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In instantiation of ‘T get(const json&, std::string_view, const T&, bool (nlohmann::json_abi_v3_12_0::basic_json<>::*)() const) [with T = glm::vec<3, float, glm::packed_highp>; json = nlohmann::json_abi_v3_12_0::basic_json<>; std::string_view = std::basic_string_view<char>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:175:52:   required from here
+  175 |         ecs::addComponent<game::Scale>(entity, {get(jsonentity, "scale", glm::vec3{1})});
+      |                                                 ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:25:82: error: no matching function for call to ‘nlohmann::json_abi_v3_12_0::basic_json<>::get<glm::vec<3, float, glm::packed_highp> >() const’
+   25 |     return j.contains(key) && isTheThingTheThingThatTheThingIs ? j.at(key).get<T>() : def;
+      |                                                                  ~~~~~~~~~~~~~~~~^~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:25:82: note: there are 2 candidates
+In file included from /home/nikita/dev/breakout/src/game/LevelParser.cpp:4:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21878:10: note: candidate 1: ‘template<class PointerType, typename std::enable_if<std::is_pointer<_Tp>::value, int>::type <anonymous> > decltype (declval<nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::basic_json_t&>().get_ptr<PointerType>()) nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get() [with typename std::enable_if<std::is_pointer<_Ptr>::value, int>::type <anonymous> = PointerType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21878 |     auto get() noexcept -> decltype(std::declval<basic_json_t&>().template get_ptr<PointerType>())
+      |          ^~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21878:10: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21877:68: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21877 |                  std::is_pointer<PointerType>::value, int>::type = 0>
+      |                                                                    ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21837:10: note: candidate 2: ‘template<class ValueTypeCV, class ValueType> constexpr decltype (declval<const nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::basic_json_t&>().get_impl<ValueType>(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>{})) nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get() const [with ValueType = ValueTypeCV; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21837 |     auto get() const noexcept(
+      |          ^~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21837:10: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp: In substitution of ‘template<class ValueTypeCV, class ValueType> constexpr decltype (std::declval<const nlohmann::json_abi_v3_12_0::basic_json<>&>().get_impl<ValueType>(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>{})) nlohmann::json_abi_v3_12_0::basic_json<>::get() const [with ValueTypeCV = glm::vec<3, float, glm::packed_highp>; ValueType = glm::vec<3, float, glm::packed_highp>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:25:82:   required from ‘T get(const json&, std::string_view, const T&, bool (nlohmann::json_abi_v3_12_0::basic_json<>::*)() const) [with T = glm::vec<3, float, glm::packed_highp>; json = nlohmann::json_abi_v3_12_0::basic_json<>; std::string_view = std::basic_string_view<char>]’
+   25 |     return j.contains(key) && isTheThingTheThingThatTheThingIs ? j.at(key).get<T>() : def;
+      |                                                                  ~~~~~~~~~~~~~~~~^~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:175:52:   required from here
+  175 |         ecs::addComponent<game::Scale>(entity, {get(jsonentity, "scale", glm::vec3{1})});
+      |                                                 ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21839:81: error: no matching function for call to ‘nlohmann::json_abi_v3_12_0::basic_json<>::get_impl<glm::vec<3, float, glm::packed_highp> >(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>) const’
+21839 |     -> decltype(std::declval<const basic_json_t&>().template get_impl<ValueType>(detail::priority_tag<4> {}))
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21839:81: note: there are 6 candidates
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21699:15: note: candidate 1: ‘template<class ValueType, typename std::enable_if<(nlohmann::json_abi_v3_12_0::detail::is_default_constructible<T1>::value && nlohmann::json_abi_v3_12_0::detail::has_from_json<nlohmann::json_abi_v3_12_0::basic_json<>, ValueType, void>::value), int>::type <anonymous> > ValueType nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<0>) const [with typename std::enable_if<(nlohmann::json_abi_v3_12_0::detail::is_default_constructible<ValueType>::value && nlohmann::json_abi_v3_12_0::detail::has_from_json<nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>, ValueType>::value), int>::type <anonymous> = ValueType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21699 |     ValueType get_impl(detail::priority_tag<0> /*unused*/) const noexcept(noexcept(
+      |               ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21699:15: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21698:28: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21698 |                    int > = 0 >
+      |                            ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21741:15: note: candidate 2: ‘template<class ValueType, typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::has_non_default_from_json<nlohmann::json_abi_v3_12_0::basic_json<>, ValueType, void>::value, int>::type <anonymous> > ValueType nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<1>) const [with typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::has_non_default_from_json<nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>, ValueType>::value, int>::type <anonymous> = ValueType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21741 |     ValueType get_impl(detail::priority_tag<1> /*unused*/) const noexcept(noexcept(
+      |               ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21741:15: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21740:28: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21740 |                    int > = 0 >
+      |                            ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21766:19: note: candidate 3: ‘template<class BasicJsonType, typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::is_basic_json<BasicJsonType>::value, int>::type <anonymous> > BasicJsonType nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<2>) const [with typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::is_basic_json<BasicJsonType>::value, int>::type <anonymous> = BasicJsonType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21766 |     BasicJsonType get_impl(detail::priority_tag<2> /*unused*/) const
+      |                   ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21766:19: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21765:28: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21765 |                    int > = 0 >
+      |                            ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21789:16: note: candidate 4: ‘template<class BasicJsonType, typename std::enable_if<std::is_same<BasicJsonType, nlohmann::json_abi_v3_12_0::basic_json<> >::value, int>::type <anonymous> > nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass> nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<3>) const [with typename std::enable_if<std::is_same<BasicJsonType, nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass> >::value, int>::type <anonymous> = BasicJsonType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21789 |     basic_json get_impl(detail::priority_tag<3> /*unused*/) const
+      |                ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21789:16: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21788:25: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21788 |                  int> = 0>
+      |                         ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21802:20: note: candidate 5: ‘template<class PointerType, typename std::enable_if<std::is_pointer<_Tp>::value, int>::type <anonymous> > constexpr decltype (declval<const nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::basic_json_t&>().get_ptr<PointerType>()) nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>) const [with typename std::enable_if<std::is_pointer<_Ptr>::value, int>::type <anonymous> = PointerType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21802 |     constexpr auto get_impl(detail::priority_tag<4> /*unused*/) const noexcept
+      |                    ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21802:20: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21801:25: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21801 |                  int> = 0>
+      |                         ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21839:81: note: some candidates omitted; use ‘-fdiagnostics-all-candidates’ to display them
+21839 |     -> decltype(std::declval<const basic_json_t&>().template get_impl<ValueType>(detail::priority_tag<4> {}))
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp: In instantiation of ‘T get(const json&, std::string_view, const T&, bool (nlohmann::json_abi_v3_12_0::basic_json<>::*)() const) [with T = glm::vec<2, float, glm::packed_highp>; json = nlohmann::json_abi_v3_12_0::basic_json<>; std::string_view = std::basic_string_view<char>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:319:24:   required from here
+  319 |             .size = get(jsonentity, "size", glm::vec2{1})
+      |                     ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:25:82: error: no matching function for call to ‘nlohmann::json_abi_v3_12_0::basic_json<>::get<glm::vec<2, float, glm::packed_highp> >() const’
+   25 |     return j.contains(key) && isTheThingTheThingThatTheThingIs ? j.at(key).get<T>() : def;
+      |                                                                  ~~~~~~~~~~~~~~~~^~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:25:82: note: there are 2 candidates
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21878:10: note: candidate 1: ‘template<class PointerType, typename std::enable_if<std::is_pointer<_Tp>::value, int>::type <anonymous> > decltype (declval<nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::basic_json_t&>().get_ptr<PointerType>()) nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get() [with typename std::enable_if<std::is_pointer<_Ptr>::value, int>::type <anonymous> = PointerType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21878 |     auto get() noexcept -> decltype(std::declval<basic_json_t&>().template get_ptr<PointerType>())
+      |          ^~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21878:10: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21877:68: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21877 |                  std::is_pointer<PointerType>::value, int>::type = 0>
+      |                                                                    ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21837:10: note: candidate 2: ‘template<class ValueTypeCV, class ValueType> constexpr decltype (declval<const nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::basic_json_t&>().get_impl<ValueType>(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>{})) nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get() const [with ValueType = ValueTypeCV; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21837 |     auto get() const noexcept(
+      |          ^~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21837:10: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp: In substitution of ‘template<class ValueTypeCV, class ValueType> constexpr decltype (std::declval<const nlohmann::json_abi_v3_12_0::basic_json<>&>().get_impl<ValueType>(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>{})) nlohmann::json_abi_v3_12_0::basic_json<>::get() const [with ValueTypeCV = glm::vec<2, float, glm::packed_highp>; ValueType = glm::vec<2, float, glm::packed_highp>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:25:82:   required from ‘T get(const json&, std::string_view, const T&, bool (nlohmann::json_abi_v3_12_0::basic_json<>::*)() const) [with T = glm::vec<2, float, glm::packed_highp>; json = nlohmann::json_abi_v3_12_0::basic_json<>; std::string_view = std::basic_string_view<char>]’
+   25 |     return j.contains(key) && isTheThingTheThingThatTheThingIs ? j.at(key).get<T>() : def;
+      |                                                                  ~~~~~~~~~~~~~~~~^~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:319:24:   required from here
+  319 |             .size = get(jsonentity, "size", glm::vec2{1})
+      |                     ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21839:81: error: no matching function for call to ‘nlohmann::json_abi_v3_12_0::basic_json<>::get_impl<glm::vec<2, float, glm::packed_highp> >(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>) const’
+21839 |     -> decltype(std::declval<const basic_json_t&>().template get_impl<ValueType>(detail::priority_tag<4> {}))
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21839:81: note: there are 6 candidates
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21699:15: note: candidate 1: ‘template<class ValueType, typename std::enable_if<(nlohmann::json_abi_v3_12_0::detail::is_default_constructible<T1>::value && nlohmann::json_abi_v3_12_0::detail::has_from_json<nlohmann::json_abi_v3_12_0::basic_json<>, ValueType, void>::value), int>::type <anonymous> > ValueType nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<0>) const [with typename std::enable_if<(nlohmann::json_abi_v3_12_0::detail::is_default_constructible<ValueType>::value && nlohmann::json_abi_v3_12_0::detail::has_from_json<nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>, ValueType>::value), int>::type <anonymous> = ValueType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21699 |     ValueType get_impl(detail::priority_tag<0> /*unused*/) const noexcept(noexcept(
+      |               ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21699:15: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21698:28: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21698 |                    int > = 0 >
+      |                            ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21741:15: note: candidate 2: ‘template<class ValueType, typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::has_non_default_from_json<nlohmann::json_abi_v3_12_0::basic_json<>, ValueType, void>::value, int>::type <anonymous> > ValueType nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<1>) const [with typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::has_non_default_from_json<nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>, ValueType>::value, int>::type <anonymous> = ValueType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21741 |     ValueType get_impl(detail::priority_tag<1> /*unused*/) const noexcept(noexcept(
+      |               ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21741:15: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21740:28: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21740 |                    int > = 0 >
+      |                            ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21766:19: note: candidate 3: ‘template<class BasicJsonType, typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::is_basic_json<BasicJsonType>::value, int>::type <anonymous> > BasicJsonType nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<2>) const [with typename std::enable_if<nlohmann::json_abi_v3_12_0::detail::is_basic_json<BasicJsonType>::value, int>::type <anonymous> = BasicJsonType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21766 |     BasicJsonType get_impl(detail::priority_tag<2> /*unused*/) const
+      |                   ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21766:19: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21765:28: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21765 |                    int > = 0 >
+      |                            ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21789:16: note: candidate 4: ‘template<class BasicJsonType, typename std::enable_if<std::is_same<BasicJsonType, nlohmann::json_abi_v3_12_0::basic_json<> >::value, int>::type <anonymous> > nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass> nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<3>) const [with typename std::enable_if<std::is_same<BasicJsonType, nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass> >::value, int>::type <anonymous> = BasicJsonType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21789 |     basic_json get_impl(detail::priority_tag<3> /*unused*/) const
+      |                ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21789:16: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21788:25: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21788 |                  int> = 0>
+      |                         ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21802:20: note: candidate 5: ‘template<class PointerType, typename std::enable_if<std::is_pointer<_Tp>::value, int>::type <anonymous> > constexpr decltype (declval<const nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::basic_json_t&>().get_ptr<PointerType>()) nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::get_impl(nlohmann::json_abi_v3_12_0::detail::priority_tag<4>) const [with typename std::enable_if<std::is_pointer<_Ptr>::value, int>::type <anonymous> = PointerType; ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]’
+21802 |     constexpr auto get_impl(detail::priority_tag<4> /*unused*/) const noexcept
+      |                    ^~~~~~~~
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21802:20: note: template argument deduction/substitution failed:
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21801:25: error: no type named ‘type’ in ‘struct std::enable_if<false, int>’
+21801 |                  int> = 0>
+      |                         ^
+/home/nikita/dev/breakout/dependencies/include/json.hpp:21839:81: note: some candidates omitted; use ‘-fdiagnostics-all-candidates’ to display them
+21839 |     -> decltype(std::declval<const basic_json_t&>().template get_impl<ValueType>(detail::priority_tag<4> {}))
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/15.1.1/bits/shared_ptr_base.h:59,
+                 from /usr/include/c++/15.1.1/bits/shared_ptr.h:53,
+                 from /usr/include/c++/15.1.1/bits/fs_path.h:46,
+                 from /usr/include/c++/15.1.1/filesystem:54,
+                 from /home/nikita/dev/breakout/src/game/LevelParser.hpp:2:
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = PropCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<PropCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:378:73:   required from here
+  378 |     registerCreator("prop",                std::make_unique<PropCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘PropCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:48:7: note:   because the following virtual functions are pure within ‘PropCreator’:
+   48 | class PropCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = ControllableCameraCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<ControllableCameraCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:379:87:   required from here
+  379 |     registerCreator("controllable camera", std::make_unique<ControllableCameraCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘ControllableCameraCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:209:7: note:   because the following virtual functions are pure within ‘ControllableCameraCreator’:
+  209 | class ControllableCameraCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = CameraCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<CameraCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:380:75:   required from here
+  380 |     registerCreator("camera",              std::make_unique<CameraCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘CameraCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:236:7: note:   because the following virtual functions are pure within ‘CameraCreator’:
+  236 | class CameraCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = PointLightCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<PointLightCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:381:79:   required from here
+  381 |     registerCreator("point light",         std::make_unique<PointLightCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘PointLightCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:256:7: note:   because the following virtual functions are pure within ‘PointLightCreator’:
+  256 | class PointLightCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = DirLightCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<DirLightCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:382:77:   required from here
+  382 |     registerCreator("directional light",   std::make_unique<DirLightCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘DirLightCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:273:7: note:   because the following virtual functions are pure within ‘DirLightCreator’:
+  273 | class DirLightCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = SpotLightCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<SpotLightCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:383:78:   required from here
+  383 |     registerCreator("spot light",          std::make_unique<SpotLightCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘SpotLightCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:287:7: note:   because the following virtual functions are pure within ‘SpotLightCreator’:
+  287 | class SpotLightCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = AreaLightCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<AreaLightCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:384:78:   required from here
+  384 |     registerCreator("area light",          std::make_unique<AreaLightCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘AreaLightCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:307:7: note:   because the following virtual functions are pure within ‘AreaLightCreator’:
+  307 | class AreaLightCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = TextCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<TextCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:385:73:   required from here
+  385 |     registerCreator("text",                std::make_unique<TextCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘TextCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:326:7: note:   because the following virtual functions are pure within ‘TextCreator’:
+  326 | class TextCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+/usr/include/c++/15.1.1/bits/unique_ptr.h: In instantiation of ‘std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...) [with _Tp = SkyboxCreator; _Args = {}; __detail::__unique_ptr_t<_Tp> = __detail::__unique_ptr_t<SkyboxCreator>]’:
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:386:75:   required from here
+  386 |     registerCreator("skybox",              std::make_unique<SkyboxCreator>());
+      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/usr/include/c++/15.1.1/bits/unique_ptr.h:1085:30: error: invalid new-expression of abstract class type ‘SkyboxCreator’
+ 1085 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.cpp:360:7: note:   because the following virtual functions are pure within ‘SkyboxCreator’:
+  360 | class SkyboxCreator : public game::ILevelEntityCreator
+      |       ^~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:22: note:     ‘virtual void game::ILevelEntityCreator::create(const int&, game::Scene&)’
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                      ^~~~~~
+[3/4] Building CXX object CMakeFiles/main.dir/src/game/GameMain.cpp.o
+FAILED: CMakeFiles/main.dir/src/game/GameMain.cpp.o 
+/usr/bin/c++  -I/home/nikita/dev/breakout/dependencies/include -I/home/nikita/dev/breakout/src -fdiagnostics-color=always -Wall -g -g -std=gnu++17 -MD -MT CMakeFiles/main.dir/src/game/GameMain.cpp.o -MF CMakeFiles/main.dir/src/game/GameMain.cpp.o.d -o CMakeFiles/main.dir/src/game/GameMain.cpp.o -c /home/nikita/dev/breakout/src/game/GameMain.cpp
+In file included from /home/nikita/dev/breakout/src/game/GameMain.cpp:12:
+/home/nikita/dev/breakout/src/game/LevelParser.hpp:19:29: error: ‘json’ has not been declared
+   19 |         virtual void create(json const &j, game::Scene &scene) = 0;
+      |                             ^~~~
+/home/nikita/dev/breakout/src/game/GameMain.cpp: In function ‘ecs::Entity_t makeSceneEntity(const std::filesystem::__cxx11::path&)’:
+/home/nikita/dev/breakout/src/game/GameMain.cpp:30:31: error: ‘class game::LevelParser’ has no member named ‘getErrorString’
+   30 |     if(game::getLevelParser().getErrorString() != "") {
+      |                               ^~~~~~~~~~~~~~
+/home/nikita/dev/breakout/src/game/GameMain.cpp:31:45: error: ‘class game::LevelParser’ has no member named ‘getErrorString’
+   31 |         std::cout << game::getLevelParser().getErrorString() << '\n';
+      |                                             ^~~~~~~~~~~~~~
+ninja: build stopped: subcommand failed.
