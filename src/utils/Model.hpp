@@ -1,11 +1,11 @@
 #pragma once
 #include "game/Renderer.hpp" // for Drawable struct
 #include "utils/ECS.hpp" // for entity from model construction
-#include <vector>
 #include "assimp/scene.h"
 #include "assimp/Importer.hpp"
-#include <list>
 #include "glm/gtc/quaternion.hpp"
+#include <vector>
+#include <list>
 
 namespace model
 {

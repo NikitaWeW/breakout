@@ -9,7 +9,7 @@
 #include "current_function.hpp"
 
 #ifndef DEBUG
-#define PROFILER_LOG_TYPE profiler::READABLE
+#define PROFILER_LOG_TYPE profiler::MARKDOWN
 #define PROFILER_PROFILE() profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler.txt")}
 #define PROFILER_PROFILE_IN_FILE(filepath) profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>(filepath)}
 #else
@@ -21,11 +21,12 @@ namespace profiler
 {
     enum LogType
     {
-        READABLE, JSON
+        READABLE, MARKDOWN, JSON
     };
 
     template <LogType> struct Log_t {};
     template <> struct Log_t<profiler::LogType::READABLE> : std::stringstream {};
+    template <> struct Log_t<profiler::LogType::MARKDOWN> : std::stringstream {};
     template <> struct Log_t<profiler::LogType::JSON> : nlohmann::json {
         std::vector<nlohmann::json *> entryStack;
     };
@@ -33,15 +34,17 @@ namespace profiler
     template<LogType type = READABLE>
     class Logger
     {
-    public:
     private:
         std::fstream m_file{};
         Log_t<type> m_log;
         std::vector<std::string> m_stack;
     public:
         Logger() = default;
+        Logger(const Logger&) = delete;
+        Logger& operator=(const Logger&) = delete;
         Logger(std::filesystem::path const &filename);
         ~Logger();
+
 
         void pushFunction(std::string_view name);
         void popFunction(std::chrono::nanoseconds const &time);
@@ -66,8 +69,11 @@ namespace profiler
     // singleton getters
     template <LogType type>
     inline Logger<type> &getLogger(std::string_view name) {
-        static Logger<type> logger{name};
-        return logger;
+        static std::map<std::string, std::unique_ptr<Logger<type>>> loggers;
+        if(loggers.find(std::string{name}) == loggers.end()) {
+            loggers.try_emplace(std::string{name}, std::move(std::make_unique<Logger<type>>(name)));
+        }
+        return *loggers.at(std::string{name});
     }
 } // namespace profiler
 
@@ -82,9 +88,15 @@ inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
     }
 }
 
+template<profiler::LogType T>
+inline profiler::Logger<T>::~Logger()
+{
+    assert(false && "log type not supported!");
+}
 template <> 
 inline profiler::Logger<profiler::LogType::READABLE>::~Logger()
 {
+    assert(m_stack.size() == 0 && "not all stack frames finished!");
     std::time_t result = std::time(nullptr);
     std::string timeDate = std::asctime(std::localtime(&result));
     timeDate.pop_back();
@@ -92,8 +104,18 @@ inline profiler::Logger<profiler::LogType::READABLE>::~Logger()
     m_file << m_log.rdbuf();
 }
 template <> 
+inline profiler::Logger<profiler::LogType::MARKDOWN>::~Logger()
+{
+    assert(m_stack.size() == 0 && "not all stack frames finished!");
+    std::time_t result = std::time(nullptr);
+    std::string timeDate = std::asctime(std::localtime(&result));
+    m_file << timeDate << " ===\n\n";
+    m_file << m_log.rdbuf();
+}
+template <> 
 inline profiler::Logger<profiler::LogType::JSON>::~Logger()
 {
+    assert(m_stack.size() == 0 && "not all stack frames finished!");
     std::time_t result = std::time(nullptr);
     std::string timeDate = std::asctime(std::localtime(&result));
     timeDate.pop_back();
@@ -101,16 +123,28 @@ inline profiler::Logger<profiler::LogType::JSON>::~Logger()
     m_file << m_log.dump(4);
 }
 
+template<profiler::LogType T>
+inline void profiler::Logger<T>::pushFunction(std::string_view name) 
+{
+    assert(false && "log type not supported!");
+}
+template<profiler::LogType T>
+inline void profiler::Logger<T>::popFunction(std::chrono::nanoseconds const &time)
+{
+    assert(false && "log type not supported!");
+}
+
 template <> 
 inline void profiler::Logger<profiler::LogType::READABLE>::pushFunction(std::string_view name)
 {
-    for(size_t i = 0; i < m_stack.size(); ++i) {
+    if(m_stack.size() == 0) {
+        m_log << "\n";
+    }
+    for(size_t i = 1; i < m_stack.size(); ++i) {
         m_log << "|  ";
     }
     if(m_stack.size() != 0) {
         m_log << "|- ";
-    } else {
-        m_log << "\n";
     }
     m_log << name
     << '\n';
@@ -127,6 +161,33 @@ inline void profiler::Logger<profiler::LogType::READABLE>::popFunction(std::chro
     }
     m_log << "finished in " << time.count() * 1e-6f << "ms"
     << '\n';
+    m_stack.pop_back();
+}
+
+template <>
+inline void profiler::Logger<profiler::LogType::MARKDOWN>::pushFunction(std::string_view name)
+{
+    if(m_stack.empty())
+        m_log << '\n';
+
+    m_log << std::string(m_stack.size() * 2, ' ') << "- `" << name << "`\n";
+
+    m_stack.emplace_back(name);
+}
+template <>
+inline void profiler::Logger<profiler::LogType::MARKDOWN>::popFunction(std::chrono::nanoseconds const& time)
+{
+    const std::size_t depth = m_stack.size();
+    float timeMS = static_cast<float>(time.count()) * 1e-6f;
+    std::string_view color;
+    if(timeMS < 2) color = "#b5cea8";
+    else if(timeMS < 4) color = "#ce9178";
+    else color = "#f44747";
+    m_log << std::string(depth * 2 + 2, ' ')
+          << "+ **finished in**"
+          << "<span style=\"color:" << color << "\">"
+          << timeMS << "</span> ms\n";
+
     m_stack.pop_back();
 }
 
@@ -157,8 +218,18 @@ inline void profiler::Logger<profiler::LogType::JSON>::popFunction(std::chrono::
     m_log.entryStack.pop_back();
 }
 
+template<profiler::LogType T>
+inline void profiler::Logger<T>::clear() 
+{
+    assert(false && "log type not supported!");
+}
 template <> 
 inline void profiler::Logger<profiler::LogType::READABLE>::clear()
+{
+    m_log.str(std::string());
+}
+template <> 
+inline void profiler::Logger<profiler::LogType::MARKDOWN>::clear()
 {
     m_log.str(std::string());
 }
