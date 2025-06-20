@@ -1,7 +1,9 @@
 # breakout
 ~~my first game.~~
 
-Right now im setting up an environment for the development (ecs, renderer, scenes, parsers, implementing graphic stuff, etc.)
+~~Right now im setting up an environment for the development (ecs, renderer, scenes, parsers, implementing graphic stuff, etc.)~~
+
+This is turning into a *mini(?)-*engine for some reason...
 
 # building
 uses cmake:

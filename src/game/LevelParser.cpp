@@ -3,6 +3,7 @@
 #include "Controller.hpp"
 #include "Animator.hpp"
 #include <iostream>
+#include "utils/Profiler.hpp"
 using json = nlohmann::json;
 
 template<size_t L = 3>
@@ -12,7 +13,7 @@ glm::vec<L, float> getVecFromJSON(json const &jsonObj) {
 
     glm::vec<L, float> result;
     for(size_t i = 0; i < L; ++i) {
-        result[static_cast<unsigned>(i)] = jsonObj.at(i);
+        result[i] = jsonObj.at(i);
     }
 
     return result;
@@ -28,7 +29,46 @@ glm::vec<L, float> get(json const &j, std::string_view key, glm::vec<L, float> c
 {
     return j.contains(key) && j.at(key).is_array() && j.at(key).at(0).is_number() ? getVecFromJSON<L>(j.at(key)) : def;
 }
-GLFWwindow *findWindow() {
+template <size_t L = 3>
+glm::vec<L, float> getColor(json const &j, std::string_view key = "color", glm::vec<L, float> const &def = glm::vec<L, float>{1})
+{
+    if(j.contains(key) && j.at(key).is_array() && j.at(key).at(0).is_number()) {
+        glm::vec<L, float> color;
+        for(size_t i = 0; i < L && i < j.at(key).size(); ++i) {
+            color[i] = j.at(key).at(i);
+        }
+        return color;
+    } else if(j.contains(key) && j.at(key).is_string()) {
+        std::string hex = j.at(key).get<std::string>();
+        if(hex.at(0) == '#') {
+            hex.erase(0, 1);
+        }
+        
+        constexpr unsigned splitLength = 2;
+        int NumSubstrings = hex.length() / splitLength;
+        std::vector<std::string> splittedStrings;
+
+        for (int i = 0; i < NumSubstrings; i++) {
+            splittedStrings.push_back(hex.substr(i * splitLength, splitLength));
+        }
+
+        // If there are leftover characters, create a shorter item at the end.
+        if (hex.length() % splitLength != 0) {
+            splittedStrings.push_back(hex.substr(splitLength * NumSubstrings));
+        }
+
+        glm::vec<L, float>color{1};
+        for(size_t i = 0; i < L && i < splittedStrings.size(); ++i) {
+            color[i] = stoi(splittedStrings[i], nullptr, 16) / 255.0f;
+        }
+
+        return color;
+    } else {
+        return def;
+    }
+}
+GLFWwindow *findWindow() 
+{
     auto iter = std::find_if(
         ecs::getSystemManager().getEntities().cbegin(), 
         ecs::getSystemManager().getEntities().cend(), 
@@ -51,6 +91,7 @@ private:
 
     void addTexture(ecs::Entity_t const &modelEntity, std::filesystem::path const &path, std::string const &type, bool flipTextures)
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         if(!ecs::entityHasComponent<model::Model>(modelEntity)) return;
         model::Model &model = ecs::get<model::Model>(modelEntity);
@@ -66,6 +107,7 @@ private:
     }
     std::pair<ecs::Entity_t, std::set<ecs::Entity_t>> createModel(std::filesystem::path const &filepath, bool flipWindingOrder, bool flipTextures)
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         if(m_modelCache.find(filepath) == m_modelCache.end()) {
             m_modelCache.try_emplace(filepath, 
@@ -140,6 +182,7 @@ private:
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         std::filesystem::path path = get<std::string>(jsonentity, "path", "", &json::is_string);
         if(path == "") {
@@ -185,15 +228,9 @@ public:
         if(materialProperties.shininess == 0)  {
             materialProperties.shininess = 16;
         }
-        if(jsonentity.contains("color") && jsonentity.at("color").is_array() && jsonentity.at("color").at(0).is_number()) {
-            Color color;
-            color.color = glm::vec4{0, 0, 0, 1};
-
-            for(size_t i = 0; i < jsonentity.at("color").size(); ++i) {
-                color.color[static_cast<unsigned>(i)] = jsonentity.at("color").at(i);
-            }
-            ecs::addComponent(entity, color);
-        }
+        ecs::addComponent(entity, Color{
+            .color = getColor<4>(jsonentity)
+        });
         if(
             (jsonentity.contains("transparent") && jsonentity.at("transparent").is_boolean() && jsonentity.at("transparent").get<bool>()) || 
             (ecs::entityHasComponent<Color>(entity) && ecs::get<Color>(entity).color.a < 1)
@@ -209,6 +246,7 @@ class ControllableCameraCreator : public game::ILevelEntityCreator
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         GLFWwindow *window = findWindow();
         if(!window) {
@@ -236,6 +274,7 @@ class CameraCreator : public game::ILevelEntityCreator
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         ecs::Entity_t entity = ecs::makeEntity<Camera, PerspectiveProjection, RenderTarget>();
         ecs::get<RenderTarget>(entity) = {};
@@ -256,15 +295,17 @@ class PointLightCreator : public game::ILevelEntityCreator
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         ecs::Entity_t entity = ecs::makeEntity<Light, PointLight>();
         ecs::get<Light>(entity) = {
-            .color = get<3>(jsonentity, "color", glm::vec3{1})
+            .color = getColor<3>(jsonentity)
         };
         ecs::get<PointLight>(entity) = {
             .attenuation = get<float>(jsonentity, "attenuation", 10.0f, &json::is_number)
         };
         ecs::addComponent<game::Position>(entity, {get(jsonentity, "position")});
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };
@@ -276,9 +317,10 @@ public:
         using namespace game;
         ecs::Entity_t entity = ecs::makeEntity<game::Light, game::DirectionalLight>();
         ecs::get<Light>(entity) = {
-            .color = get<3>(jsonentity, "color", glm::vec3{1}),
+            .color = getColor<4>(jsonentity)
         };
         ecs::addComponent<game::Direction>(entity, {get<3>(jsonentity, "direction", glm::vec3{1, 0, 0})});
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };
@@ -287,10 +329,11 @@ class SpotLightCreator : public game::ILevelEntityCreator
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         ecs::Entity_t entity = ecs::makeEntity<game::Light, game::SpotLight>();
         ecs::get<Light>(entity) = {
-            .color = get<3>(jsonentity, "color", glm::vec3{1}),
+            .color = getColor<4>(jsonentity)
         };
         ecs::get<SpotLight>(entity) = {
             .innerConeAngle = get<float>(jsonentity, "inner cone angle", 35.0f, &json::is_number),
@@ -299,6 +342,7 @@ public:
         };
         ecs::addComponent<game::Position>(entity, {get<3>(jsonentity, "position")});
         ecs::addComponent<game::Direction>(entity, {get<3>(jsonentity, "direction", glm::vec3{1, 0, 0})});
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };
@@ -307,10 +351,11 @@ class AreaLightCreator : public game::ILevelEntityCreator
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         using namespace game;
         ecs::Entity_t entity = ecs::makeEntity<game::Light, game::AreaLight>();
         ecs::get<Light>(entity) = {
-            .color = get<3>(jsonentity, "color", glm::vec3{1}),
+            .color = getColor<4>(jsonentity)
         };
         ecs::get<AreaLight>(entity) = {
             .attenuation = get<float>(jsonentity, "attenuation", 10.0f, &json::is_number),
@@ -318,6 +363,7 @@ public:
         };
         ecs::addComponent<game::Position>(entity, {get<3>(jsonentity, "position")});
         ecs::addComponent<game::Direction>(entity, {get<3>(jsonentity, "direction", glm::vec3{1, 0, 0})});
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };
@@ -328,6 +374,7 @@ private:
     // pair(model entity, set of light entities)
     text::Font &createFont(std::filesystem::path atlas, std::filesystem::path metadata)
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         auto pair = std::make_pair(atlas, metadata);
         if(m_fontCache.find(pair) == m_fontCache.end()) {
             m_fontCache.try_emplace(pair, atlas, metadata);
@@ -337,6 +384,7 @@ private:
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         ecs::Entity_t entity = ecs::makeEntity<game::Text>();
         assert(jsonentity.contains("font") && jsonentity.at("font").is_object());
         std::string text = get<std::string>(jsonentity, "string", "", &json::is_string);
@@ -361,6 +409,7 @@ class SkyboxCreator : public game::ILevelEntityCreator
 public:
     void create(json const &jsonentity, game::Scene &scene) override
     {
+        PROFILER_PROFILE_IN_FILE("log/loading");
         std::filesystem::path path = get<std::string>(jsonentity, "path", "", &json::is_string);
         if(path == "") {
             std::cout << "no path specified for skybox!\n";

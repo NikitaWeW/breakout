@@ -1,7 +1,7 @@
 #pragma once
 #include "utils/ECS.hpp"
 #include "utils/Model.hpp"
-#include "EaseFunctions.hpp"
+#include "utils/EaseFunctions.hpp"
 
 namespace game
 {

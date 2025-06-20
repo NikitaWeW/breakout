@@ -33,6 +33,7 @@ namespace opengl
         bool isComplete();
         void attach(Texture const &texture, GLenum attachment = GL_COLOR_ATTACHMENT0);
         void attach(TextureMS const &texture, GLenum attachment = GL_COLOR_ATTACHMENT0);
+        void attach(Cubemap const &cubemap, GLenum attachment = GL_COLOR_ATTACHMENT0);
         void attach(Renderbuffer const &renderbuffer, GLenum attachment = GL_DEPTH_STENCIL_ATTACHMENT);
         void attach(RenderbufferMS const &renderbuffer, GLenum attachment = GL_DEPTH_STENCIL_ATTACHMENT);
     };

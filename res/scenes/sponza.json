@@ -3,9 +3,8 @@
     "entities": [
         {
             "type": "prop",
-            "path": "res/models/sponza/Sponza.gltf",
+            "path": "res/models/crytek-sponza/Sponza.gltf",
             "flip textures": true,
-            "flip winding order": false,
             "scale": [0.01, 0.01, 0.01],
             "semi-transparent": true
         },
@@ -19,18 +18,24 @@
             "type": "point light",
             "position": [0, 3, 0],
             "attenuation": 0.1,
-            "color": [0.1, 1, 1]
+            "color": "#6532a8"
         },
         {
             "type": "point light",
             "position": [-2, 2, 0],
             "attenuation": 0.2,
-            "color": [1, 0.1, 1]
+            "color": "#32a84e"
+        },
+        {
+            "type": "point light",
+            "position": [2, 2, 0],
+            "attenuation": 0.2,
+            "color": "#bbff00"
         },
         {
             "type": "directional light",
-            "direction": [1, -0.5, -1],
-            "color": [1, 1, 1]
+            "direction": [-0.63, -0.25, 0.7],
+            "color": "#FAD6A5"
         },
         {
             "type": "spot light",

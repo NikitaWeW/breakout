@@ -163,13 +163,17 @@
         {
             "type": "text",
             "string": "text rendering still works?",
-            "foreground color": [1, 1, 1, 0.1],
-            "position": [-1.4, 0.9],
-            "size": 0.5,
+            "foreground color": [1, 1, 1, 0.4],
+            "position": [0.01, 0.96],
+            "size": 0.25,
             "font": {
                 "atlas": "res/msdf-fonts/JetBrainsMono-Bold.png",
                 "metadata": "res/msdf-fonts/JetBrainsMono-Bold.json"
             }
+        },
+        {
+            "type": "skybox",
+            "path": "res/textures/qwantani_sunset_2k.hdr"
         }
     ]
 }

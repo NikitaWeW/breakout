@@ -305,7 +305,7 @@ void extractVertexData(model::MeshData &data, aiMesh const *aimesh)
     }
 }
 
-void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial const *material, aiTextureType const type, std::string const &typeName, int flags, std::vector<std::pair<std::string, opengl::Texture>> &loadedTextureCache, std::filesystem::path const &textureDirectory)
+void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial const *material, aiTextureType const type, int flags, std::vector<std::pair<std::string, opengl::Texture>> &loadedTextureCache, std::filesystem::path const &textureDirectory, std::string const &typeName, std::string const &grayscaleTypeName = "")
 {
     PROFILER_PROFILE_IN_FILE("log/loading");
     aiString str;
@@ -322,8 +322,9 @@ void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial con
         if(!alreadyLoaded) {
             std::string filepath{textureDirectory.string() + '/' + str.C_Str()};
             std::replace_if(filepath.begin(), filepath.end(), [](char c){ return c == '\\'; }, '/');
-            opengl::Texture texture{filepath, (flags & model::FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, typeName};
-            texture.type = typeName;
+            bool isGrayScale = false;
+            opengl::Texture texture{filepath, (flags & model::FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, typeName, grayscaleTypeName == "" ? nullptr : &isGrayScale};
+            texture.type = isGrayScale ? grayscaleTypeName : typeName;
             textures.push_back(texture);
             loadedTextureCache.emplace_back(filepath, texture);
         }
@@ -350,10 +351,11 @@ model::Mesh model::Model::processMesh(aiMesh const *aimesh, int flags, aiScene c
     }
 
     aiMaterial const *material = scene->mMaterials[aimesh->mMaterialIndex];
-    loadMaterialTextures(mesh.textures, material, aiTextureType_DIFFUSE,  "diffuse",  flags, m_loadedTextures, m_directory);
-    loadMaterialTextures(mesh.textures, material, aiTextureType_SPECULAR, "specular", flags, m_loadedTextures, m_directory);
-    loadMaterialTextures(mesh.textures, material, aiTextureType_HEIGHT,   "normal",   flags, m_loadedTextures, m_directory);
-    loadMaterialTextures(mesh.textures, material, aiTextureType_NORMALS,  "normal",   flags, m_loadedTextures, m_directory);
+    loadMaterialTextures(mesh.textures, material, aiTextureType_DIFFUSE, flags, m_loadedTextures, m_directory,      "diffuse");
+    loadMaterialTextures(mesh.textures, material, aiTextureType_SPECULAR, flags, m_loadedTextures, m_directory,     "specular");
+    loadMaterialTextures(mesh.textures, material, aiTextureType_NORMALS, flags, m_loadedTextures, m_directory,      "normal",   "height");
+    loadMaterialTextures(mesh.textures, material, aiTextureType_HEIGHT, flags, m_loadedTextures, m_directory,       "normal",   "height");
+    loadMaterialTextures(mesh.textures, material, aiTextureType_DISPLACEMENT, flags, m_loadedTextures, m_directory, "normal",   "height");
 
     if(!(flags & LOAD_DATA)) { // deallocate data
         mesh.data = {};
@@ -367,7 +369,10 @@ model::Model::Model(std::filesystem::path const &filePath, int flags)
     PROFILER_PROFILE_IN_FILE("log/loading");
     m_importer = std::make_shared<Assimp::Importer>();
     m_scene = m_importer->ReadFile( filePath.string().c_str(),
+        aiProcess_SplitLargeMeshes      |
         aiProcess_GenNormals            |
+        aiProcess_GenUVCoords           |
+        aiProcess_FindInvalidData       |
         aiProcess_CalcTangentSpace      |
         aiProcess_Triangulate           |
         aiProcess_JoinIdenticalVertices |

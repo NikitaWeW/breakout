@@ -28,6 +28,10 @@ void opengl::Framebuffer::attach(TextureMS const &texture, GLenum attachment)
 {
     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D_MULTISAMPLE, texture.getRenderID(), 0);
 }
+void opengl::Framebuffer::attach(Cubemap const &cubemap, GLenum attachment)
+{
+    glFramebufferTexture(GL_FRAMEBUFFER, attachment, cubemap.getRenderID(), 0);
+}
 void opengl::Framebuffer::attach(Renderbuffer const &renderbuffer, GLenum attachment)
 {
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, renderbuffer.getRenderID());

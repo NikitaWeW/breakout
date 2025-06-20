@@ -43,6 +43,10 @@ glm::mat4 getViewMat(ecs::Entity_t const &entity)
         right = glm::cross(forward, up);
         
         return glm::lookAt(position, position + forward, up);
+    } else if(ecs::entityHasComponent<Direction>(entity)) {
+        glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
+        glm::vec3 direction = ecs::get<Direction>(entity).dir;
+        return glm::lookAt(position, position - glm::normalize(direction), glm::vec3{0, 1, 0}); // FIXME: probably won't work with CSM
     } else if(ecs::entityHasComponent<Position>(entity)) {
         return glm::translate(glm::mat4{1.0f}, -ecs::get<Position>(entity).position);
     } else {
@@ -179,6 +183,7 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
 }
 void drawSkybox(ecs::Entity_t const &entity) 
 {
+    PROFILER_PROFILE();
     assert(ecs::entityHasComponent<game::Skybox>(entity) && ecs::entityHasComponent<opengl::Cubemap>(entity));
     opengl::Cubemap cubemap = ecs::get<opengl::Cubemap>(entity);
     cubemap.bind(0);
@@ -320,6 +325,56 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(0);
 }
+void game::Renderer::renderShadowMaps(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget) {
+    PROFILER_PROFILE();
+    for(ecs::Entity_t const &lightEntity : entities) {
+        if(!ecs::entityHasComponent<Light>(lightEntity) || !ecs::entityHasComponent<ShadowCaster>(lightEntity)) continue;
+        Light const &light = ecs::get<Light>(lightEntity);
+        ShadowCaster &shadowCaster = ecs::get<ShadowCaster>(lightEntity);
+
+        if(ecs::entityHasComponent<PointLight>(lightEntity)) {
+            if(!shadowCaster.omnidirectionalShadowMap.has_value()) {
+                shadowCaster.omnidirectionalShadowMap = opengl::Cubemap{0}; // dummy argument
+                shadowCaster.omnidirectionalShadowMap.value().bind();
+                for(unsigned int i = 0; i < 6; ++i) glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+                assert(shadowCaster.omnidirectionalShadowMap.has_value() && shadowCaster.omnidirectionalShadowMap.value().getRenderID() != 0);
+
+                shadowCaster.fbo = opengl::Framebuffer{0};
+                shadowCaster.fbo.bind();
+                shadowCaster.fbo.attach(shadowCaster.omnidirectionalShadowMap.value(), GL_DEPTH_ATTACHMENT);
+                glDrawBuffer(GL_NONE);
+                glReadBuffer(GL_NONE);
+                assert(shadowCaster.fbo.isComplete());
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                
+                shadowCaster.projMat = glm::perspective<float>(glm::radians(45.0f), 1, SHADOW_MAP_ZNEAR, SHADOW_MAP_ZFAR);
+            }
+            shadowCaster.viewMat = getViewMat(lightEntity);
+
+            PointLight const &pointLight = ecs::get<PointLight>(lightEntity);
+        } else if(ecs::entityHasComponent<DirectionalLight>(lightEntity)) {
+            if(!shadowCaster.regularShadowMap.has_value()) {
+                shadowCaster.regularShadowMap = opengl::Texture{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE}; // dummy argument
+                shadowCaster.regularShadowMap.value().bind();
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+                assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap.value().getRenderID() != 0);
+
+                shadowCaster.fbo = opengl::Framebuffer{0};
+                shadowCaster.fbo.bind();
+                shadowCaster.fbo.attach(shadowCaster.regularShadowMap.value(), GL_DEPTH_ATTACHMENT);
+                glDrawBuffer(GL_NONE);
+                glReadBuffer(GL_NONE);
+                assert(shadowCaster.fbo.isComplete());
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                
+                shadowCaster.projMat = glm::perspective<float>(glm::radians(45.0f), 1, SHADOW_MAP_ZNEAR, SHADOW_MAP_ZFAR);
+            }
+            DirectionalLight const &dirLight = ecs::get<DirectionalLight>(lightEntity);
+        } else if(ecs::entityHasComponent<SpotLight>(lightEntity)) {
+            SpotLight const &spotLight = ecs::get<SpotLight>(lightEntity);
+        }
+    }
+}
 
 void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double deltatime)
 {
@@ -359,6 +414,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         camera.viewMat = getViewMat(cameraEntity);
 
         renderMain(entities, camera, rtarget);
+        renderShadowMaps(entities, camera, rtarget);
 
         for(ecs::Entity_t const &entity : entities) {
             if(ecs::entityHasComponent<game::Text>(entity)) drawText(entity, camera);

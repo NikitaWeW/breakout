@@ -3,6 +3,7 @@
 #include "utils/Bitmap.hpp"
 #include <stdexcept>
 #include <array>
+#include <random>
 
 constexpr unsigned NUM_FACES_IN_CUBEMAP = 6;
 
@@ -17,13 +18,32 @@ opengl::Texture::Texture(GLenum filtermin, GLenum filtermag, GLenum wrap) noexce
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 }
 
-opengl::Texture::Texture(std::filesystem::path const &filepath, bool flip, bool srgb, std::string const &type) : type(type)
+opengl::Texture::Texture(std::filesystem::path const &filepath, bool flip, bool srgb, std::string const &type, bool *isGrayScalePtr) : type(type)
 {
     stbi_set_flip_vertically_on_load(flip);
-    int width = 0, height = 0;
+    int width = 0, height = 0, numComponents = 0;
     unsigned char *buffer = nullptr;
-    buffer = stbi_load(static_cast<char const *>(filepath.string().c_str()), &width, &height, nullptr, 4);
+    buffer = stbi_load(static_cast<char const *>(filepath.string().c_str()), &width, &height, &numComponents, 4);
     if(!buffer) throw std::runtime_error{"failed to load a texture " + filepath.string()};
+    assert(width > 0 && height > 0);
+
+    if(isGrayScalePtr) {
+        const int pixelCount = glm::min(width * height, 10);
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dist(0, (width - 1) * (height - 1));
+        *isGrayScalePtr = true;
+        for (int i = 0; i < pixelCount; ++i) {
+            int index = dist(gen);
+            unsigned char r = buffer[index * numComponents + 0];
+            unsigned char g = buffer[index * numComponents + 1];
+            unsigned char b = buffer[index * numComponents + 2];
+            if (r != g || r != b) {
+                *isGrayScalePtr = false;
+                break;
+            }
+        }
+    }
 
     glGenTextures(1, &m_renderID);
     bind();
@@ -74,6 +94,12 @@ void opengl::TextureMS::bind(unsigned slot) const noexcept { glActiveTexture(GL_
 opengl::Cubemap::Cubemap(unsigned) noexcept
 {
     glGenTextures(1, &m_renderID);
+    bind();
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
 }
 
 glm::vec3 faceCoordsToXYZ(unsigned x, unsigned y, unsigned faceID, unsigned faceSize) {
@@ -207,4 +233,7 @@ opengl::Cubemap::Cubemap(std::filesystem::path const &filepath, bool flip)
     }
 }
 
-void opengl::Cubemap::bind(unsigned slot) const noexcept { glActiveTexture(GL_TEXTURE0 + slot); glBindTexture(GL_TEXTURE_CUBE_MAP, m_renderID); }
+void opengl::Cubemap::bind(unsigned slot) const noexcept { 
+    glActiveTexture(GL_TEXTURE0 + slot); 
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_renderID); 
+}

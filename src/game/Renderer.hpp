@@ -13,6 +13,9 @@
 namespace game
 {
     constexpr size_t MAX_LIGHTS = 100;
+    constexpr size_t SHADOW_MAP_SIZE = 1024;
+    constexpr float SHADOW_MAP_ZNEAR = 0.01f;
+    constexpr float SHADOW_MAP_ZFAR = 100;
 
     struct Drawable
     {
@@ -22,16 +25,7 @@ namespace game
         unsigned count;
         GLenum mode = GL_TRIANGLES;
     };
-    struct Text
-    {
-        text::Font *font;
-        std::string text;
-        glm::vec2 position; // 
-        float size;
-        glm::vec4 fgColor;
-        glm::vec4 bgColor;
-        std::optional<glm::mat4> matrix;
-    };
+    
     struct Camera
     {
         float zfar = 100;
@@ -43,18 +37,6 @@ namespace game
         // calculated by renderer system
         glm::mat4 viewMat;
         glm::mat4 projMat;
-    };
-    struct PerspectiveProjection {}; // marker component
-    struct Transparent {}; // also a marker component
-    struct SemiTransparent {};
-    struct Skybox {};
-    struct Color
-    {
-        glm::vec4 color;
-    };
-    struct ModelMatrix
-    {
-        glm::mat4 modelMatrix;
     };
     struct RenderTarget
     {
@@ -71,6 +53,33 @@ namespace game
         int prevWidth = -1;
         int prevHeight = -1;
     };
+    
+    // marker components
+    struct PerspectiveProjection {}; 
+    struct Transparent {};
+    struct SemiTransparent {};
+    struct Skybox {};
+
+    struct Color
+    {
+        glm::vec4 color;
+    };
+    struct ModelMatrix
+    {
+        glm::mat4 modelMatrix;
+    };
+    
+    struct Text
+    {
+        text::Font *font;
+        std::string text;
+        glm::vec2 position; // 
+        float size;
+        glm::vec4 fgColor;
+        glm::vec4 bgColor;
+        std::optional<glm::mat4> matrix;
+    };
+
     struct RepeatTexture
     {
         unsigned num = 1;
@@ -79,10 +88,19 @@ namespace game
     {
         float shininess;
     };
+    
     struct LightUBO
     {
         opengl::UniformBuffer ubo;
     };
+    struct ShadowCaster {
+        std::optional<opengl::Texture> regularShadowMap;
+        std::optional<opengl::Cubemap> omnidirectionalShadowMap;
+        opengl::Framebuffer fbo;
+        glm::mat4 projMat;
+        glm::mat4 viewMat;
+    };
+    
     struct Light {
         glm::vec3 color;
     };
@@ -118,7 +136,9 @@ namespace game
         std::optional<opengl::UniformBuffer *> m_lightsUBO;
 
         void renderMain(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget);
+        void renderShadowMaps(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget);
         void drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const;
+
     public:
         Renderer() = default;
         void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;

@@ -56,8 +56,8 @@ void game::gameMain(GLFWwindow *window)
     glfwSetCursorPosCallback(window, game::cursor_position_callback);
 
     ecs::getSystemManager().getEntities().insert(makeWindowEntity(window));
-    ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json"));
-    // ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/sponza.json"));
+    // ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json"));
+    ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/sponza.json"));
     ecs::getSystemManager().getEntities().insert(makeLightStorageEntity());
     
     // ====================
@@ -76,7 +76,7 @@ void game::gameMain(GLFWwindow *window)
     while (!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
-        profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler.txt").clear();
+        profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler").clear();
         
         ecs::getSystemManager().update(deltatime);
 
@@ -117,4 +117,5 @@ void registerEcs()
     ecs::getComponentManager().registerComponent<game::Transparent>();
     ecs::getComponentManager().registerComponent<game::SemiTransparent>();
     ecs::getComponentManager().registerComponent<game::Skybox>();
+    ecs::getComponentManager().registerComponent<game::ShadowCaster>();
 }

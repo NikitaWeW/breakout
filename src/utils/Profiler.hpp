@@ -10,7 +10,7 @@
 
 #ifndef DEBUG
 #define PROFILER_LOG_TYPE profiler::MARKDOWN
-#define PROFILER_PROFILE() profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler.txt")}
+#define PROFILER_PROFILE() profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler")}
 #define PROFILER_PROFILE_IN_FILE(filepath) profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>(filepath)}
 #else
 #define PROFILER_PROFILE()
@@ -109,7 +109,7 @@ inline profiler::Logger<profiler::LogType::MARKDOWN>::~Logger()
     assert(m_stack.size() == 0 && "not all stack frames finished!");
     std::time_t result = std::time(nullptr);
     std::string timeDate = std::asctime(std::localtime(&result));
-    m_file << timeDate << " ===\n\n";
+    m_file << timeDate << "===\n\n";
     m_file << m_log.rdbuf();
 }
 template <> 
@@ -180,11 +180,11 @@ inline void profiler::Logger<profiler::LogType::MARKDOWN>::popFunction(std::chro
     const std::size_t depth = m_stack.size();
     float timeMS = static_cast<float>(time.count()) * 1e-6f;
     std::string_view color;
-    if(timeMS < 2) color = "#b5cea8";
-    else if(timeMS < 4) color = "#ce9178";
+    if(timeMS < 1) color = "#b5cea8";
+    else if(timeMS < 5) color = "#ce9178";
     else color = "#f44747";
-    m_log << std::string(depth * 2 + 2, ' ')
-          << "+ **finished in**"
+    m_log << std::string(depth * 2, ' ')
+          << "+ **finished in** "
           << "<span style=\"color:" << color << "\">"
           << timeMS << "</span> ms\n";
 
