@@ -215,9 +215,9 @@ void setupPointLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster
     if(!shadowCaster.omnidirectionalShadowMap.has_value()) {
         shadowCaster.omnidirectionalShadowMap = opengl::Cubemap{0}; // dummy argument
         shadowCaster.omnidirectionalShadowMap.value().bind();
-        // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_NONE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         for(unsigned int i = 0; i < 6; ++i) 
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32F, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
         assert(shadowCaster.omnidirectionalShadowMap.has_value() && shadowCaster.omnidirectionalShadowMap.value().getRenderID() != 0);
 
         shadowCaster.fbo = opengl::Framebuffer{0};
@@ -237,10 +237,10 @@ void setupPointLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster
 void setupDirLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster &shadowCaster, game::Camera const &camera) 
 {
     if(!shadowCaster.regularShadowMap.has_value()) {
-        shadowCaster.regularShadowMap = opengl::Texture{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE}; // dummy argument
+        shadowCaster.regularShadowMap = opengl::Texture{GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE}; // dummy argument
         shadowCaster.regularShadowMap.value().bind();
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_NONE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
         assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap.value().getRenderID() != 0);
 
         shadowCaster.fbo = opengl::Framebuffer{0};
@@ -268,10 +268,10 @@ void setupSpotLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster 
 {
     auto const &light = ecs::get<game::SpotLight>(entity);
     if(!shadowCaster.regularShadowMap.has_value()) {
-        shadowCaster.regularShadowMap = opengl::Texture{GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE}; // dummy argument
+        shadowCaster.regularShadowMap = opengl::Texture{GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE}; // dummy argument
         shadowCaster.regularShadowMap.value().bind();
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_NONE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
         assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap.value().getRenderID() != 0);
 
         shadowCaster.fbo = opengl::Framebuffer{0};

@@ -14,7 +14,7 @@ struct Material
 };
 
 // TODO: atlas
-uniform samplerCubeShadow u_pointLightSamplers[5];
+uniform samplerCube u_pointLightSamplers[5];
 uniform sampler2D   u_dirLightSamplers  [5];
 uniform sampler2D   u_spotLightSamplers [5];
 
@@ -64,7 +64,7 @@ layout(std140) uniform u_lights {
 };
 uniform vec4 u_color;
 
-vec3 calculateLight(PointLight light, samplerCubeShadow depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
+vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 vec3 calculateLight(DirLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 
@@ -83,22 +83,22 @@ void main()
     for(uint i = 0u; i < numPointLights; ++i) {
         lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
     }
-    for(uint i = 0u; i < numDirLights; ++i) {
-        lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).rgb;
-    }
-    for(uint i = 0u; i < numSpotLights; ++i) {
-        lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
-    }
+    // for(uint i = 0u; i < numDirLights; ++i) {
+    //     lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).rgb;
+    // }
+    // for(uint i = 0u; i < numSpotLights; ++i) {
+    //     lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
+    // }
 
     // o_color *= vec4(lightColor, 1);
     o_color = vec4(lightColor, 1);
 }
 
-vec3 calculateShadow(PointLight light, samplerCubeShadow depthMap, vec3 fragPos, vec3 normal);
+vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 normal);
 vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 fragPos, vec3 normal);
 vec3 calculateShadow(SpotLight light, sampler2D depthMap, vec3 fragPos, vec3 normal);
 
-vec3 calculateLight(PointLight light, samplerCubeShadow depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos) 
+vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos) 
 {
     vec3 lightDir = normalize(light.position - fragPos);
     normal = normalize(normal);
@@ -118,7 +118,7 @@ vec3 calculateLight(PointLight light, samplerCubeShadow depthMap, Material mater
         pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.shininess) *
         vec3(1 - texture(material.rough, texCoords));
     vec3 shadow = calculateShadow(light, depthMap, fragPos, normal);
-
+return shadow; // REMOVE ME
     return vec3(ambient + (1 - shadow) * (diffuse + specular));
 }
 vec3 calculateLight(DirLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos) 
@@ -177,9 +177,8 @@ const vec3 gridSamplingDisk[20] = vec3[]
    vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
-vec3 calculateShadow(PointLight light, samplerCubeShadow depthMap, vec3 fragPos, vec3 normal)
+vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 normal)
 {
-    return vec3(0);
     vec3 fragToLight = fragPos - light.position;
     float currentDepth = length(fragToLight);
 
@@ -191,7 +190,7 @@ vec3 calculateShadow(PointLight light, samplerCubeShadow depthMap, vec3 fragPos,
     float diskRadius = (1.0 + (viewDistance / light.farPlane)) / 25.0;
     for(int i = 0; i < samples; ++i)
     {
-        float closestDepth = texture(depthMap, vec4(normalize(fragToLight + gridSamplingDisk[i] * diskRadius), currentDepth)).r;
+        float closestDepth = texture(depthMap, normalize(fragToLight + gridSamplingDisk[i] * diskRadius)).r;
         closestDepth *= light.farPlane;   // undo mapping [0;1]
         if(currentDepth - bias > closestDepth)
             shadow += 1.0;

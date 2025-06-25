@@ -17,7 +17,6 @@ opengl::Texture::Texture(GLenum filtermin, GLenum filtermag, GLenum wrap) noexce
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 }
-
 opengl::Texture::Texture(std::filesystem::path const &filepath, bool flip, bool srgb, std::string const &type, bool *isGrayScalePtr) : type(type)
 {
     stbi_set_flip_vertically_on_load(flip);
@@ -58,15 +57,14 @@ opengl::Texture::Texture(std::filesystem::path const &filepath, bool flip, bool 
 
     stbi_image_free(buffer);
 }
-
 opengl::Texture::~Texture()
 {
     if(canDeallocate()) {
         glDeleteTextures(1, &m_renderID);
     }
 }
-
-void opengl::Texture::bind(unsigned slot) const noexcept {
+void opengl::Texture::bind(unsigned slot) const noexcept 
+{
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, m_renderID);
 }
@@ -81,28 +79,16 @@ opengl::TextureMS::TextureMS(GLenum filter, GLenum wrap) noexcept
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 }
-
 opengl::TextureMS::~TextureMS()
 {
     if(canDeallocate()) {
         glDeleteTextures(1, &m_renderID);
     }
 }
-
 void opengl::TextureMS::bind(unsigned slot) const noexcept { glActiveTexture(GL_TEXTURE0 + slot); glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_renderID); }
 
-opengl::Cubemap::Cubemap(unsigned) noexcept
+glm::vec3 faceCoordsToXYZ(unsigned x, unsigned y, unsigned faceID, unsigned faceSize) 
 {
-    glGenTextures(1, &m_renderID);
-    bind();
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
-}
-
-glm::vec3 faceCoordsToXYZ(unsigned x, unsigned y, unsigned faceID, unsigned faceSize) {
     float A = 2.0f * (float) x / faceSize;
     float B = 2.0f * (float) y / faceSize;
 
@@ -189,7 +175,6 @@ void convertEquirectangularToCubemap(Bitmap<float> const &equir, std::array<Bitm
         }   // i loop
     }   // Face loop
 }
-
 opengl::Cubemap::Cubemap(std::filesystem::path const &filepath, bool flip)
 {
     int width, height, numChannels;
@@ -233,7 +218,18 @@ opengl::Cubemap::Cubemap(std::filesystem::path const &filepath, bool flip)
     }
 }
 
-void opengl::Cubemap::bind(unsigned slot) const noexcept { 
+opengl::Cubemap::Cubemap(unsigned) noexcept
+{
+    glGenTextures(1, &m_renderID);
+    bind();
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+void opengl::Cubemap::bind(unsigned slot) const noexcept 
+{ 
     glActiveTexture(GL_TEXTURE0 + slot); 
     glBindTexture(GL_TEXTURE_CUBE_MAP, m_renderID); 
 }
