@@ -38,14 +38,6 @@ ecs::Entity_t makeWindowEntity(GLFWwindow *window)
     };
     return windowEntity;
 }
-ecs::Entity_t makeLightStorageEntity() 
-{
-    using namespace game;
-    ecs::Entity_t lightStorageEntity = ecs::makeEntity<LightUBO, LightUpdater::LightStorage>();
-    ecs::get<LightUBO>(lightStorageEntity) = {};
-    ecs::get<LightUpdater::LightStorage>(lightStorageEntity) = {};
-    return lightStorageEntity;
-}
 
 void game::gameMain(GLFWwindow *window) 
 {
@@ -58,7 +50,6 @@ void game::gameMain(GLFWwindow *window)
     ecs::getSystemManager().getEntities().insert(makeWindowEntity(window));
     // ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/plane.json"));
     ecs::getSystemManager().getEntities().insert(makeSceneEntity("res/scenes/sponza.json"));
-    ecs::getSystemManager().getEntities().insert(makeLightStorageEntity());
     
     // ====================
 
@@ -73,10 +64,14 @@ void game::gameMain(GLFWwindow *window)
         }  
     }; 
     fpsShower.detach();
+    // let all the systems run once before presenting to solve the chicken-egg problems (e.g. generating shadow maps based on light data)
+    ecs::getSystemManager().update(deltatime);
     while (!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
+#ifndef NDEBUG
         profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler").clear();
+#endif
         
         ecs::getSystemManager().update(deltatime);
 
@@ -89,10 +84,10 @@ void game::gameMain(GLFWwindow *window)
 void registerEcs()
 {
     using namespace game;
-    ecs::getSystemManager().registerSystem<Renderer>();
     ecs::getSystemManager().registerSystem<CameraController>();
     ecs::getSystemManager().registerSystem<Animator>();
     ecs::getSystemManager().registerSystem<LightUpdater>();
+    ecs::getSystemManager().registerSystem<Renderer>();
     // ====================
     ecs::getComponentManager().registerComponent<Color>();
     ecs::getComponentManager().registerComponent<Position>();
@@ -118,4 +113,5 @@ void registerEcs()
     ecs::getComponentManager().registerComponent<game::SemiTransparent>();
     ecs::getComponentManager().registerComponent<game::Skybox>();
     ecs::getComponentManager().registerComponent<game::ShadowCaster>();
+    ecs::getComponentManager().registerComponent<game::CastsShadow>();
 }

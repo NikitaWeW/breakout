@@ -59,6 +59,7 @@ namespace game
     struct Transparent {};
     struct SemiTransparent {};
     struct Skybox {};
+    struct CastsShadow {};
 
     struct Color
     {
@@ -93,12 +94,21 @@ namespace game
     {
         opengl::UniformBuffer ubo;
     };
+    struct LightSamplers
+    {
+        std::map<size_t, opengl::Cubemap *> pointLightSamplers;
+        std::map<size_t, opengl::Texture *> dirLightSamplers;
+        std::map<size_t, opengl::Texture *> spotLightSamplers;
+    };
+    // TODO: rename it into something more intuitive
     struct ShadowCaster {
         std::optional<opengl::Texture> regularShadowMap;
         std::optional<opengl::Cubemap> omnidirectionalShadowMap;
         opengl::Framebuffer fbo;
         glm::mat4 projMat;
         glm::mat4 viewMat;
+        float farPlane;
+        float nearPlane;
     };
     
     struct Light {
@@ -132,8 +142,13 @@ namespace game
         opengl::ShaderProgram m_oitShader{"shaders/oitTransparent"};
         opengl::ShaderProgram m_oitCompositeShader{"shaders/oitComposite"};
         opengl::ShaderProgram m_skyboxShader{"shaders/skybox"};
+        opengl::ShaderProgram m_depthMapShader{"shaders/depthMapOpaque"};
+        opengl::ShaderProgram m_depthMapOmnidirectionalShader{"shaders/depthMapOmnidirectionalOpaque"};
 
+        // easier access
         std::optional<opengl::UniformBuffer *> m_lightsUBO;
+        std::optional<LightSamplers *> m_lightSamplers;
+        unsigned m_commonTextureCount = 0;
 
         void renderMain(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget);
         void renderShadowMaps(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget);
@@ -152,7 +167,7 @@ namespace game
             glm::vec3 color;
             float attenuation;
             glm::vec3 position;
-            float _pad0;
+            float farPlane;
         };
         struct ShaderDirLight
         {
@@ -160,6 +175,7 @@ namespace game
             float _pad0;
             glm::vec3 color;
             float _pad1;
+            glm::mat4 viewProj;
         };
         struct ShaderSpotLight
         {
@@ -171,6 +187,7 @@ namespace game
             float attenuation;
             glm::vec3 color;
             float _pad0;
+            glm::mat4 viewProj;
         };
         struct LightStorage
         {
@@ -185,7 +202,8 @@ namespace game
             std::array<ShaderSpotLight, MAX_LIGHTS> spotLights;
         };
     public:
-        LightUpdater() = default;
+        LightUpdater();
         void update(std::set<ecs::Entity_t> const &entities, double deltatime) override;
     };
 }
+

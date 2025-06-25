@@ -2,7 +2,7 @@
 
 const uint MAX_LIGHTS = 100u;
 const float ambientKoeffitient = 0.125;
-const float opaqueTreshold = 0.9;
+const float opaqueTreshold = 0.95;
 
 struct Material
 {
@@ -17,25 +17,28 @@ struct PointLight
     float attenuation;
     vec3 position;
     float _pad0;
-}; // 32 bytes
+    mat4 viewProj;
+}; // 96 bytes (ignoring the sampler)
 struct DirLight
 {
     vec3 direction;
     float _pad0;
     vec3 color;
     float _pad1;
-}; // 32 bytes
+    mat4 viewProj;
+}; // 96 bytes
 struct SpotLight
 {
     vec3 position;
     float innerConeAngle;
     vec3 direction;
     float outerConeAngle;
-    vec3 _pad1;
+    vec3 _pad0;
     float attenuation;
     vec3 color;
-    float _pad0;
-}; // 64 bytes
+    float _pad1;
+    mat4 viewProj;
+}; // 128 bytes
 
 in VS_OUT {
     vec2 texCoords;
@@ -64,11 +67,11 @@ vec4 calculateLight(SpotLight light, Material material, vec3 normal, vec3 viewDi
 
 void main() 
 {
+discard;
     vec2 texCoords = fs_in.texCoords;
     vec3 viewDir = normalize(u_camPos - fs_in.fragPos);
     vec3 normal = normalize(fs_in.TBN * normalize(texture(u_material.normal, texCoords).rgb * 2.0 - 1.0));
     vec3 fragPos = fs_in.fragPos;
-
     vec4 color = texture(u_material.diffuse, texCoords) * u_color;
     if(opaqueTreshold < color.a) discard;
 

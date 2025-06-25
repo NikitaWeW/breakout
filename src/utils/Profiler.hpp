@@ -9,9 +9,13 @@
 #include "current_function.hpp"
 
 #ifndef DEBUG
+#define PROFILER_CONCAT_DETAIL(A, B) A##B
+#define PROFILER_CONCAT(A, B) PROFILER_CONCAT_DETAIL(A, B)
+#define PROFILER_UNIQUE_VAR(base) PROFILER_CONCAT(base, __LINE__)
+
 #define PROFILER_LOG_TYPE profiler::MARKDOWN
-#define PROFILER_PROFILE() profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler")}
-#define PROFILER_PROFILE_IN_FILE(filepath) profiler::ScopeTimer<PROFILER_LOG_TYPE> profiler_scope_timer_ ## BOOST_CURRENT_FUNCTION{BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>(filepath)}
+#define PROFILER_PROFILE() profiler::ScopeTimer<PROFILER_LOG_TYPE> PROFILER_UNIQUE_VAR(_profiler_scope_timer_){BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>("log/profiler")}
+#define PROFILER_PROFILE_IN_FILE(filepath) profiler::ScopeTimer<PROFILER_LOG_TYPE> PROFILER_UNIQUE_VAR(_profiler_scope_timer_){BOOST_CURRENT_FUNCTION, profiler::getLogger<PROFILER_LOG_TYPE>(filepath)}
 #else
 #define PROFILER_PROFILE()
 #define PROFILER_PROFILE_IN_FILE(filepath)

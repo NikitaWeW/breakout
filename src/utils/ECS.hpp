@@ -53,7 +53,7 @@ namespace ecs
     /**
      * \brief Controls the maximum number of registered components allowed to exist simultaneously.
      */
-    const ComponentID_t MAX_COMPONENTS = 32;
+    const ComponentID_t MAX_COMPONENTS = 128;
 
     /**
      * \brief Used to track which components entity has. 
@@ -219,13 +219,13 @@ namespace ecs
 
 inline ecs::EntityManager::EntityManager()
 {
-    for(Entity_t id = 0; id < MAX_ENTITIES; ++id) {
+    for(Entity_t id = 1; id < MAX_ENTITIES; ++id) {
         m_availableEntityIDs.push(id);
     }
 }
 inline ecs::Entity_t ecs::EntityManager::createEntity(Signature_t signature)
 {
-    assert(m_livingEntitiesCount <= MAX_ENTITIES && "too many entities");
+    assert(!m_availableEntityIDs.empty() && "too many entities");
     Entity_t entity = m_availableEntityIDs.front();
     m_availableEntityIDs.pop();
     ++m_livingEntitiesCount;
@@ -234,7 +234,7 @@ inline ecs::Entity_t ecs::EntityManager::createEntity(Signature_t signature)
 }
 inline void ecs::EntityManager::destroyEntity(Entity_t const &entity)
 {
-    assert(entity < MAX_ENTITIES && "entity out of range");
+    assert(1 <= entity && entity < MAX_ENTITIES && "entity out of range");
     --m_livingEntitiesCount;
     m_availableEntityIDs.push(entity);
 
@@ -242,18 +242,18 @@ inline void ecs::EntityManager::destroyEntity(Entity_t const &entity)
 }
 inline void ecs::EntityManager::setSignature(Entity_t const &entity, Signature_t signature)
 {
-    assert(entity < MAX_ENTITIES && "entity out of range");
+    assert(1 <= entity && entity < MAX_ENTITIES && "entity out of range");
     m_signatures[entity] = signature;
 }
 inline ecs::Signature_t const &ecs::EntityManager::getSignature(Entity_t const &entity) const
 {
-    assert(entity < MAX_ENTITIES && "entity out of range");
+    assert(1 <= entity && entity < MAX_ENTITIES && "entity out of range");
     return m_signatures.at(entity); 
 }
 
 inline ecs::Signature_t &ecs::EntityManager::getSignature(Entity_t const &entity)
 {
-    assert(entity < MAX_ENTITIES && "entity out of range");
+    assert(1 <= entity && entity < MAX_ENTITIES && "entity out of range");
     return m_signatures.at(entity);
 }
 
@@ -273,12 +273,15 @@ inline void ecs::ComponentArray<Component_t>::remove(Entity_t const &entity)
     assert(m_entityToIndex.find(entity) != m_entityToIndex.end() && "removing non-existing component");
     size_t removedEntityIndex = m_entityToIndex.at(entity);
     size_t lastEntityIndex = m_components.size() - 1;
-    m_components[removedEntityIndex] = m_components[lastEntityIndex];
+    m_components[removedEntityIndex] = std::move(m_components[lastEntityIndex]);
 
     Entity_t lastEntity = m_indexToEntity.at(lastEntityIndex);
     m_entityToIndex.at(lastEntity) = removedEntityIndex;
     m_indexToEntity.at(removedEntityIndex) = lastEntity;
+
     m_components.pop_back();
+    m_entityToIndex.erase(entity);
+    m_indexToEntity.erase(lastEntityIndex);
 }
 template <typename Component_t>
 inline Component_t const &ecs::ComponentArray<Component_t>::getComponent(Entity_t const &entity) const
@@ -305,6 +308,7 @@ inline void ecs::ComponentArray<Component_t>::onEntityDestroyed(Entity_t const &
 template <typename Component_t>
 inline void ecs::ComponentManager::registerComponent()
 {
+    assert(m_nextID < MAX_COMPONENTS && "too many components registred!");
     char const *name = typeid(Component_t).name();
     if(m_componentIDs.find(name) != m_componentIDs.end()) {
         return;

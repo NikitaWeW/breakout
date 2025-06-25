@@ -214,6 +214,7 @@ public:
         ecs::addComponent<game::Position>(entity, {get(jsonentity, "position")});
         ecs::addComponent<game::OrientationEuler>(entity, {get(jsonentity, "rotation")});
         ecs::addComponent<game::Scale>(entity, {get<3>(jsonentity, "scale", glm::vec3{1})});
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<CastsShadow>(entity);
         if(jsonentity.contains("repeat textures") && jsonentity.at("repeat textures").is_number()) {
             ecs::addComponent(entity, RepeatTexture{jsonentity["repeat textures"].get<unsigned>()});
         }
@@ -320,7 +321,7 @@ public:
             .color = getColor<4>(jsonentity)
         };
         ecs::addComponent<game::Direction>(entity, {get<3>(jsonentity, "direction", glm::vec3{1, 0, 0})});
-        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
+        if(get<bool>(jsonentity, "does shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };
@@ -387,7 +388,7 @@ public:
         PROFILER_PROFILE_IN_FILE("log/loading");
         ecs::Entity_t entity = ecs::makeEntity<game::Text>();
         assert(jsonentity.contains("font") && jsonentity.at("font").is_object());
-        std::string text = get<std::string>(jsonentity, "string", "", &json::is_string);
+        std::string text = get<std::string>(jsonentity, "string", "lorem ispum", &json::is_string);
         glm::vec2 position = get<2>(jsonentity, "position", glm::vec2{0});
         float size = get<float>(jsonentity, "size", 1.0f, &json::is_number);
         glm::vec4 fgColor = get<4>(jsonentity, "foreground color", glm::vec4{1});

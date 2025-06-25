@@ -3,11 +3,11 @@
 layout(binding = 0) uniform sampler2D u_texture;
 uniform float u_exposure = 1;
 
+in vec2 v_texCoord;
 out vec4 o_color;
 
 void main() {
-    vec2 texCoord = gl_FragCoord.xy / textureSize(u_texture, 0);
-    vec3 hdrColor = texture(u_texture, texCoord).rgb;
+    vec3 hdrColor = texture(u_texture, v_texCoord).rgb;
     vec3 mappedColor = 1 - exp(-hdrColor * u_exposure);
     
     o_color = vec4(mappedColor, 1);
