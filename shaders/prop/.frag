@@ -80,15 +80,15 @@ void main()
     if(o_color.a < opaqueTreshold) discard;
 
     vec3 lightColor = vec3(0);
-    for(uint i = 0u; i < numPointLights; ++i) {
-        lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
-    }
+    // for(uint i = 0u; i < numPointLights; ++i) {
+    //     lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
+    // }
     // for(uint i = 0u; i < numDirLights; ++i) {
     //     lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).rgb;
     // }
-    // for(uint i = 0u; i < numSpotLights; ++i) {
-    //     lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
-    // }
+    for(uint i = 0u; i < numSpotLights; ++i) {
+        lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
+    }
 
     // o_color *= vec4(lightColor, 1);
     o_color = vec4(lightColor, 1);
@@ -161,9 +161,10 @@ vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3
             pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.shininess) * 
             vec3(1 - texture(material.rough, texCoords));
         vec3 shadow = calculateShadow(light, depthMap, fragPos, normal);
-
+// return shadow; // REMOVE ME
         return vec3(ambient + (1 - shadow) * (diffuse + specular));
     } else {
+// return vec3(0); // REMOVE ME
         return vec3(ambient);
     }
 }

@@ -28,6 +28,12 @@ glm::mat4 getViewMat(ecs::Entity_t const &entity)
     if(ecs::entityHasComponent<OrientationQuaternion>(entity)) {
         glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
         return glm::translate(glm::mat4_cast(glm::normalize(ecs::get<OrientationQuaternion>(entity).quat)), -position);
+    } else if(ecs::entityHasComponent<Direction>(entity)) {
+        glm::vec3 position = ecs::entityHasComponent<game::Position>(entity) ? ecs::get<game::Position>(entity).position : glm::vec3{0};
+        glm::vec3 direction = glm::normalize(ecs::get<game::Direction>(entity).dir);
+        assert(direction != glm::vec3{0});
+        glm::vec3 up = glm::mix(glm::vec3{0, 1, 0}, glm::vec3{1, 0, 0}, glm::abs(glm::dot(direction, glm::vec3{0, 1, 0})));
+        return glm::lookAt(position, position + direction, up);
     } else if(ecs::entityHasComponent<OrientationEuler>(entity)) {
         glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
         glm::vec3 orientation = glm::radians(ecs::get<OrientationEuler>(entity).rotation);
@@ -274,7 +280,7 @@ void setupSpotLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
         assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap.value().getRenderID() != 0);
 
-        shadowCaster.fbo = opengl::Framebuffer{0};
+        shadowCaster.fbo = opengl::Framebuffer{0}; // also a dummy argument
         shadowCaster.fbo.bind();
         shadowCaster.fbo.attach(shadowCaster.regularShadowMap.value(), GL_DEPTH_ATTACHMENT);
         glDrawBuffer(GL_NONE);
