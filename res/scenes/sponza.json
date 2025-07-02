@@ -39,17 +39,17 @@
         },
         {
             "type": "spot light",
-            "direction": [0, -0.8, -0.6],
-            "position": [-4.5, 10.5, 2.5],
+            "direction": [-0.61, -0.25, 0.75],
+            "position": [1.1, 6.7, -4.8],
             "inner cone angle": 15,
             "outer cone angle": 35,
             "attenuation": 0.05,
-            "color": [0.1, 0.1, 0.01]
+            "color": [1, 1, 0.1]
         },
         {
             "type": "spot light",
             "direction": [0, -1, 0],
-            "position": [-12, 2, -4.5 ],
+            "position": [-12, 3.4, -4.5 ],
             "inner cone angle": 15,
             "outer cone angle": 25,
             "attenuation": 0.05,

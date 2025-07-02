@@ -54,7 +54,7 @@ void game::gameMain(GLFWwindow *window)
     // ====================
 
     // ! all deltatime is in seconds
-    double deltatime = 0.0001;
+    double deltatime = 0.0166;
     std::thread fpsShower{
         [&deltatime, &window]() {
             while(!glfwWindowShouldClose(window)) {

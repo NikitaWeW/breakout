@@ -183,10 +183,10 @@ namespace game
             float innerConeAngle;
             glm::vec3 direction;
             float outerConeAngle;
-            glm::vec3 _pad1;
+            glm::vec3 _pad0;
             float attenuation;
             glm::vec3 color;
-            float _pad0;
+            float _pad1;
             glm::mat4 viewProj;
         };
         struct LightStorage

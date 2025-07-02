@@ -32,7 +32,7 @@ glm::mat4 getViewMat(ecs::Entity_t const &entity)
         glm::vec3 position = ecs::entityHasComponent<game::Position>(entity) ? ecs::get<game::Position>(entity).position : glm::vec3{0};
         glm::vec3 direction = glm::normalize(ecs::get<game::Direction>(entity).dir);
         assert(direction != glm::vec3{0});
-        glm::vec3 up = glm::mix(glm::vec3{0, 1, 0}, glm::vec3{1, 0, 0}, glm::abs(glm::dot(direction, glm::vec3{0, 1, 0})));
+        glm::vec3 up = glm::abs(glm::dot(direction, glm::vec3{0, 1, 0})) > 0.99 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0};
         return glm::lookAt(position, position + direction, up);
     } else if(ecs::entityHasComponent<OrientationEuler>(entity)) {
         glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
@@ -288,7 +288,7 @@ void setupSpotLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster 
         assert(shadowCaster.fbo.isComplete());
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
-        shadowCaster.projMat = glm::perspective<float>(glm::radians(light.outerConeAngle), 1, game::SHADOW_MAP_ZNEAR, game::SHADOW_MAP_ZFAR);
+        shadowCaster.projMat = glm::perspective<float>(glm::radians(light.outerConeAngle * 2), 1, game::SHADOW_MAP_ZNEAR, game::SHADOW_MAP_ZFAR);
         shadowCaster.nearPlane = game::SHADOW_MAP_ZNEAR;
         shadowCaster.farPlane = game::SHADOW_MAP_ZFAR;
     }
