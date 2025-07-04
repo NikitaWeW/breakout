@@ -440,6 +440,8 @@ game::LevelParser::~LevelParser() = default;
 
 game::Scene game::LevelParser::parseScene(std::filesystem::path const &filepath)
 {
+    PROFILER_PROFILE_IN_FILE("log/loading");
+
     std::ifstream filestream{filepath};
     if(!filestream) {
         std::cout << "failed to open file \"" << filepath << "\"!\n";

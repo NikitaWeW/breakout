@@ -34,7 +34,7 @@
         },
         {
             "type": "directional light",
-            "direction": [-0.63, -0.25, 0.7],
+            "direction": [-0.67, -0.68, -0.3],
             "color": "#FAD6A5"
         },
         {
@@ -44,7 +44,7 @@
             "inner cone angle": 15,
             "outer cone angle": 35,
             "attenuation": 0.05,
-            "color": [1, 1, 0.1]
+            "color": [0.8, 0.8, 0.1]
         },
         {
             "type": "spot light",
@@ -54,6 +54,15 @@
             "outer cone angle": 25,
             "attenuation": 0.05,
             "color": [0.1, 0.3, 0.1]
+        },
+        {
+            "type": "spot light",
+            "direction": [0.93, 0.012, 0.37],
+            "position": [-0.95, 2.1, -5.4],
+            "inner cone angle": 35,
+            "outer cone angle": 55,
+            "attenuation": 0.05,
+            "color": "#f5a142"
         },
         {
             "type": "text",

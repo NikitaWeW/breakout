@@ -190,7 +190,7 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
             // camera.fov -= event.yoffset.value_or(0) * controllable.sensitivity * 10;
             camera.fov = glm::clamp<float>(camera.fov, 0.01, 45);
         }
-        for(ecs::Entity_t const &entity : entities) { // REMOVE ME: DEBUG
+        for(ecs::Entity_t const &entity : entities) { // REMOVE ME: DEBUG: change sun angle
             if(!ecs::entityHasComponent<Direction>(entity) || !ecs::entityHasComponent<DirectionalLight>(entity)) continue;
             auto &dir = ecs::get<Direction>(entity).dir;
             dir = glm::rotate<float>(glm::mat4{1.0f}, event.yoffset.value_or(0) * 0.01f, glm::vec3{1, 0, 0}) * glm::vec4{dir, 0};

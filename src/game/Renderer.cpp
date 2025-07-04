@@ -73,7 +73,7 @@ glm::mat4 getModelMat(ecs::Entity_t const &entity)
         modelMat = modelMat * glm::mat4_cast(ecs::get<game::OrientationQuaternion>(entity).quat);
     }
     if(ecs::entityHasComponent<game::Scale>(entity)) {
-        modelMat = glm::scale(modelMat, ecs::get<game::Scale>(entity).scale);
+        modelMat = glm::scale(modelMat, glm::max(ecs::get<game::Scale>(entity).scale, glm::vec3{0.0001}));
     }
     return modelMat;
 }
@@ -328,7 +328,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
 
     rtarget.mainFBO.bind();
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // draw opaque objects
     m_propShader.bind();
@@ -394,8 +394,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     // OIT COMPOSITE PASS 
     // ===================
 
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    glDisable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -414,14 +413,14 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     // HDR IMAGE / OTHER POSTPROCESSING PASS 
     // ======================================
 
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    glDisable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBindFramebuffer(GL_FRAMEBUFFER, rtarget.outputFBOid);
     m_screenShader.bind();
     rtarget.mainFBOColor.bind(0);
+    // caster.regularShadowMap->bind(0);
 
     // draw a quad (hard-coded in VSh)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

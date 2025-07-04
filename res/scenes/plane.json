@@ -148,17 +148,17 @@
         },
         {
             "type": "directional light",
-            "direction": [1, -1, -1],
+            "direction": [-0.66, -0.24, 0.71],
             "color": [1, 1, 1]
         },
         {
             "type": "spot light",
-            "direction": [0, -1, 0],
-            "position": [-3, 3, -3],
+            "direction": [0.7, -0.65, -0.29],
+            "position": [-14, 13, 2.4],
             "inner cone angle": 35,
             "outer cone angle": 55,
             "attenuation": 0.05,
-            "color": [1, 1, 0.1]
+            "color": [2, 2, 0.2]
         },
         {
             "type": "text",

@@ -22,7 +22,7 @@ uniform mat4 u_projectionMat;
 
 uniform mat4 u_boneMatrices[MAX_BONES];
 uniform bool u_animated;
-uniform uint u_texCoordMult;
+uniform uint u_texCoordMult = 1u;
 
 void main() {
     vec4 position = vec4(0);
@@ -49,5 +49,4 @@ void main() {
     tangent = normalize(tangent - dot(tangent, normal) * normal);
     vec3 bitangent = cross(tangent, normal);
     vs_out.TBN = mat3(tangent, bitangent, normal);
-
 }

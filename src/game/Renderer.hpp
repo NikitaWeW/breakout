@@ -12,7 +12,8 @@
 
 namespace game
 {
-    constexpr size_t MAX_LIGHTS = 100;
+    // The number of maximum lights per light type
+    constexpr size_t MAX_LIGHTS = 5;
     constexpr size_t SHADOW_MAP_SIZE = 1024;
     constexpr float SHADOW_MAP_ZNEAR = 0.01f;
     constexpr float SHADOW_MAP_ZFAR = 100;
