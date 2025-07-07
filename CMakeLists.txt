@@ -46,5 +46,6 @@ endif()
 target_link_libraries(main PRIVATE ${LIBRARIES})
 target_include_directories(main PRIVATE dependencies/include src)
 
-install(DIRECTORY res DESTINATION res)
+install(DIRECTORY res DESTINATION .)
+install(DIRECTORY shaders DESTINATION .)
 install(TARGETS main DESTINATION .)

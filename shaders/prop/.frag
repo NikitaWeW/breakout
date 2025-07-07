@@ -80,9 +80,9 @@ void main()
     if(o_color.a < opaqueTreshold) discard;
 
     vec3 lightColor = vec3(0);
-    // for(uint i = 0u; i < numPointLights; ++i) {
-    //     lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
-    // }
+    for(uint i = 0u; i < numPointLights; ++i) {
+        lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
+    }
     for(uint i = 0u; i < numDirLights; ++i) {
         lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).rgb;
     }

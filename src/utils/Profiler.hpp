@@ -88,7 +88,7 @@ inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
     std::filesystem::create_directories(filename.parent_path());
     m_file.open(filename, std::fstream::in | std::fstream::out | std::fstream::trunc);
     if(!m_file) {
-        throw std::runtime_error{"failed to open file " + std::string{filename}};
+        throw std::runtime_error{"failed to open file " + filename.string()};
     }
 }
 
