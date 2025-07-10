@@ -152,7 +152,7 @@ inline void profiler::Logger<profiler::LogType::READABLE>::pushFunction(std::str
     }
     m_log << name
     << '\n';
-    m_stack.push_back(std::string{name});
+    m_stack.emplace_back(name);
 }
 template <> 
 inline void profiler::Logger<profiler::LogType::READABLE>::popFunction(std::chrono::nanoseconds const &time)
@@ -205,14 +205,14 @@ inline void profiler::Logger<profiler::LogType::JSON>::pushFunction(std::string_
     };
 
     if(m_log.entryStack.empty()) {
-        m_log["stack"].push_back(std::move(entry));
+        m_log["stack"].emplace_back(std::move(entry));
         m_log.entryStack.push_back(&m_log["stack"].back());
     } else {
-        m_log.entryStack.back()->at("children").push_back(std::move(entry));
+        m_log.entryStack.back()->at("children").emplace_back(std::move(entry));
         m_log.entryStack.push_back(&m_log.entryStack.back()->at("children").back());
     }
 
-    m_stack.push_back(std::string{name});
+    m_stack.emplace_back(name);
 }
 template <> 
 inline void profiler::Logger<profiler::LogType::JSON>::popFunction(std::chrono::nanoseconds const &time)

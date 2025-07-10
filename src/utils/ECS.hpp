@@ -113,7 +113,7 @@ namespace ecs
         std::map<Entity_t, size_t> m_entityToIndex{};
         std::map<size_t, Entity_t> m_indexToEntity{};
     public:
-        void insert(Entity_t const &entity, Component_t component);
+        void insert(Entity_t const &entity, Component_t &&component);
         void remove(Entity_t const &entity);
         Component_t const &getComponent(Entity_t const &entity) const;
         Component_t &getComponent(Entity_t const &entity);
@@ -143,7 +143,7 @@ namespace ecs
          * Get unique component ID used to index the Signature_t bitset.
          */
         template <typename Component_t> ComponentID_t getComponentID();
-        template <typename Component_t> void addComponent(Entity_t const &entity, Component_t component);
+        template <typename Component_t> void addComponent(Entity_t const &entity, Component_t &&component);
         template <typename Component_t> void removeComponent(Entity_t const &entity);
         template <typename Component_t> Component_t &getComponent(Entity_t const &entity);
         template <typename Component_t> Component_t const &getComponent(Entity_t const &entity) const;
@@ -205,10 +205,12 @@ namespace ecs
         static SystemManager *manager = new SystemManager{};
         return *manager;
     }
+
+
     template <typename Component_t> bool entityHasComponent(Entity_t const &entity);
     template <typename Component_t> Component_t &get(Entity_t const &entity);
     template <typename Component_t> void removeComponent(Entity_t const &entity);
-    template <typename Component_t> void addComponent(Entity_t const &entity, Component_t const &component = {});
+    template <typename Component_t> void addComponent(Entity_t const &entity, Component_t &&component = {});
     template <typename... Components_t> ecs::Entity_t makeEntity();
 } // namespace ecs
 
@@ -258,14 +260,14 @@ inline ecs::Signature_t &ecs::EntityManager::getSignature(Entity_t const &entity
 }
 
 template <typename Component_t>
-inline void ecs::ComponentArray<Component_t>::insert(Entity_t const &entity, Component_t component)
+inline void ecs::ComponentArray<Component_t>::insert(Entity_t const &entity, Component_t &&component)
 {
     assert(m_entityToIndex.find(entity) == m_entityToIndex.end() && "component added to the same entity more than once!");
 
     size_t index = m_components.size();
     m_entityToIndex[entity] = index;
     m_indexToEntity[index] = entity;
-    m_components.push_back(component);
+    m_components.emplace_back(component);
 }
 template <typename Component_t>
 inline void ecs::ComponentArray<Component_t>::remove(Entity_t const &entity)
@@ -324,9 +326,9 @@ inline ecs::ComponentID_t ecs::ComponentManager::getComponentID()
     return m_componentIDs.at(name);
 }
 template <typename Component_t>
-inline void ecs::ComponentManager::addComponent(Entity_t const &entity, Component_t component)
+inline void ecs::ComponentManager::addComponent(Entity_t const &entity, Component_t &&component)
 {
-    getComponentArray<Component_t>()->insert(entity, component);
+    getComponentArray<Component_t>()->insert(entity, std::forward<Component_t>(component));
 }
 template <typename Component_t>
 inline void ecs::ComponentManager::removeComponent(Entity_t const &entity)
@@ -410,8 +412,8 @@ void ecs::removeComponent(Entity_t const &entity)
 }
 
 template <typename Component_t>
-void ecs::addComponent(Entity_t const &entity, Component_t const &component)
+void ecs::addComponent(Entity_t const &entity, Component_t &&component)
 {
-    getComponentManager().addComponent<Component_t>(entity, component);
+    getComponentManager().addComponent<Component_t>(entity, std::forward<Component_t>(component));
     getEntityManager().getSignature(entity).set(getComponentManager().getComponentID<Component_t>(), true);
 }

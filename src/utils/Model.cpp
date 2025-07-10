@@ -196,7 +196,7 @@ void model::Model::processNode(aiNode const *node, int flags, aiScene const *sce
 {
     PROFILER_PROFILE_IN_FILE("log/loading");
     for(unsigned i = 0; i < node->mNumMeshes; ++i) {
-        m_meshes.push_back(processMesh(scene->mMeshes[node->mMeshes[i]], flags, scene));
+        m_meshes.emplace_back(std::move(processMesh(scene->mMeshes[node->mMeshes[i]], flags, scene)));
     }
     for(unsigned i = 0; i < node->mNumChildren; ++i) {
         processNode(node->mChildren[i], flags, scene);
@@ -264,7 +264,7 @@ void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMa
         std::string boneName = bone->mName.C_Str();
         if(boneMap.find(boneName) == boneMap.end()) {
             unsigned id = boneCounter;
-            boneTransformations.push_back(toMat4(bone->mOffsetMatrix));
+            boneTransformations.emplace_back(toMat4(bone->mOffsetMatrix));
             assert(boneTransformations.size() - 1 == id);
             boneMap.try_emplace(boneName, id);
             boneID = id;
@@ -292,10 +292,10 @@ void extractVertexData(model::MeshData &data, aiMesh const *aimesh)
     PROFILER_PROFILE_IN_FILE("log/loading");
     for(unsigned i = 0; i < aimesh->mNumVertices; ++i) {
         // i use vec4's for potential byte alignment. lets hope it wont be that bad on large models
-        data.positions.push_back({ aimesh->mVertices[i].x, aimesh->mVertices[i].y, aimesh->mVertices[i].z, 1 });
-        data.normals.push_back({ aimesh->mNormals[i].x, aimesh->mNormals[i].y, aimesh->mNormals[i].z, 0 });
-        data.tangents.push_back({ aimesh->mTangents[i].x, aimesh->mTangents[i].y, aimesh->mTangents[i].z, 0 });
-        data.textureCoords.push_back({ aimesh->mTextureCoords[0][i].x, aimesh->mTextureCoords[0][i].y });
+        data.positions.emplace_back(    aimesh->mVertices[i].x,         aimesh->mVertices[i].y, aimesh->mVertices[i].z, 1);
+        data.normals.emplace_back(      aimesh->mNormals[i].x,          aimesh->mNormals[i].y,  aimesh->mNormals[i].z,  0);
+        data.tangents.emplace_back(     aimesh->mTangents[i].x,         aimesh->mTangents[i].y, aimesh->mTangents[i].z, 0);
+        data.textureCoords.emplace_back(aimesh->mTextureCoords[0][i].x, aimesh->mTextureCoords[0][i].y);
     }
     for(unsigned i = 0; i < aimesh->mNumFaces; ++i) {
         aiFace face = aimesh->mFaces[i];
@@ -325,7 +325,7 @@ void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial con
             bool isGrayScale = false;
             opengl::Texture texture{filepath, (flags & model::FLIP_TEXTURES) != 0, type == aiTextureType_DIFFUSE, typeName, grayscaleTypeName == "" ? nullptr : &isGrayScale};
             texture.type = isGrayScale ? grayscaleTypeName : typeName;
-            textures.push_back(texture);
+            textures.emplace_back(std::move(texture));
             loadedTextureCache.emplace_back(filepath, texture);
         }
     }

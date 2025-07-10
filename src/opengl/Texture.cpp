@@ -128,7 +128,7 @@ glm::vec3 faceCoordsToXYZ(unsigned x, unsigned y, unsigned faceID, unsigned face
 // thanks to https://github.com/emeiri/ogldev/blob/master/Common/cubemap_texture.cpp
 void convertEquirectangularToCubemap(Bitmap<float> const &equir, std::array<Bitmap<float>, NUM_FACES_IN_CUBEMAP> &cubemapBitmaps)
 {
-    unsigned faceSize = equir.getWidth() / 4;
+    unsigned faceSize = glm::ceil(equir.getWidth() / 4.0f);
 
     for (unsigned i = 0; i < NUM_FACES_IN_CUBEMAP; i++) {
         cubemapBitmaps[i] = Bitmap{faceSize, faceSize, equir.getNumComponents()};

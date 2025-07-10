@@ -97,7 +97,7 @@ bool opengl::ShaderProgram::collectShaders(std::string const &directory) noexcep
 
         std::ifstream filestream{directoryEntry.path()};
         shader.source = std::string{std::istreambuf_iterator<char>{filestream}, std::istreambuf_iterator<char>{}};
-        m_shaders.push_back(shader);
+        m_shaders.emplace_back(std::move(shader));
     }
     return true;
 }

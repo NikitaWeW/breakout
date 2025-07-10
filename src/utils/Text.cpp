@@ -89,7 +89,7 @@ void text::Font::drawText(std::string const &text, glm::vec2 const &position, fl
             currentRenderData.glyphOffset = data.offset;
             currentRenderData.glyphSize = data.size;
             
-            renderData.push_back(currentRenderData);
+            renderData.emplace_back(std::move(currentRenderData));
     
             currentPosition.x += data.size.x * size + m_spacing;
         }

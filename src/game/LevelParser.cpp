@@ -49,12 +49,12 @@ glm::vec<L, float> getColor(json const &j, std::string_view key = "color", glm::
         std::vector<std::string> splittedStrings;
 
         for (int i = 0; i < NumSubstrings; i++) {
-            splittedStrings.push_back(hex.substr(i * splitLength, splitLength));
+            splittedStrings.emplace_back(hex.substr(i * splitLength, splitLength));
         }
 
         // If there are leftover characters, create a shorter item at the end.
         if (hex.length() % splitLength != 0) {
-            splittedStrings.push_back(hex.substr(splitLength * NumSubstrings));
+            splittedStrings.emplace_back(hex.substr(splitLength * NumSubstrings));
         }
 
         glm::vec<L, float>color{1};
@@ -214,7 +214,8 @@ public:
         ecs::addComponent<game::Position>(entity, {get(jsonentity, "position")});
         ecs::addComponent<game::OrientationEuler>(entity, {get(jsonentity, "rotation")});
         ecs::addComponent<game::Scale>(entity, {get<3>(jsonentity, "scale", glm::vec3{1})});
-        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<CastsShadow>(entity);
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) 
+            ecs::addComponent<CastsShadow>(entity);
         if(jsonentity.contains("repeat textures") && jsonentity.at("repeat textures").is_number()) {
             ecs::addComponent(entity, RepeatTexture{jsonentity["repeat textures"].get<unsigned>()});
         }
@@ -306,7 +307,8 @@ public:
             .attenuation = get<float>(jsonentity, "attenuation", 10.0f, &json::is_number)
         };
         ecs::addComponent<game::Position>(entity, {get(jsonentity, "position")});
-        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) 
+            ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };
@@ -343,7 +345,8 @@ public:
         };
         ecs::addComponent<game::Position>(entity, {get<3>(jsonentity, "position")});
         ecs::addComponent<game::Direction>(entity, {get<3>(jsonentity, "direction", glm::vec3{1, 0, 0})});
-        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) 
+            ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };
@@ -364,7 +367,8 @@ public:
         };
         ecs::addComponent<game::Position>(entity, {get<3>(jsonentity, "position")});
         ecs::addComponent<game::Direction>(entity, {get<3>(jsonentity, "direction", glm::vec3{1, 0, 0})});
-        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) ecs::addComponent<ShadowCaster>(entity);
+        if(get<bool>(jsonentity, "casts shadow", true, &json::is_boolean)) 
+            ecs::addComponent<ShadowCaster>(entity);
         scene.containedEntities.insert(entity);
     }
 };

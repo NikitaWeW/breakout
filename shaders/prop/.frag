@@ -14,9 +14,9 @@ struct Material
 };
 
 // TODO: atlas
-uniform samplerCube u_pointLightSamplers[MAX_LIGHTS];
-uniform sampler2D   u_dirLightSamplers  [MAX_LIGHTS];
-uniform sampler2D   u_spotLightSamplers [MAX_LIGHTS];
+layout( binding = 5) uniform samplerCube u_pointLightSamplers[MAX_LIGHTS];
+layout( binding = 10) uniform sampler2D   u_dirLightSamplers  [MAX_LIGHTS];
+layout( binding = 15) uniform sampler2D   u_spotLightSamplers [MAX_LIGHTS];
 
 struct PointLight
 {
@@ -90,8 +90,8 @@ void main()
         lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
     }
 
-    o_color *= vec4(lightColor, 1);
-    // o_color = vec4(lightColor, 1);
+    // o_color *= vec4(lightColor, 1);
+    o_color = vec4(lightColor, 1);
 }
 
 vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 normal);
@@ -118,7 +118,7 @@ vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, v
         pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.shininess) *
         vec3(1 - texture(material.rough, texCoords));
     vec3 shadow = calculateShadow(light, depthMap, fragPos, normal);
-return shadow; // REMOVE ME
+
     return vec3(ambient + (1 - shadow) * (diffuse + specular));
 }
 vec3 calculateLight(DirLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos) 

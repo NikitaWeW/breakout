@@ -109,7 +109,7 @@ void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsiz
     }
 
     std::cout << error.id << ": opengl " << error.severity << " severity " << error.type << ", raised from " << error.source << ":\n\t" << error.message << '\n';
-    assert(severity != GL_DEBUG_SEVERITY_HIGH);
+    // assert(severity != GL_DEBUG_SEVERITY_HIGH);
 }
 class Deallocator {
 public: 

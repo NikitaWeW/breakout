@@ -5,9 +5,9 @@ const float ambientKoeffitient = 0.05;
 const float opaqueTreshold = 0.9;
 
 // TODO: atlas
-uniform samplerCube u_pointLightSamplers[5];
-uniform sampler2D   u_dirLightSamplers  [5];
-uniform sampler2D   u_spotLightSamplers [5];
+layout( binding = 5) uniform samplerCube u_pointLightSamplers[MAX_LIGHTS];
+layout( binding = 10) uniform sampler2D   u_dirLightSamplers  [MAX_LIGHTS];
+layout( binding = 15) uniform sampler2D   u_spotLightSamplers [MAX_LIGHTS];
 
 struct Material
 {

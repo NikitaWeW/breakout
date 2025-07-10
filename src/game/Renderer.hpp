@@ -138,6 +138,8 @@ namespace game
             {"diffuse", opengl::Texture{"res/textures/notfound.png", false, true}},
             {"normal", opengl::Texture{"res/textures/blue.png", false, false}}
         };
+        opengl::Cubemap m_defaultCubemap{"res/textures/white.png"};
+
         opengl::ShaderProgram m_screenShader{"shaders/hdrImage"};
         opengl::ShaderProgram m_propShader{"shaders/prop"};
         opengl::ShaderProgram m_oitShader{"shaders/oitTransparent"};
@@ -149,11 +151,11 @@ namespace game
         // easier access
         std::optional<opengl::UniformBuffer *> m_lightsUBO;
         std::optional<LightSamplers *> m_lightSamplers;
-        unsigned m_commonTextureCount = 0;
 
         void renderMain(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget);
         void renderShadowMaps(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget);
         void drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const;
+        void setCommonUniforms(opengl::ShaderProgram const &shader, game::Camera const &camera, glm::vec3 const &cameraPosition);
 
     public:
         Renderer() = default;

@@ -117,34 +117,36 @@ void setTextures(model::Mesh const &mesh, opengl::ShaderProgram const &shader, s
     setDefaultTexture("AO",       boundTextureTypes, defaultTextures, textureCount, shader);
     setDefaultTexture("height",   boundTextureTypes, defaultTextures, textureCount, shader);
 }
-void setCommonUniforms(opengl::ShaderProgram const &shader, game::Camera const &camera, glm::vec3 const &cameraPosition, unsigned &commonTextureCount, std::optional<opengl::UniformBuffer *> const &lightsUBO, std::optional<game::LightSamplers *> const &lightSamplers)
+void game::Renderer::setCommonUniforms(opengl::ShaderProgram const &shader, game::Camera const &camera, glm::vec3 const &cameraPosition)
 {
     glUniformMatrix4fv(shader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
     glUniformMatrix4fv(shader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
     glUniform3fv(      shader.getUniform("u_camPos"),         1,           &cameraPosition.x);
-    if(lightsUBO.has_value()) {
+    if(m_lightsUBO.has_value()) {
         int location = shader.getUniformBlock("u_lights");
         if(location >= 0) {
-            lightsUBO.value()->bind();
-            glUniformBlockBinding(shader.getRenderID(), location, 0);
+            m_lightsUBO.value()->bind();
+            m_lightsUBO.value()->bindingPoint(1);
+            glUniformBlockBinding(shader.getRenderID(), location, 1);
         }
     }
-    if(lightSamplers.has_value()) {
-        auto &samplers = *lightSamplers.value();
-        for(auto &[index, texture] : samplers.pointLightSamplers) {
-            glUniform1i(shader.getUniform("u_pointLightSamplers[" + std::to_string(index) + "]"), commonTextureCount);
-            texture->bind(commonTextureCount);
-            ++commonTextureCount;
+    if(m_lightSamplers.has_value()) {
+        auto &samplers = *m_lightSamplers.value();
+        // default initialize them
+        for(size_t slot = 5; slot < 10; ++slot) {
+            m_defaultCubemap.bind(slot);
         }
-        for(auto &[index, texture] : samplers.dirLightSamplers) {
-            glUniform1i(shader.getUniform("u_dirLightSamplers[" + std::to_string(index) + "]"), commonTextureCount);
-            texture->bind(commonTextureCount);
-            ++commonTextureCount;
+        for(size_t slot = 10; slot < 20; ++slot) {
+            m_defaultTextures.at("").bind(slot);
         }
-        for(auto &[index, texture] : samplers.spotLightSamplers) {
-            glUniform1i(shader.getUniform("u_spotLightSamplers[" + std::to_string(index) + "]"), commonTextureCount);
-            texture->bind(commonTextureCount);
-            ++commonTextureCount;
+        for(auto const &[slot, texture] : samplers.pointLightSamplers) {
+            texture->bind(slot + 5);
+        }
+        for(auto const &[slot, texture] : samplers.dirLightSamplers) {
+            texture->bind(slot + 10);
+        }
+        for(auto const &[slot, texture] : samplers.spotLightSamplers) {
+            texture->bind(slot + 15);
         }
     }
 
@@ -184,7 +186,7 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
 
         game::Drawable const &drawable = mesh.drawable.value();
         
-        setTextures(mesh, shader, m_defaultTextures, m_commonTextureCount);
+        setTextures(mesh, shader, m_defaultTextures, 32);
         
         ecs::entityHasComponent<game::Color>(entity) ?
             glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<game::Color>(entity).color.r) :
@@ -332,7 +334,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
 
     // draw opaque objects
     m_propShader.bind();
-    setCommonUniforms(m_propShader, camera, cameraPosition, m_commonTextureCount, m_lightsUBO, m_lightSamplers);
+    setCommonUniforms(m_propShader, camera, cameraPosition);
     for(ecs::Entity_t const &entity : entities) {
         if(ecs::entityHasComponent<model::Model>(entity) && (!ecs::entityHasComponent<Transparent>(entity) || ecs::entityHasComponent<SemiTransparent>(entity))) {
             drawModel(entity, m_propShader);
@@ -381,7 +383,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
 
     // draw transparent objects
     m_oitShader.bind();
-    setCommonUniforms(m_oitShader, camera, cameraPosition, m_commonTextureCount, m_lightsUBO, m_lightSamplers);
+    setCommonUniforms(m_oitShader, camera, cameraPosition);
     for(ecs::Entity_t const &entity : entities) {
         if(ecs::entityHasComponent<model::Model>(entity) && (ecs::entityHasComponent<Transparent>(entity) || ecs::entityHasComponent<SemiTransparent>(entity))) {
             drawModel(entity, m_oitShader);
@@ -516,8 +518,6 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         camera.projMat = getProjMat(cameraEntity);
         camera.viewMat = getViewMat(cameraEntity);
 
-        m_commonTextureCount = 0;
-
         renderShadowMaps(entities, camera, rtarget);
         renderMain(entities, camera, rtarget);
 
@@ -565,9 +565,9 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
                 shaderPointLight.position = ecs::entityHasComponent<Position>(lightEntity) ?
                     ecs::get<Position>(lightEntity).position :
                     glm::vec3{0};
-                // shaderPointLight.viewProj = viewProj;
-                if(caster.has_value()) 
+                if(caster.has_value()) {
                     shaderPointLight.farPlane = caster.value()->farPlane;
+                }
 
                 if(caster.has_value() && caster.value()->omnidirectionalShadowMap.has_value()) 
                     samplers.pointLightSamplers[storage.numPointLights] = &caster.value()->omnidirectionalShadowMap.value();
