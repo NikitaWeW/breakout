@@ -473,6 +473,8 @@ void game::Renderer::renderShadowMaps(std::set<ecs::Entity_t> const &entities, g
         opaqueShader->bind();
         glUniformMatrix4fv(opaqueShader->getUniform("u_viewMat"),        1, GL_FALSE, &shadowCaster.viewMat[0][0]);
         glUniformMatrix4fv(opaqueShader->getUniform("u_projectionMat"),  1, GL_FALSE, &shadowCaster.projMat[0][0]);
+        glUniform3fv(      opaqueShader->getUniform("u_lightPos"),       1,           &shadowCaster.viewMat[3].x );
+        glUniform1f(       opaqueShader->getUniform("u_farPlane"),                     shadowCaster.farPlane     );
         for(ecs::Entity_t const &entity : entities) {
             if(ecs::entityHasComponent<model::Model>(entity) && ecs::entityHasComponent<CastsShadow>(entity)) {
                 drawModel(entity, *opaqueShader);

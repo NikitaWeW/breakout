@@ -41,7 +41,7 @@ const mat4 shadowMatrices[6] = mat4[](
     )
 );
 
-out vec4 FragPos; // FragPos from GS (output per emitvertex)
+out vec4 v_fragPos; // v_fragPos from GS (output per emitvertex)
 uniform mat4 u_projectionMat;
 
 void main()
@@ -51,8 +51,8 @@ void main()
         gl_Layer = face; // built-in variable that specifies to which face we render.
         for(int i = 0; i < 3; ++i) // for each triangle vertex
         {
-            FragPos = gl_in[i].gl_Position;
-            gl_Position = u_projectionMat * shadowMatrices[face] * FragPos;
+            v_fragPos = gl_in[i].gl_Position;
+            gl_Position = u_projectionMat * shadowMatrices[face] * v_fragPos;
             EmitVertex();
         }    
         EndPrimitive();

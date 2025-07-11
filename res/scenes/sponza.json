@@ -23,7 +23,7 @@
         {
             "type": "point light",
             "position": [-2, 2, 0],
-            "attenuation": 0.2,
+            "attenuation": 0.02,
             "color": "#32a84e"
         },
         {
@@ -44,8 +44,7 @@
             "inner cone angle": 15,
             "outer cone angle": 35,
             "attenuation": 0.05,
-            "color": [0.8, 0.8, 0.1],
-            "casts shadow": false
+            "color": [0.8, 0.8, 0.1]
         },
         {
             "type": "spot light",
@@ -54,8 +53,7 @@
             "inner cone angle": 15,
             "outer cone angle": 25,
             "attenuation": 0.05,
-            "color": [0.1, 0.3, 0.1],
-            "casts shadow": false
+            "color": [0.1, 0.3, 0.1]
         },
         {
             "type": "spot light",
@@ -64,8 +62,7 @@
             "inner cone angle": 35,
             "outer cone angle": 55,
             "attenuation": 0.05,
-            "color": "#f5a142",
-            "casts shadow": false
+            "color": "#f5a142"
         },
         {
             "type": "text",
