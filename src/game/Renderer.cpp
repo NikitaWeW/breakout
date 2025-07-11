@@ -327,6 +327,8 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     glCullFace(GL_BACK);
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_POLYGON_OFFSET_FILL);
+
 
     rtarget.mainFBO.bind();
     glClearColor(rtarget.clearColor.r, rtarget.clearColor.g, rtarget.clearColor.b, rtarget.clearColor.a);
@@ -345,6 +347,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);
     glDisable(GL_CULL_FACE);
+    glDisable(GL_POLYGON_OFFSET_FILL);
 
     m_skyboxShader.bind();
     glUniformMatrix4fv(m_skyboxShader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
@@ -372,6 +375,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // revelage
     glBlendEquation(GL_FUNC_ADD);
     glCullFace(GL_BACK);
+    glDisable(GL_POLYGON_OFFSET_FILL);
 
     rtarget.oitFBO.bind();
     {
@@ -396,6 +400,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     // OIT COMPOSITE PASS 
     // ===================
 
+    glDisable(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
@@ -415,6 +420,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     // HDR IMAGE / OTHER POSTPROCESSING PASS 
     // ======================================
 
+    glDisable(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
@@ -466,6 +472,8 @@ void game::Renderer::renderShadowMaps(std::set<ecs::Entity_t> const &entities, g
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         glCullFace(GL_BACK);
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(1.0, 1.0);
 
         shadowCaster.fbo.bind();
         glClear(GL_DEPTH_BUFFER_BIT);

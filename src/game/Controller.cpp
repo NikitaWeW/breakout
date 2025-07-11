@@ -172,7 +172,7 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
                 glm::mat4 invViewMat = glm::inverse(camera.viewMat);
                 glm::vec3 cameraPos = invViewMat * glm::vec4{0, 0, 0, 1};
                 glm::vec3 cameraDir = invViewMat * glm::vec4{0, 0, -1, 0};
-                std::cout << std::setprecision(2) << "camera position: [" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << "]; \t"
+                std::cout << std::setprecision(2) << "camera position: [" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << "] \t"
                     << "camera direction: [" << cameraDir.x << ", " << cameraDir.y << ", " << cameraDir.z << "]\n" << std::setprecision(6);
             }
         }
