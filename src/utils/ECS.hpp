@@ -207,10 +207,10 @@ namespace ecs
     }
 
 
-    template <typename Component_t> bool entityHasComponent(Entity_t const &entity);
+    template <typename Component_t> bool has(Entity_t const &entity);
     template <typename Component_t> Component_t &get(Entity_t const &entity);
-    template <typename Component_t> void removeComponent(Entity_t const &entity);
-    template <typename Component_t> void addComponent(Entity_t const &entity, Component_t &&component = {});
+    template <typename Component_t> void remove(Entity_t const &entity);
+    template <typename Component_t> void add(Entity_t const &entity, Component_t &&component = {});
     template <typename... Components_t> ecs::Entity_t makeEntity();
 } // namespace ecs
 
@@ -385,7 +385,7 @@ inline void ecs::SystemManager::update(double deltatime) const
 }
 
 template <typename Component_t> 
-inline bool ecs::entityHasComponent(Entity_t const &entity) 
+inline bool ecs::has(Entity_t const &entity) 
 { 
     return getEntityManager().getSignature(entity)[getComponentManager().getComponentID<Component_t>()]; 
 }
@@ -405,14 +405,14 @@ inline ecs::Entity_t ecs::makeEntity()
     return entity;
 }
 template <typename Component_t> 
-void ecs::removeComponent(Entity_t const &entity) 
+void ecs::remove(Entity_t const &entity) 
 {
     getComponentManager().removeComponent<Component_t>(entity);
     getEntityManager().getSignature(entity).set(getComponentManager().getComponentID<Component_t>(), false);
 }
 
 template <typename Component_t>
-void ecs::addComponent(Entity_t const &entity, Component_t &&component)
+void ecs::add(Entity_t const &entity, Component_t &&component)
 {
     getComponentManager().addComponent<Component_t>(entity, std::forward<Component_t>(component));
     getEntityManager().getSignature(entity).set(getComponentManager().getComponentID<Component_t>(), true);

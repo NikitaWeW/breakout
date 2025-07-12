@@ -1,6 +1,6 @@
 #include <iostream>
 #include "Controller.hpp"
-#include "Physics.hpp"
+#include "CommonTypes.hpp"
 #include "Renderer.hpp"
 
 game::CameraController *game::CameraController::controllerCallbackUser = nullptr;
@@ -57,17 +57,17 @@ game::CameraController::CameraController()
 void game::CameraController::update(std::set<ecs::Entity_t> const &entities, double deltatime)
 {
     for(ecs::Entity_t const &entity : entities) {
-        if(!ecs::entityHasComponent<Camera>(entity) || !ecs::entityHasComponent<ControllableCamera>(entity) || !ecs::entityHasComponent<Window>(entity)) continue;
+        if(!ecs::has<Camera>(entity) || !ecs::has<ControllableCamera>(entity) || !ecs::has<Window>(entity)) continue;
         ControllableCamera &controllable = ecs::get<ControllableCamera>(entity);
         Camera &camera = ecs::get<Camera>(entity);
         GLFWwindow *window = ecs::get<Window>(entity).glfwwindow;
         glfwGetWindowSize(window, &camera.width, &camera.height);
-        if(!ecs::entityHasComponent<Position>(entity)) continue;
+        if(!ecs::has<Position>(entity)) continue;
 
         glfwGetWindowSize(window, &camera.width, &camera.height);
         float const &speed = controllable.speedUnitsPerSecond;
         glm::mat4 const &invViewMat = glm::inverse(camera.viewMat);
-        glm::vec3 &position = ecs::get<Position>(entity).position;
+        glm::vec3 &position = ecs::get<Position>(entity);
         
         glm::vec3 forward = glm::normalize(glm::vec3{invViewMat * glm::vec4{0, 0, -1, 0}});
         glm::vec3 right   = glm::normalize(glm::vec3{invViewMat * glm::vec4{1, 0, 0, 0}});
@@ -110,8 +110,8 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
         offset *= controllable.sensitivity;
         // offset *= deltatime;
 
-        if(ecs::entityHasComponent<OrientationEuler>(entity)) {
-            glm::vec3 &orientation = ecs::get<OrientationEuler>(entity).rotation;
+        if(ecs::has<OrientationEuler>(entity)) {
+            glm::vec3 &orientation = ecs::get<OrientationEuler>(entity);
 
             if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) { // FIXME: doesent rotate?
                 orientation.z -= controllable.sensitivity * 1000 * (float) deltatime;
@@ -129,8 +129,8 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
             } else if(orientation.x <= -90) {
                 orientation.x = -89.999;
             }
-        } else if(ecs::entityHasComponent<OrientationQuaternion>(entity)) {
-            glm::quat &orientation = ecs::get<OrientationQuaternion>(entity).quat;
+        } else if(ecs::has<OrientationQuaternion>(entity)) {
+            glm::quat &orientation = ecs::get<OrientationQuaternion>(entity);
             if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
                 orientation *= glm::angleAxis(glm::radians(controllable.sensitivity * 1000 * (float) deltatime), glm::vec3{0, 0, 1});
             } if(glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
@@ -148,7 +148,7 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
     for (; !m_keyQueue.empty(); m_keyQueue.pop()) {
         KeyEvent const &event = m_keyQueue.front();
         for(ecs::Entity_t const &entity : entities) {
-            if(event.key == GLFW_KEY_R && glfwGetKey(event.window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && event.action == GLFW_PRESS && ecs::entityHasComponent<opengl::ShaderProgram>(entity)) { // hot reload shaders
+            if(event.key == GLFW_KEY_R && glfwGetKey(event.window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && event.action == GLFW_PRESS && ecs::has<opengl::ShaderProgram>(entity)) { // hot reload shaders
                 opengl::ShaderProgram &shader = ecs::get<opengl::ShaderProgram>(entity);
                 
                 opengl::ShaderProgram copy = shader;
@@ -163,11 +163,11 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
                     continue;
                 }
             }
-            if(event.key == GLFW_KEY_ESCAPE && event.action == GLFW_PRESS && ecs::entityHasComponent<ControllableCamera>(entity)) {
+            if(event.key == GLFW_KEY_ESCAPE && event.action == GLFW_PRESS && ecs::has<ControllableCamera>(entity)) {
                 bool &locked = ecs::get<ControllableCamera>(entity).locked;
                 locked = !locked;
             }
-            if(event.key == GLFW_KEY_V && event.action == GLFW_PRESS && ecs::entityHasComponent<Camera>(entity)) {
+            if(event.key == GLFW_KEY_V && event.action == GLFW_PRESS && ecs::has<Camera>(entity)) {
                 Camera &camera = ecs::get<Camera>(entity);
                 glm::mat4 invViewMat = glm::inverse(camera.viewMat);
                 glm::vec3 cameraPos = invViewMat * glm::vec4{0, 0, 0, 1};
@@ -181,7 +181,7 @@ void game::CameraController::update(std::set<ecs::Entity_t> const &entities, dou
     for (; !m_mouseQueue.empty(); m_mouseQueue.pop()) {
         MouseEvent const &event = m_mouseQueue.front();
         for(ecs::Entity_t const &entity : entities) {
-            if(!ecs::entityHasComponent<Camera>(entity) || !ecs::entityHasComponent<ControllableCamera>(entity) || !ecs::entityHasComponent<Window>(entity)) continue;
+            if(!ecs::has<Camera>(entity) || !ecs::has<ControllableCamera>(entity) || !ecs::has<Window>(entity)) continue;
             GLFWwindow *window = ecs::get<Window>(entity).glfwwindow;
             if(window != event.window) continue;
             Camera &camera = ecs::get<Camera>(entity);

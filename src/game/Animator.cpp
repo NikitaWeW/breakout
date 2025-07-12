@@ -38,20 +38,20 @@ void game::Animator::update(std::set<ecs::Entity_t> const &entities, double delt
 {
     for(ecs::Entity_t const &entity : entities)
     {
-        if(!ecs::entityHasComponent<Animation>(entity)) continue;
+        if(!ecs::has<Animation>(entity)) continue;
         Animation &animation = ecs::get<Animation>(entity);
 
         updateAnimation(animation, deltatime);
         if(!animation.aianimation) continue;
 
-        if(ecs::entityHasComponent<AnimationTransition>(entity)) {
+        if(ecs::has<AnimationTransition>(entity)) {
             AnimationTransition &transition = ecs::get<AnimationTransition>(entity);
             transition.to.normalizedTime = animation.normalizedTime;
 
             if(transition.to.aianimation) {
                 transition.factor += transition.factorPerSecond * deltatime;
     
-                if(ecs::entityHasComponent<model::Model>(entity)) {
+                if(ecs::has<model::Model>(entity)) {
                     animation.boneMatrices = &ecs::get<model::Model>(entity).getBoneTransformations(
                         animation.normalizedTime * getDurationSeconds(animation), transition.to.normalizedTime * getDurationSeconds(transition.to), 
                         animation.aianimation, transition.to.aianimation, 
@@ -60,14 +60,14 @@ void game::Animator::update(std::set<ecs::Entity_t> const &entities, double delt
                 }
     
                 if(transition.factor >= 1) {
-                    ecs::removeComponent<AnimationTransition>(entity);
+                    ecs::remove<AnimationTransition>(entity);
                     animation = transition.to;
                 }
             } else {
-                ecs::removeComponent<AnimationTransition>(entity);
+                ecs::remove<AnimationTransition>(entity);
             }
         }
-        if(ecs::entityHasComponent<model::Model>(entity) && !ecs::entityHasComponent<AnimationTransition>(entity)) {
+        if(ecs::has<model::Model>(entity) && !ecs::has<AnimationTransition>(entity)) {
             animation.boneMatrices = &ecs::get<model::Model>(entity).getBoneTransformations(animation.normalizedTime * getDurationSeconds(animation), animation.aianimation);
         }
     }

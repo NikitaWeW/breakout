@@ -2,7 +2,7 @@
 #include "glm/gtc/quaternion.hpp"
 #include "Renderer.hpp"
 #include "Animator.hpp"
-#include "game/Physics.hpp"
+#include "game/CommonTypes.hpp"
 #include "utils/Model.hpp"
 #include "utils/Profiler.hpp"
 
@@ -10,7 +10,7 @@ glm::mat4 getProjMat(ecs::Entity_t const &entity)
 {
     game::Camera const &camera = ecs::get<game::Camera>(entity);
     assert(camera.width > 0 && camera.height > 0);
-    if(ecs::entityHasComponent<game::PerspectiveProjection>(entity))
+    if(ecs::has<game::PerspectiveProjection>(entity))
         return glm::perspective<float>(glm::radians(camera.fov), (float) camera.width / (float) camera.height, camera.znear, camera.zfar);
     else
         return glm::ortho<float>(
@@ -25,18 +25,18 @@ glm::mat4 getProjMat(ecs::Entity_t const &entity)
 glm::mat4 getViewMat(ecs::Entity_t const &entity) 
 {
     using namespace game;
-    if(ecs::entityHasComponent<OrientationQuaternion>(entity)) {
-        glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
-        return glm::translate(glm::mat4_cast(glm::normalize(ecs::get<OrientationQuaternion>(entity).quat)), -position);
-    } else if(ecs::entityHasComponent<Direction>(entity)) {
-        glm::vec3 position = ecs::entityHasComponent<game::Position>(entity) ? ecs::get<game::Position>(entity).position : glm::vec3{0};
-        glm::vec3 direction = glm::normalize(ecs::get<game::Direction>(entity).dir);
+    if(ecs::has<OrientationQuaternion>(entity)) {
+        glm::vec3 position = ecs::has<Position>(entity) ? ecs::get<Position>(entity) : glm::vec3{0, 0, 0};
+        return glm::translate(glm::mat4_cast(glm::normalize(ecs::get<OrientationQuaternion>(entity))), -position);
+    } else if(ecs::has<Direction>(entity)) {
+        glm::vec3 position = ecs::has<game::Position>(entity) ? ecs::get<game::Position>(entity) : glm::vec3{0};
+        glm::vec3 direction = glm::normalize(ecs::get<game::Direction>(entity));
         assert(direction != glm::vec3{0});
         glm::vec3 up = glm::abs(glm::dot(direction, glm::vec3{0, 1, 0})) > 0.99 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0};
         return glm::lookAt(position, position + direction, up);
-    } else if(ecs::entityHasComponent<OrientationEuler>(entity)) {
-        glm::vec3 position = ecs::entityHasComponent<Position>(entity) ? ecs::get<Position>(entity).position : glm::vec3{0, 0, 0};
-        glm::vec3 orientation = glm::radians(ecs::get<OrientationEuler>(entity).rotation);
+    } else if(ecs::has<OrientationEuler>(entity)) {
+        glm::vec3 position = ecs::has<Position>(entity) ? ecs::get<Position>(entity) : glm::vec3{0, 0, 0};
+        glm::vec3 orientation = glm::radians(static_cast<glm::vec3>(ecs::get<OrientationEuler>(entity)));
         glm::vec3 forward = glm::normalize(glm::vec3(
             cos(orientation.y) * cos(orientation.x),
             sin(orientation.x),
@@ -49,8 +49,8 @@ glm::mat4 getViewMat(ecs::Entity_t const &entity)
         right = glm::cross(forward, up);
         
         return glm::lookAt(position, position + forward, up);
-    } else if(ecs::entityHasComponent<Position>(entity)) {
-        return glm::translate(glm::mat4{1.0f}, -ecs::get<Position>(entity).position);
+    } else if(ecs::has<Position>(entity)) {
+        return glm::translate(glm::mat4{1.0f}, -ecs::get<Position>(entity));
     } else {
         return glm::mat4{1.0f};
     }
@@ -58,29 +58,29 @@ glm::mat4 getViewMat(ecs::Entity_t const &entity)
 glm::mat4 getModelMat(ecs::Entity_t const &entity) 
 {
     glm::mat4 modelMat{1.0f};
-    if(ecs::entityHasComponent<game::ModelMatrix>(entity)) {
+    if(ecs::has<game::ModelMatrix>(entity)) {
         modelMat = ecs::get<game::ModelMatrix>(entity).modelMatrix;
     }
-    if(ecs::entityHasComponent<game::Position>(entity)) {
-        modelMat = glm::translate(modelMat, ecs::get<game::Position>(entity).position);
+    if(ecs::has<game::Position>(entity)) {
+        modelMat = glm::translate(modelMat, ecs::get<game::Position>(entity));
     }
-    if(ecs::entityHasComponent<game::OrientationEuler>(entity)) {
-        glm::vec3 const &rotation = ecs::get<game::OrientationEuler>(entity).rotation;
+    if(ecs::has<game::OrientationEuler>(entity)) {
+        glm::vec3 const &rotation = ecs::get<game::OrientationEuler>(entity);
         modelMat = glm::rotate<float>(modelMat, rotation.x, {1, 0, 0});
         modelMat = glm::rotate<float>(modelMat, rotation.y, {0, 1, 0});
         modelMat = glm::rotate<float>(modelMat, rotation.z, {0, 0, 1});
-    } else if(ecs::entityHasComponent<game::OrientationQuaternion>(entity)) {
-        modelMat = modelMat * glm::mat4_cast(ecs::get<game::OrientationQuaternion>(entity).quat);
+    } else if(ecs::has<game::OrientationQuaternion>(entity)) {
+        modelMat = modelMat * glm::mat4_cast(ecs::get<game::OrientationQuaternion>(entity));
     }
-    if(ecs::entityHasComponent<game::Scale>(entity)) {
-        modelMat = glm::scale(modelMat, glm::max(ecs::get<game::Scale>(entity).scale, glm::vec3{0.0001}));
+    if(ecs::has<game::Scale>(entity)) {
+        modelMat = glm::scale(modelMat, glm::max(ecs::get<game::Scale>(entity), glm::vec3{0.0001}));
     }
     return modelMat;
 }
 std::optional<std::vector<glm::mat4> const *> getBoneMatrices(ecs::Entity_t const &entity)
 {
     std::optional<std::vector<glm::mat4> const *> boneMatrices = {};
-    if(ecs::entityHasComponent<game::Animation>(entity) && ecs::get<game::Animation>(entity).boneMatrices != nullptr) {
+    if(ecs::has<game::Animation>(entity) && ecs::get<game::Animation>(entity).boneMatrices != nullptr) {
         boneMatrices.emplace(ecs::get<game::Animation>(entity).boneMatrices);
     }
 
@@ -155,7 +155,7 @@ void game::Renderer::setCommonUniforms(opengl::ShaderProgram const &shader, game
 void draw(game::Drawable const &drawable) {
     drawable.va.bind();
     if(drawable.ib.has_value()) {
-        drawable.ib.value().bind();
+        drawable.ib->bind();
         glDrawElements(drawable.mode, drawable.count, GL_UNSIGNED_INT, nullptr);
     } else {
         glDrawArrays(drawable.mode, 0, drawable.count);
@@ -164,7 +164,7 @@ void draw(game::Drawable const &drawable) {
 void drawText(ecs::Entity_t const &textEntity, game::Camera const &camera) {
     PROFILER_PROFILE();
     using namespace game;
-    assert(ecs::entityHasComponent<Text>(textEntity));
+    assert(ecs::has<Text>(textEntity));
     Text const &text = ecs::get<Text>(textEntity);
     glm::mat4 matrix = text.matrix.value_or(glm::ortho<float>(
         0, static_cast<float>(camera.width), 
@@ -176,7 +176,7 @@ void drawText(ecs::Entity_t const &textEntity, game::Camera const &camera) {
 void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgram const &shader) const
 {
     PROFILER_PROFILE();
-    assert(ecs::entityHasComponent<model::Model>(entity));
+    assert(ecs::has<model::Model>(entity));
     model::Model const &model = ecs::get<model::Model>(entity);
     glm::mat4 modelMat = getModelMat(entity);
     std::optional<std::vector<glm::mat4> const *> boneMatrices = getBoneMatrices(entity);
@@ -188,18 +188,18 @@ void game::Renderer::drawModel(ecs::Entity_t const &entity, opengl::ShaderProgra
         
         setTextures(mesh, shader, m_defaultTextures, 32);
         
-        ecs::entityHasComponent<game::Color>(entity) ?
+        ecs::has<game::Color>(entity) ?
             glUniform4fv(shader.getUniform("u_color"), 1, &ecs::get<game::Color>(entity).color.r) :
             glUniform4f( shader.getUniform("u_color"), 1, 1, 1, 1);
         if(boneMatrices.has_value()) {
             glUniformMatrix4fv(shader.getUniform("u_boneMatrices"), static_cast<int>(boneMatrices.value()->size()), GL_FALSE, &(*boneMatrices.value()->data())[0][0]);
         }
-        if(ecs::entityHasComponent<game::RepeatTexture>(entity)) {
+        if(ecs::has<game::RepeatTexture>(entity)) {
             glUniform1ui(shader.getUniform("u_texCoordMult"), ecs::get<game::RepeatTexture>(entity).num);
         } else {
             glUniform1ui(shader.getUniform("u_texCoordMult"), 1);
         }
-        if(ecs::entityHasComponent<game::MaterialProperties>(entity)) {
+        if(ecs::has<game::MaterialProperties>(entity)) {
             game::MaterialProperties const &materialProperties = ecs::get<game::MaterialProperties>(entity);
             glUniform1f(shader.getUniform("u_material.shininess"), materialProperties.shininess);
         }
@@ -222,11 +222,11 @@ void setupPointLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster
 {
     if(!shadowCaster.omnidirectionalShadowMap.has_value()) {
         shadowCaster.omnidirectionalShadowMap = opengl::Cubemap{0}; // dummy argument
-        shadowCaster.omnidirectionalShadowMap.value().bind();
+        shadowCaster.omnidirectionalShadowMap->bind();
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         for(unsigned int i = 0; i < 6; ++i) 
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        assert(shadowCaster.omnidirectionalShadowMap.has_value() && shadowCaster.omnidirectionalShadowMap.value().getRenderID() != 0);
+        assert(shadowCaster.omnidirectionalShadowMap.has_value() && shadowCaster.omnidirectionalShadowMap->getRenderID() != 0);
 
         shadowCaster.fbo = opengl::Framebuffer{0};
         shadowCaster.fbo.bind();
@@ -246,10 +246,10 @@ void setupDirLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster &
 {
     if(!shadowCaster.regularShadowMap.has_value()) {
         shadowCaster.regularShadowMap = opengl::Texture{GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE}; // dummy argument
-        shadowCaster.regularShadowMap.value().bind();
+        shadowCaster.regularShadowMap->bind();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap.value().getRenderID() != 0);
+        assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap->getRenderID() != 0);
 
         shadowCaster.fbo = opengl::Framebuffer{0};
         shadowCaster.fbo.bind();
@@ -265,8 +265,8 @@ void setupDirLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster &
         shadowCaster.farPlane = game::SHADOW_MAP_ZFAR;
     }
     glm::vec3 direction = glm::vec3{0, -1, 0};
-    if(ecs::entityHasComponent<game::Direction>(entity))
-        direction = ecs::get<game::Direction>(entity).dir;
+    if(ecs::has<game::Direction>(entity))
+        direction = ecs::get<game::Direction>(entity);
         
     // glm::vec3 targetPosition = glm::vec3{glm::inverse(camera.viewMat) * glm::vec4{0, 0, 0, 1}};
     glm::vec3 targetPosition = glm::vec3{0};
@@ -277,10 +277,10 @@ void setupSpotLightShadowCaster(ecs::Entity_t const &entity, game::ShadowCaster 
     auto const &light = ecs::get<game::SpotLight>(entity);
     if(!shadowCaster.regularShadowMap.has_value()) {
         shadowCaster.regularShadowMap = opengl::Texture{GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE}; // dummy argument
-        shadowCaster.regularShadowMap.value().bind();
+        shadowCaster.regularShadowMap->bind();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, game::SHADOW_MAP_SIZE, game::SHADOW_MAP_SIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-        assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap.value().getRenderID() != 0);
+        assert(shadowCaster.regularShadowMap.has_value() && shadowCaster.regularShadowMap->getRenderID() != 0);
 
         shadowCaster.fbo = opengl::Framebuffer{0}; // also a dummy argument
         shadowCaster.fbo.bind();
@@ -310,7 +310,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     glm::vec3 cameraPosition = glm::vec3{invViewMat * glm::vec4{0, 0, 0, 1}};
 
     {
-        auto lightStorageEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::entityHasComponent<LightUBO>(entity); });
+        auto lightStorageEntity = std::find_if(entities.begin(), entities.end(), [](ecs::Entity_t const &entity){ return ecs::has<LightUBO>(entity); });
         m_lightsUBO = lightStorageEntity != entities.end() ? &ecs::get<LightUBO>(*lightStorageEntity).ubo : std::optional<opengl::UniformBuffer *>{};
         m_lightSamplers = lightStorageEntity != entities.end() ? &ecs::get<LightSamplers>(*lightStorageEntity) : std::optional<LightSamplers *>{};
     }
@@ -338,7 +338,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     m_propShader.bind();
     setCommonUniforms(m_propShader, camera, cameraPosition);
     for(ecs::Entity_t const &entity : entities) {
-        if(ecs::entityHasComponent<model::Model>(entity) && (!ecs::entityHasComponent<Transparent>(entity) || ecs::entityHasComponent<SemiTransparent>(entity))) {
+        if(ecs::has<model::Model>(entity) && (!ecs::has<Transparent>(entity) || ecs::has<SemiTransparent>(entity))) {
             drawModel(entity, m_propShader);
         }
     } // for(auto &entity : entities) 
@@ -353,7 +353,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     glUniformMatrix4fv(m_skyboxShader.getUniform("u_viewMat"),        1, GL_FALSE, &camera.viewMat[0][0]);
     glUniformMatrix4fv(m_skyboxShader.getUniform("u_projectionMat"),  1, GL_FALSE, &camera.projMat[0][0]);
     for(ecs::Entity_t const &entity : entities) {
-        if(ecs::entityHasComponent<Skybox>(entity) && ecs::entityHasComponent<opengl::Cubemap>(entity)) {
+        if(ecs::has<Skybox>(entity) && ecs::has<opengl::Cubemap>(entity)) {
             drawSkybox(entity, ecs::get<opengl::Cubemap>(entity));
         }
     } // for(auto &entity : entities) 
@@ -389,7 +389,7 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
     m_oitShader.bind();
     setCommonUniforms(m_oitShader, camera, cameraPosition);
     for(ecs::Entity_t const &entity : entities) {
-        if(ecs::entityHasComponent<model::Model>(entity) && (ecs::entityHasComponent<Transparent>(entity) || ecs::entityHasComponent<SemiTransparent>(entity))) {
+        if(ecs::has<model::Model>(entity) && (ecs::has<Transparent>(entity) || ecs::has<SemiTransparent>(entity))) {
             drawModel(entity, m_oitShader);
         }
     }
@@ -439,25 +439,25 @@ void game::Renderer::renderMain(std::set<ecs::Entity_t> const &entities, game::C
 void game::Renderer::renderShadowMaps(std::set<ecs::Entity_t> const &entities, game::Camera &camera, game::RenderTarget &rtarget) {
     PROFILER_PROFILE();
     for(ecs::Entity_t const &lightEntity : entities) {
-        if(!ecs::entityHasComponent<Light>(lightEntity) || !ecs::entityHasComponent<ShadowCaster>(lightEntity)) continue;
+        if(!ecs::has<Light>(lightEntity) || !ecs::has<ShadowCaster>(lightEntity)) continue;
 
         ShadowCaster &shadowCaster = ecs::get<ShadowCaster>(lightEntity);
 
         opengl::ShaderProgram *opaqueShader = nullptr;
 
-        if(ecs::entityHasComponent<PointLight>(lightEntity)) {
+        if(ecs::has<PointLight>(lightEntity)) {
             opaqueShader = &m_depthMapOmnidirectionalShader;
             setupPointLightShadowCaster(lightEntity, shadowCaster, camera);
         }
-        else if(ecs::entityHasComponent<DirectionalLight>(lightEntity)) {
+        else if(ecs::has<DirectionalLight>(lightEntity)) {
             opaqueShader = &m_depthMapShader;
             setupDirLightShadowCaster(lightEntity, shadowCaster, camera);
         }
-        else if(ecs::entityHasComponent<SpotLight>(lightEntity)) {
+        else if(ecs::has<SpotLight>(lightEntity)) {
             opaqueShader = &m_depthMapShader;
             setupSpotLightShadowCaster(lightEntity, shadowCaster, camera);
         }
-        else if(ecs::entityHasComponent<AreaLight>(lightEntity)) {
+        else if(ecs::has<AreaLight>(lightEntity)) {
             opaqueShader = &m_depthMapShader;
             setupAreaLightShadowCaster(lightEntity, shadowCaster, camera);
         }
@@ -484,7 +484,7 @@ void game::Renderer::renderShadowMaps(std::set<ecs::Entity_t> const &entities, g
         glUniform3fv(      opaqueShader->getUniform("u_lightPos"),       1,           &shadowCaster.viewMat[3].x );
         glUniform1f(       opaqueShader->getUniform("u_farPlane"),                     shadowCaster.farPlane     );
         for(ecs::Entity_t const &entity : entities) {
-            if(ecs::entityHasComponent<model::Model>(entity) && ecs::entityHasComponent<CastsShadow>(entity)) {
+            if(ecs::has<model::Model>(entity) && ecs::has<CastsShadow>(entity)) {
                 drawModel(entity, *opaqueShader);
             }
         } // for(auto &entity : entities) 
@@ -495,7 +495,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
 {
     PROFILER_PROFILE();
     for(ecs::Entity_t const &cameraEntity : entities) {
-        if(!ecs::entityHasComponent<Camera>(cameraEntity) || !ecs::entityHasComponent<RenderTarget>(cameraEntity)) continue;
+        if(!ecs::has<Camera>(cameraEntity) || !ecs::has<RenderTarget>(cameraEntity)) continue;
 
         game::Camera &camera = ecs::get<game::Camera>(cameraEntity);
         game::RenderTarget &rtarget = ecs::get<game::RenderTarget>(cameraEntity);
@@ -532,7 +532,7 @@ void game::Renderer::update(std::set<ecs::Entity_t> const &entities, double delt
         renderMain(entities, camera, rtarget);
 
         for(ecs::Entity_t const &entity : entities) {
-            if(ecs::entityHasComponent<game::Text>(entity)) drawText(entity, camera);
+            if(ecs::has<game::Text>(entity)) drawText(entity, camera);
         } // for(auto &entity : entities) 
     } // for(auto &cameraEntity : entities)
 }
@@ -548,7 +548,7 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
 {
     PROFILER_PROFILE();
     for(ecs::Entity_t const &storageEntity : entities) {
-        if(!ecs::entityHasComponent<LightStorage>(storageEntity) || !ecs::entityHasComponent<LightUBO>(storageEntity) || !ecs::entityHasComponent<LightSamplers>(storageEntity)) continue;
+        if(!ecs::has<LightStorage>(storageEntity) || !ecs::has<LightUBO>(storageEntity) || !ecs::has<LightSamplers>(storageEntity)) continue;
         LightStorage &storage = ecs::get<LightStorage>(storageEntity);
         opengl::UniformBuffer &ubo = ecs::get<LightUBO>(storageEntity).ubo;
         LightSamplers &samplers = ecs::get<LightSamplers>(storageEntity);
@@ -561,19 +561,19 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
         storage.numDirLights = 0;
         storage.numSpotLights = 0;
         for(ecs::Entity_t const &lightEntity : entities) {
-            if(!ecs::entityHasComponent<Light>(lightEntity)) continue;
+            if(!ecs::has<Light>(lightEntity)) continue;
             Light const &light = ecs::get<Light>(lightEntity);
-            std::optional<ShadowCaster *> caster = ecs::entityHasComponent<ShadowCaster>(lightEntity) ? &ecs::get<ShadowCaster>(lightEntity) : std::optional<ShadowCaster *>{};
+            std::optional<ShadowCaster *> caster = ecs::has<ShadowCaster>(lightEntity) ? &ecs::get<ShadowCaster>(lightEntity) : std::optional<ShadowCaster *>{};
             glm::mat4 viewProj = caster.has_value() ? caster.value()->projMat * caster.value()->viewMat : glm::mat4{1.0f};
 
-            if(ecs::entityHasComponent<PointLight>(lightEntity)) {
+            if(ecs::has<PointLight>(lightEntity)) {
                 ShaderPointLight &shaderPointLight = storage.pointLights[storage.numPointLights];
                 PointLight const &pointLight = ecs::get<PointLight>(lightEntity);
 
                 shaderPointLight.attenuation = pointLight.attenuation;
                 shaderPointLight.color = light.color;
-                shaderPointLight.position = ecs::entityHasComponent<Position>(lightEntity) ?
-                    ecs::get<Position>(lightEntity).position :
+                shaderPointLight.position = ecs::has<Position>(lightEntity) ?
+                    ecs::get<Position>(lightEntity) :
                     glm::vec3{0};
                 if(caster.has_value()) {
                     shaderPointLight.farPlane = caster.value()->farPlane;
@@ -583,11 +583,11 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
                     samplers.pointLightSamplers[storage.numPointLights] = &caster.value()->omnidirectionalShadowMap.value();
 
                 ++storage.numPointLights;
-            } else if(ecs::entityHasComponent<DirectionalLight>(lightEntity)) {
+            } else if(ecs::has<DirectionalLight>(lightEntity)) {
                 ShaderDirLight &shaderDirLight = storage.dirLights[storage.numDirLights];
 
-                shaderDirLight.direction = ecs::entityHasComponent<Direction>(lightEntity) ?
-                    ecs::get<Direction>(lightEntity).dir :
+                shaderDirLight.direction = ecs::has<Direction>(lightEntity) ?
+                    ecs::get<Direction>(lightEntity) :
                     glm::vec3{0, 0, -1};
                 shaderDirLight.color = light.color;
                 shaderDirLight.viewProj = viewProj;
@@ -596,17 +596,17 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
                     samplers.dirLightSamplers[storage.numDirLights] = &caster.value()->regularShadowMap.value();
 
                 ++storage.numDirLights;
-            } else if(ecs::entityHasComponent<SpotLight>(lightEntity)) {
+            } else if(ecs::has<SpotLight>(lightEntity)) {
                 ShaderSpotLight &shaderSpotLight = storage.spotLights[storage.numSpotLights];
                 SpotLight const &spotLight = ecs::get<SpotLight>(lightEntity);
 
                 shaderSpotLight = {
-                    .position = ecs::entityHasComponent<Position>(lightEntity) ?
-                        ecs::get<Position>(lightEntity).position :
+                    .position = ecs::has<Position>(lightEntity) ?
+                        ecs::get<Position>(lightEntity) :
                         glm::vec3{0, 0, -1},
                     .innerConeAngle = glm::cos(glm::radians(spotLight.innerConeAngle)),
-                    .direction = ecs::entityHasComponent<Direction>(lightEntity) ?
-                        ecs::get<Direction>(lightEntity).dir :
+                    .direction = ecs::has<Direction>(lightEntity) ?
+                        ecs::get<Direction>(lightEntity) :
                         glm::vec3{0, 0, -1},
                     .outerConeAngle = glm::cos(glm::radians(spotLight.outerConeAngle)),
                     .attenuation = spotLight.attenuation,
@@ -619,7 +619,7 @@ void game::LightUpdater::update(std::set<ecs::Entity_t> const &entities, double 
                     samplers.spotLightSamplers[storage.numSpotLights] = &caster.value()->regularShadowMap.value();
 
                 ++storage.numSpotLights;
-            } else if(ecs::entityHasComponent<AreaLight>(lightEntity)) {
+            } else if(ecs::has<AreaLight>(lightEntity)) {
                 assert(false && "not implemented"); // TODO: area lights
             }
         }
