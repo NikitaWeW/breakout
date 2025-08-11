@@ -6,16 +6,13 @@
 */
 /**
  * \file ecs.hpp
- * \brief My Entity Component System implimentation.
+ * \brief My thread safe (TODO) Entity Component System implimentation.
  * 
  * Thanks to this article: https://austinmorlan.com/posts/entity_component_system
  * Took a bit of inspiration from https://github.com/skypjack/entt
  * 
  * The main focus was on the simplicity and small size (one header, < 1000 lines of code).
  * The intended way to use it is by creating the ecs::registry class and using all the functions from it.
- * 
- * TODO:
- * - async ecs
  */
 /*
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -38,8 +35,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "profiler.hpp"
 #define ECS_ASSERT(x, msg) assert((x) && (msg))
 #define ECS_THROW(x) (throw (x))
+#define ECS_LOCK(mutex) (std::scoped_lock lock##__LINE__{mutex})
 // plug-in profiler
-#define ECS_PROFILE() PROFILER_PROFILE_IN_FILE_LOG_TYPE("log/ecs", profiler::LogType::JSON)
+#define ECS_PROFILE()
 
 namespace ecs
 {
@@ -276,26 +274,18 @@ namespace ecs
         std::unordered_map<std::string_view, std::unique_ptr<ISystem>> m_systems{};
     public:
         /**
-         * \brief A class to use to push around lists of types, nothing more.
-         * \tparam Type Types provided by the type list.
-         * From the entt lib.
-         */
-        template<typename... Type>
-        struct type_list {
-            /*! \brief Type list type. */
-            using type = type_list;
-            /*! \brief Compile-time number of elements in the type list. */
-            static constexpr auto size = sizeof...(Type);
-        };
-        /**
          * \brief Alias for exclusion lists.
          * \tparam Type List of types.
          * From the entt lib.
          */
         template<typename... Type>
-        struct exclude_t final: type_list<Type...> {
-            /*! \brief Default constructor. */
+        struct exclude_t final {
+            /** \brief Default constructor. */
             explicit constexpr exclude_t() = default;
+            /** \brief Type Types provided by the type list. */
+            using type = exclude_t;
+            /** \brief Compile-time number of elements in the type list. */
+            static constexpr auto size = sizeof...(Type);
         };
 
 
@@ -339,6 +329,7 @@ namespace ecs
          * \param entity A valid enitiy identifier.
          * \tparam Component_t The component type.
          * \throws std::invalid_argument if the entity is not a valid identifier.
+         * \throws std::out_of_range if the component is not added.
          * \return The component lvalue reference.
          */
         template <typename Component_t> 
@@ -353,6 +344,7 @@ namespace ecs
          * \brief Removes a component from a valid entity.
          * \param entity A valid enitiy identifier.
          * \throws std::invalid_argument if the entity is not a valid identifier.
+         * \throws std::out_of_range if the component is not added.
          * \tparam Component_t The component type.
          */
         template <typename Component_t> 
@@ -362,6 +354,7 @@ namespace ecs
          * \param entity A valid enitiy identifier.
          * \param component An optional component value to move.
          * \throws std::invalid_argument if the entity is not a valid identifier.
+         * \throws std::invalid_argument if the component is already added.
          * \tparam Component_t The component type.
          */
         template <typename Component_t> 
@@ -614,6 +607,8 @@ inline Component_t &ecs::registry::get(entity const &entity)
 {
     ECS_PROFILE();
     if(!valid(entity)) ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
+    m_componentManager.registerComponent<Component_t>();
+    if(!has<Component_t>(entity)) ECS_THROW(std::out_of_range{"component to get is not added!"});
     return m_componentManager.getComponent<Component_t>(entity);
 }
 template <typename Component_t>
@@ -621,6 +616,8 @@ inline Component_t const &ecs::registry::get(entity const &entity) const
 {
     ECS_PROFILE();
     if(!valid(entity)) ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
+    m_componentManager.registerComponent<Component_t>();
+    if(!has<Component_t>(entity)) ECS_THROW(std::out_of_range{"component to get is not added!"});
     return m_componentManager.getComponent<Component_t>(entity);
 }
 template <typename... Components_t>
@@ -639,6 +636,8 @@ void ecs::registry::remove(entity const &entity)
 {
     ECS_PROFILE();
     if(!valid(entity)) ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
+    m_componentManager.registerComponent<Component_t>();
+    if(!has<Component_t>(entity)) ECS_THROW(std::out_of_range{"component to remove is not added!"});
     m_componentManager.removeComponent<Component_t>(entity);
     getSignature(entity).set(m_componentManager.getComponentID<Component_t>(), false);
 }
@@ -647,6 +646,8 @@ void ecs::registry::add(entity const &entity, Component_t &&component)
 {
     ECS_PROFILE();
     if(!valid(entity)) ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
+    m_componentManager.registerComponent<Component_t>();
+    if(has<Component_t>(entity)) ECS_THROW(std::invalid_argument{"component to add already added!"});
     m_componentManager.addComponent<Component_t>(entity, std::forward<Component_t>(component));
     getSignature(entity).set(m_componentManager.getComponentID<Component_t>(), true);
 }
@@ -666,6 +667,7 @@ inline bool ecs::registry::valid(entity const &entity) const
 inline void ecs::registry::destroy(ecs::entity const &entity)
 {
     ECS_PROFILE();
+    if(!valid(entity)) ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
     m_entityManager.destroyEntity(entity);
     m_componentManager.entityDestroyed(entity);
 }
@@ -677,6 +679,9 @@ inline std::unordered_set<ecs::entity> const &ecs::registry::getEntities() const
 template<typename Type, typename... Other, typename... Exclude>
 std::vector<ecs::entity> ecs::registry::view(exclude_t<Exclude...> = exclude_t{}) const
 {
+    m_componentManager.registerComponent<Type>();
+    (m_componentManager.registerComponent<Other>(), ...);
+    (m_componentManager.registerComponent<Exclude>(), ...);
     ECS_PROFILE();
     Signature_t required = m_componentManager.getComponentID<Type>() | (m_componentManager.getComponentID<Other>() | ...);
     Signature_t excluded = (m_componentManager.getComponentID<Exclude>() | ...);

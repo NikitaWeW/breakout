@@ -8,10 +8,6 @@ option(GENERATE_MSDF_FONTS OFF "generate msdf fonts using github.com/Chlumsky/ms
 
 project(breakout C CXX)
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
-add_executable(main ${SOURCES} ${DEPENDENCIES_SOURCES})
-
 if(WIN32)
     file(GLOB_RECURSE LIBRARIES "dependencies/lib/windows/*")
 elseif(UNIX AND NOT APPLE) # linux
@@ -43,8 +39,18 @@ if(GENERATE_MSDF_FONTS)
     endforeach()
 endif()
 
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
+add_executable(main ${SOURCES} ${DEPENDENCIES_SOURCES})
 target_link_libraries(main PRIVATE ${LIBRARIES})
 target_include_directories(main PRIVATE dependencies/include src)
+
+if(BUILD_TESTS)
+    file(GLOB_RECURSE TESTS_SOURCES "tests/src/*.cpp")
+    file(GLOB_RECURSE TESTS_DEPENDENCIES_SOURCES "tests/dependencies/compile/*")
+    add_executable(tests ${TESTS_SOURCES} ${TESTS_DEPENDENCIES_SOURCES})
+    target_include_directories(tests PRIVATE dependencies/include tests/src tests/dependencies/include)
+endif()
 
 install(DIRECTORY res DESTINATION .)
 install(DIRECTORY shaders DESTINATION .)

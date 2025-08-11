@@ -23,10 +23,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "glm/gtc/constants.hpp"
 #include <array>
 
+#define EQUIRECT_ASSERT(x, msg) assert((x) && (msg))
+
 /**
  * \brief A bitmap class, representing a 2d texture with the n number of components.
- * \tparam Format_t the underlying type.
- * \tparam components the number of glm::vec components used in the setPixel and getPixel operations.
+ * \tparam Format_t The underlying type.
+ * \tparam components The number of glm::vec components used in the setPixel and getPixel operations.
  */
 template <typename Format_t = float, size_t components = 4>
 class Bitmap
@@ -41,17 +43,17 @@ public:
     Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *data = nullptr);
 
     /**
-     * \brief sets the pixel at the (x; y) absolute coordinates to a specified value.
-     * \param x the x coordinate in range of [0; width).
-     * \param x the y coordinate in range of [0; height).
+     * \brief Sets the pixel at the (x; y) absolute coordinates to a specified value.
+     * \param x The x coordinate in range of [0; width).
+     * \param x The y coordinate in range of [0; height).
      * \param value The 4-component value. Only first numComponents will be set.
      */
     void setPixel(unsigned x, unsigned y, glm::vec<components, Format_t> const &value);
     /**
-     * \brief gets the pixel at (x, y).
-     * \param x the x coordinate in range of [0; width).
-     * \param x the y coordinate in range of [0; height).
-     * \return the value at the (x; y) absolute coordinates. Only first numComponents will be filled, the rest will be filled with 0.
+     * \brief Gets the pixel at (x, y).
+     * \param x The x coordinate in range of [0; width).
+     * \param x The y coordinate in range of [0; height).
+     * \return The value at the (x; y) absolute coordinates. Only first numComponents will be filled, the rest will be filled with 0.
      */
     glm::vec<components, Format_t> getPixel(unsigned x, unsigned y) const;
 
@@ -66,7 +68,7 @@ public:
 namespace eqr
 {
     /**
-     * \brief opengl-style right-handed cube map faces indices.
+     * \brief OpenGL-style right-handed cube map faces indices.
      */
     enum CubemapFaces
     {
@@ -81,17 +83,17 @@ namespace eqr
 
     /**
      * \brief Convert a cubemap to an equirectangular image.
-     * \param cubemapFaces an array of cubemap face bitmaps in the order of CubemapFaces enum of size CubemapFaces::NUM_CUBEMAP_FACES (6). The size and number of components of each face must be consistent.
-     * \tparam T the type of a bitmap. May be deduced.
-     * \return a 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
+     * \param cubemapFaces An array of cubemap face bitmaps in the order of CubemapFaces enum of size CubemapFaces::NUM_CUBEMAP_FACES (6). The size and number of components of each face must be consistent.
+     * \tparam T The type of a bitmap. May be deduced.
+     * \return A 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
      */
     template <typename T>
     Bitmap<T> fromCubemap(std::array<Bitmap<T>, NUM_CUBEMAP_FACES> const &cubemapFaces);
 
     /**
      * \brief Convert an equirectangular image to a cubemap.
-     * \param equirectangularImage a 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
-     * \tparam T the type of a bitmap. May be deduced.
+     * \param equirectangularImage A 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
+     * \tparam T The type of a bitmap. May be deduced.
      * \return An array of square cubemap face bitmaps in the order of CubemapFaces enum of size CubemapFaces::NUM_CUBEMAP_FACES (6). The size and number of components of each face is consistent. The size is equal to equirectangular_width / 4 = equirectangular_height / 2.
      */
     template <typename T>
@@ -224,7 +226,7 @@ namespace eqr
 
                 auto [face, uv] = getUVface(dir);
 
-                assert(uv.x >= 0 && uv.y >= 0 && uv.x <= 1 && uv.y <= 1);
+                EQUIRECT_ASSERT(uv.x >= 0 && uv.y >= 0 && uv.x <= 1 && uv.y <= 1, "uv is not in range of [0; 1]");
 
                 glm::vec2 texel = uv * static_cast<float>(maxFaceTexel);
 
@@ -287,7 +289,7 @@ namespace eqr
             break;
         
         default:
-            assert(0);
+            EQUIRECT_ASSERT(false, "unknown face");
         }
 
         return res;
@@ -358,7 +360,7 @@ namespace eqr
 template <typename Format_t, size_t components>
 inline Bitmap<Format_t, components>::Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *src) : m_width(width), m_height(height), m_numComponents(numComponents)
 {
-    assert(m_numComponents <= 4);
+    EQUIRECT_ASSERT(m_numComponents <= 4, "Components > 4 is yet not supported!");
     m_data.resize(width * height * numComponents);
     if(src) {
         std::copy(src, src + m_data.size(), m_data.begin());
@@ -368,8 +370,8 @@ inline Bitmap<Format_t, components>::Bitmap(unsigned width, unsigned height, uns
 template <typename Format_t, size_t components>
 inline void Bitmap<Format_t, components>::setPixel(unsigned x, unsigned y, glm::vec<components, Format_t> const &value)
 {
-    assert(x < m_width && y < m_height);
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(x < m_width && y < m_height, "x or y is out of range!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     Format_t *data = m_data.data();
     size_t offset = getOffsetOf(x, y);
     if (m_numComponents > 0) data[offset + 0] = value.x;
@@ -381,8 +383,8 @@ inline void Bitmap<Format_t, components>::setPixel(unsigned x, unsigned y, glm::
 template <typename Format_t, size_t components>
 inline glm::vec<components, Format_t> Bitmap<Format_t, components>::getPixel(unsigned x, unsigned y) const
 {
-    assert(x < m_width && y < m_height);
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(x < m_width && y < m_height, "x or y is out of range!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     Format_t const *data = m_data.data();
     size_t offset = getOffsetOf(x, y);
     return glm::vec4(
@@ -396,36 +398,36 @@ inline glm::vec<components, Format_t> Bitmap<Format_t, components>::getPixel(uns
 template <typename Format_t, size_t components> 
 inline unsigned Bitmap<Format_t, components>::getWidth() const 
 { 
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_width; 
 }
 template <typename Format_t, size_t components> 
 inline unsigned Bitmap<Format_t, components>::getHeight() const 
 { 
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_height; 
 }
 template <typename Format_t, size_t components> 
 inline unsigned Bitmap<Format_t, components>::getNumComponents() const 
 { 
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_numComponents; 
 }
 template <typename Format_t, size_t components> 
 inline glm::vec2 Bitmap<Format_t, components>::getDimensions() const 
 { 
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return glm::vec2{getWidth(), getHeight()}; 
 }
 template <typename Format_t, size_t components> 
 inline Format_t const *Bitmap<Format_t, components>::getData() const 
 { 
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_data.data(); 
 }
 template <typename Format_t, size_t components> 
 inline Format_t *Bitmap<Format_t, components>::getData() 
 { 
-    assert(m_data.size() == m_height * m_width * m_numComponents && "Bitmap not initialized!");
+    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_data.data(); 
 }
