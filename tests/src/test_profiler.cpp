@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
-#include <catch_amalgamated.hpp>
-#include "src/core/profiler.hpp"
+#include "catch2/catch_test_macros.hpp"
+#include "core/profiler.hpp"
 #include <thread>
 #include <algorithm>
 
@@ -12,9 +12,9 @@ static std::chrono::nanoseconds two_ms_ns() {
 }
 
 TEST_CASE("getLogger returns same/shared_ptr instance", "[profiler][getLogger]") {
-    auto A1 = getLogger<LogType::READABLE>("foo");
-    auto A2 = getLogger<LogType::READABLE>("foo");
-    auto B  = getLogger<LogType::READABLE>("bar");
+    auto A1 = getLogger<LogType::READABLE>("build/foo");
+    auto A2 = getLogger<LogType::READABLE>("build/foo");
+    auto B  = getLogger<LogType::READABLE>("build/bar");
 
     REQUIRE(A1 == A2);
     REQUIRE(A1 != B);
@@ -143,13 +143,9 @@ TEST_CASE("Concurrent getLogger produces single instance per name", "[profiler][
     }
     for (auto &th : threads) th.join();
 
-    // group by name
-    std::map<std::string, std::shared_ptr<Logger<LogType::READABLE>>> unique_map;
+    std::map<std::ostream *, std::shared_ptr<Logger<LogType::READABLE>>> unique_map;
     for (auto &ptr : collected) {
-        // retrieve the filename from the Logger by inspecting its address in the map
-        // we can't directly get the name back, but getLogger returns same instance
-        // so all pointers in collected for "alpha" must compare equal, etc.
-        unique_map.emplace(std::to_string(reinterpret_cast<uintptr_t>(ptr.get())), ptr);
+        unique_map.emplace(ptr->getOutputStream(), ptr);
     }
 
     REQUIRE(unique_map.size() == names.size());
@@ -177,6 +173,15 @@ TEST_CASE("Concurrent ScopedTimer logging on READABLE logger", "[profiler][concu
     logger.reset();
 
     std::string out = oss.str();
-    auto count = std::count(out.begin(), out.end(), "Task");
+
+    int count = 0;
+    size_t pos = out.find("Task", 0);
+
+    while (pos != std::string::npos) {
+        count++;
+        pos = out.find("Task", pos + 1);
+    }
+
+
     REQUIRE(count == thread_count * iterations);
 }

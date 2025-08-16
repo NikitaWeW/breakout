@@ -46,10 +46,19 @@ target_link_libraries(main PRIVATE ${LIBRARIES})
 target_include_directories(main PRIVATE dependencies/include src)
 
 if(BUILD_TESTS)
+    Include(FetchContent)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.9.1
+    )
+    FetchContent_MakeAvailable(Catch2)
+
     file(GLOB_RECURSE TESTS_SOURCES "tests/src/*.cpp")
     file(GLOB_RECURSE TESTS_DEPENDENCIES_SOURCES "tests/dependencies/compile/*")
     add_executable(tests ${TESTS_SOURCES} ${TESTS_DEPENDENCIES_SOURCES})
-    target_include_directories(tests PRIVATE dependencies/include tests/src tests/dependencies/include)
+    target_include_directories(tests PRIVATE src dependencies/include tests/src tests/dependencies/include)
+    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 endif()
 
 install(DIRECTORY res DESTINATION .)

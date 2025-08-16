@@ -108,7 +108,7 @@ namespace profiler
          * \brief Write in a custom stream.
          * \param stream The stream object. Must be alive during the lifetime of a logger!!
          */
-        Logger(std::ostream const &stream);
+        Logger(std::ostream &stream);
         ~Logger();
 
         /**
@@ -176,7 +176,8 @@ namespace profiler
 template<profiler::LogType type>
 inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
 {
-    std::filesystem::create_directories(filename.parent_path());
+    if(filename.has_parent_path())
+        std::filesystem::create_directories(filename.parent_path());
     m_file.open(filename, std::fstream::out | std::fstream::trunc);
     if(!m_file) {
         PROFILER_THROW(std::runtime_error{"failed to open file " + filename.string()});
@@ -185,7 +186,7 @@ inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
 }
 
 template <profiler::LogType type>
-inline profiler::Logger<type>::Logger(std::ostream const &stream) : m_output(&stream)
+inline profiler::Logger<type>::Logger(std::ostream &stream) : m_output(&stream)
 {}
 
 template<profiler::LogType type>
