@@ -41,9 +41,20 @@ endif()
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
-add_executable(main ${SOURCES} ${DEPENDENCIES_SOURCES})
-target_link_libraries(main PRIVATE ${LIBRARIES})
+
+add_library(dependencies ${DEPENDENCIES_SOURCES})
+target_include_directories(dependencies PRIVATE dependencies/include)
+
+add_executable(main ${SOURCES})
+target_link_libraries(main PRIVATE ${LIBRARIES} dependencies)
 target_include_directories(main PRIVATE dependencies/include src)
+
+file(GLOB_RECURSE GLM_PCH "dependencies/include/glm/*.hpp")
+target_precompile_headers(main PRIVATE 
+    src/core/ecs.hpp
+    ${GLM_PCH}
+
+)
 
 if(BUILD_TESTS)
     Include(FetchContent)

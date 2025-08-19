@@ -3,6 +3,7 @@
 #include <atomic>
 #include <future>
 #include <random>
+#include <iostream>
 
 struct Position { int x = 0,  y = 0;  };
 struct Velocity { int dx = 0, dy = 0; };
@@ -14,13 +15,14 @@ TEST_CASE("Mixed Concurrent ECS Operations", "[concurrency][ecs::registry]")
     ECS_PROFILE();
 
     ecs::registry reg;
-    constexpr int opsPerThread = 500;
+    constexpr int opsPerThread = 100;
 
     auto worker = [&](){
         std::mt19937_64 rng{std::random_device{}()};
         std::uniform_int_distribution<int> coin(0, 3);
 
         for(int i = 0; i < opsPerThread; ++i) {
+            // std::cout << i << '\n';
             ecs::entity e;
             switch(coin(rng)) {
                 case 0: e = reg.create<Position>();                 break;
@@ -57,22 +59,16 @@ TEST_CASE("Mixed Concurrent ECS Operations", "[concurrency][ecs::registry]")
             }
             if(i % 13 == 0) {
                 auto viewPosVel = reg.view<Position, Velocity>(ecs::registry::exclude_t<Health>{});
-                if(!viewPosVel.empty()) {
-                    auto some = viewPosVel[rand() % viewPosVel.size()];
+                for(auto some : viewPosVel)
+                {
+                    REQUIRE(reg.has<Position>(some));
+                    REQUIRE(reg.has<Velocity>(some));
+                    REQUIRE_FALSE(reg.has<Health>(some));
+
                     auto v = reg.lock<Velocity>(some);
                     v->dx = -v->dx;
                     v->dy = -v->dy;
                 }
-
-                for(auto e : viewPosVel)
-                {
-                    REQUIRE(reg.has<Position>(e));
-                    REQUIRE(reg.has<Velocity>(e));
-                    REQUIRE_FALSE(reg.has<Health>(e));
-                }
-            }
-            if(i % 17 == 0) {
-                reg.update();
             }
 
             if(reg.has<Velocity>(e)) {

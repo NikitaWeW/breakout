@@ -128,7 +128,7 @@ TEST_CASE("Concurrent getLogger produces single instance per name", "[profiler][
     threads.reserve(threads_count);
 
     // names to choose from
-    std::vector<std::string> names = {"alpha", "beta", "gamma"};
+    std::vector<std::string> names = {"build/alpha", "build/beta", "build/gamma"};
 
     std::mutex collect_mtx;
     for (int t = 0; t < threads_count; ++t) {
