@@ -1,97 +1,127 @@
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/benchmark/catch_benchmark.hpp"
 #include "core/ecs.hpp"
+#include <thread>
+#include <vector>
 #include <atomic>
-#include <future>
-#include <random>
-#include <iostream>
+#include <mutex>
+#include "entt/entt.hpp"
 
-struct Position { int x = 0,  y = 0;  };
-struct Velocity { int dx = 0, dy = 0; };
-struct Health   { int value = 100;    };
-struct Tag : std::string {};
+struct Position { float  x = 0,  y = 0; };
+struct Velocity { float dx = 0, dy = 0; };
 
-TEST_CASE("Mixed Concurrent ECS Operations", "[concurrency][ecs::registry]") 
-{
-    ECS_PROFILE();
-
+TEST_CASE("Create and validate entities", "[entity]") {
     ecs::registry reg;
-    constexpr int opsPerThread = 100;
 
-    auto worker = [&](){
-        std::mt19937_64 rng{std::random_device{}()};
-        std::uniform_int_distribution<int> coin(0, 3);
+    // Initially no entities
+    REQUIRE(reg.getEntities().empty());
 
-        for(int i = 0; i < opsPerThread; ++i) {
-            // std::cout << i << '\n';
-            ecs::entity e;
-            switch(coin(rng)) {
-                case 0: e = reg.create<Position>();                 break;
-                case 1: e = reg.create<Position, Velocity>();       break;
-                case 2: e = reg.create<Velocity, Health>();         break;
-                default: e = reg.create<Position, Velocity, Health>(); break;
-            }
+    // Create two empty entities
+    auto e1 = reg.create<>();
+    auto e2 = reg.create<>();
 
-            if(i % 5 == 0) {
-                if(!reg.has<Tag>(e)) {
-                    reg.add<Tag>(e, Tag{"worker_tag"});
-                }
-            } else if(i % 7 == 0) {
-                if(reg.has<Health>(e)) {
-                    reg.remove<Health>(e);
-                }
-            }
+    // Both should be valid and distinct
+    REQUIRE(reg.valid(e1));
+    REQUIRE(reg.valid(e2));
+    REQUIRE(e1 != e2);
 
-            if(reg.has<Position>(e)) {
-                auto pos = reg.lock<Position>(e);
-                pos->x += std::sin(float(i)) * 0.1f;
-                pos->y -= std::cos(float(i)) * 0.05f;
-            }
-            if(reg.has<Velocity>(e)) {
-                auto vel = reg.lock<Velocity>(e);
-                vel->dx *= (1.0f + 0.01f * (i % 10));
-                vel->dy *= (1.0f - 0.01f * (i % 15));
-            }
+    // getEntities returns both
+    auto all = reg.getEntities();
+    REQUIRE(all.size() == 2);
+    REQUIRE(std::find(all.begin(), all.end(), e1) != all.end());
+    REQUIRE(std::find(all.begin(), all.end(), e2) != all.end());
+}
+TEST_CASE("Add, has and get components", "[component]") {
+    ecs::registry reg;
+    auto e = reg.create<>();
 
-            if(i % 11 == 0) {
-                auto sig = reg.getSignature(e);
-                size_t bitcount = sig.count();
-                (void)bitcount; // no-op
-            }
-            if(i % 13 == 0) {
-                auto viewPosVel = reg.view<Position, Velocity>(ecs::registry::exclude_t<Health>{});
-                for(auto some : viewPosVel)
-                {
-                    REQUIRE(reg.has<Position>(some));
-                    REQUIRE(reg.has<Velocity>(some));
-                    REQUIRE_FALSE(reg.has<Health>(some));
+    // Initially, no Position component
+    REQUIRE_FALSE(reg.has<Position>(e));
 
-                    auto v = reg.lock<Velocity>(some);
-                    v->dx = -v->dx;
-                    v->dy = -v->dy;
-                }
-            }
+    // Add and verify
+    reg.add<Position>(e, Position{1.0f, 2.0f});
+    REQUIRE(reg.has<Position>(e));
 
-            if(reg.has<Velocity>(e)) {
-                reg.remove<Velocity>(e);
-            } else {
-                REQUIRE_THROWS_AS(reg.remove<Velocity>(e), std::out_of_range);
-            }
-
-            if((i % 3 == 0) && coin(rng) == 0) {
-                reg.destroy(e);
-            }
-        }
-    };
-
-
-    std::future<void> a = std::async(std::launch::async, worker);
-    std::future<void> b = std::async(std::launch::async, worker);
-    std::future<void> c = std::async(std::launch::async, worker);
-
-    a.get(); b.get(); c.get();
-
-    for(auto e : reg.getEntities()) {
-        REQUIRE(reg.valid(e));
-        REQUIRE_FALSE(reg.has<Velocity>(e));
+    // Retrieve via get (const) and lock (mutable)
+    {
+        auto constPos = reg.get<Position>(e);
+        REQUIRE(constPos->x == 1.0f);
+        REQUIRE(constPos->y == 2.0f);
     }
+
+    {
+        auto mutPos = reg.lock<Position>(e);
+        mutPos->x = 5.0f;
+    }
+    REQUIRE(reg.get<Position>(e)->x == 5.0f);
+}
+TEST_CASE("Remove components", "[component]") {
+    ecs::registry reg;
+    auto e = reg.create<>();
+
+    reg.add<Velocity>(e, Velocity{0.1f, 0.2f});
+    REQUIRE(reg.has<Velocity>(e));
+
+    reg.remove<Velocity>(e);
+    REQUIRE_FALSE(reg.has<Velocity>(e));
+
+    // Removing again should throw out_of_range
+    REQUIRE_THROWS_AS(reg.remove<Velocity>(e), std::out_of_range);
+}
+TEST_CASE("View entities by component signature", "[view]") {
+    ecs::registry reg;
+
+    // Create 3 entities with different combos
+    auto a = reg.create<Position>();
+    auto b = reg.create<Position, Velocity>();
+    auto c = reg.create<Velocity>();
+
+    {
+        // View entities that have Position
+        auto posOnly = reg.view<Position>();
+        REQUIRE(posOnly->size() == 2);
+        REQUIRE(std::find(posOnly.begin(), posOnly.end(), a) != posOnly.end());
+        REQUIRE(std::find(posOnly.begin(), posOnly.end(), b) != posOnly.end());
+    }
+    {
+        // View entities that have Position but exclude Velocity
+        auto purePos = reg.view<Position>(ecs::exclude_t<Velocity>{});
+        REQUIRE(purePos->size() == 1);
+        REQUIRE(purePos->front() == a);
+    }
+    {
+        // View only Velocity
+        auto velOnly = reg.view<Velocity>();
+        REQUIRE(velOnly->size() == 2);
+        REQUIRE(std::find(velOnly.begin(), velOnly.end(), b) != velOnly.end());
+        REQUIRE(std::find(velOnly.begin(), velOnly.end(), c) != velOnly.end());
+    }
+}
+TEST_CASE("Destroy entity and its components", "[destroy]") {
+    ecs::registry reg;
+    auto e = reg.create<Position, Velocity>();
+
+    REQUIRE(reg.valid(e));
+    REQUIRE(reg.has<Position>(e));
+    REQUIRE(reg.has<Velocity>(e));
+
+    reg.destroy(e);
+    REQUIRE_FALSE(reg.valid(e));
+
+    // After destroy, getSignature or has should throw invalid_argument
+    REQUIRE_THROWS_AS(reg.getSignature(e), std::invalid_argument);
+    REQUIRE_THROWS_AS(reg.has<Position>(e), std::invalid_argument);
+}
+TEST_CASE("Invalid handles and double-add errors", "[errors]") {
+    ecs::registry reg;
+    ecs::entity bad = ecs::MAX_ENTITIES + 10;
+
+    // invalid entity
+    REQUIRE_THROWS_AS(reg.has<Position>(bad), std::invalid_argument);
+    REQUIRE_THROWS_AS(reg.add<Position>(bad, Position{}), std::invalid_argument);
+
+    auto e = reg.create<>();
+    // double add same component
+    reg.add<Position>(e, Position{});
+    REQUIRE_THROWS_AS(reg.add<Position>(e, Position{}), std::invalid_argument);
 }

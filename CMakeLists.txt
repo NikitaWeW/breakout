@@ -1,8 +1,6 @@
-# This line will be changed if reconfiguration is required       
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 option(GENERATE_MSDF_FONTS OFF "generate msdf fonts using github.com/Chlumsky/msdf-atlas-gen")
 
@@ -49,27 +47,15 @@ add_executable(main ${SOURCES})
 target_link_libraries(main PRIVATE ${LIBRARIES} dependencies)
 target_include_directories(main PRIVATE dependencies/include src)
 
-file(GLOB_RECURSE GLM_PCH "dependencies/include/glm/*.hpp")
 target_precompile_headers(main PRIVATE 
     src/core/ecs.hpp
-    ${GLM_PCH}
-
+    dependencies/include/glm/glm.hpp
+    dependencies/include/glm/gtc/quaternion.hpp
+    dependencies/include/glm/gtc/matrix_transform.hpp
 )
 
 if(BUILD_TESTS)
-    Include(FetchContent)
-    FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG        v3.9.1
-    )
-    FetchContent_MakeAvailable(Catch2)
-
-    file(GLOB_RECURSE TESTS_SOURCES "tests/src/*.cpp")
-    file(GLOB_RECURSE TESTS_DEPENDENCIES_SOURCES "tests/dependencies/compile/*")
-    add_executable(tests ${TESTS_SOURCES} ${TESTS_DEPENDENCIES_SOURCES})
-    target_include_directories(tests PRIVATE src dependencies/include tests/src tests/dependencies/include)
-    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+    add_subdirectory(tests)
 endif()
 
 install(DIRECTORY res DESTINATION .)
