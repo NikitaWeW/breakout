@@ -58,6 +58,36 @@ if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
+set(DOXYGEN_SKIP_DOT TRUE)
+find_package(Doxygen)
+
+if (NOT DOXYGEN_FOUND OR DOXYGEN_VERSION VERSION_LESS "1.9.8")
+    message(STATUS "Documentation generation requires Doxygen 1.9.8 or later")
+else()
+    set(header_paths
+        "src"
+        "tests"
+    )
+
+    # Format the source list into a Doxyfile INPUT value that Doxygen can parse
+    foreach(path IN LISTS header_paths)
+        string(APPEND GLFW_DOXYGEN_INPUT " \\\n\"${path}\"")
+    endforeach()
+
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html"
+                       COMMAND "${DOXYGEN_EXECUTABLE}"2
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                       MAIN_DEPENDENCY Doxyfile
+                       DEPENDS ${header_paths}
+                       COMMENT "Generating HTML documentation"
+                       VERBATIM)
+
+    add_custom_target(docs ALL SOURCES "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
+
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/html" DESTINATION ./docs)
+endif()
+
+
 install(DIRECTORY res DESTINATION .)
 install(DIRECTORY shaders DESTINATION .)
 install(TARGETS main DESTINATION .)

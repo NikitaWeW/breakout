@@ -10,7 +10,9 @@ FetchContent_Declare(
     GIT_TAG        v3.15.0
 )
 
+message(STATUS "TESTS: Fetching Catch2...")
 FetchContent_MakeAvailable(Catch2)
+message(STATUS "TESTS: Fetching EnTT...")
 FetchContent_MakeAvailable(EnTT)
 
 file(GLOB_RECURSE TESTS_SOURCES "src/*.cpp")
