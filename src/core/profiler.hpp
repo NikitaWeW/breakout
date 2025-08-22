@@ -29,6 +29,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <mutex>
 #include "json.hpp"
 
+/*! \cond Doxygen_Suppress */
+
 #ifndef NDEBUG
 //  http://www.boost.org/libs/assert/current_function.html
 //  Copyright (c) 2002 Peter Dimov and Multi Media Ltd.
@@ -68,6 +70,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #define PROFILER_STATIC_ASSERT(x, msg) static_assert((x) && (msg))
 #define PROFILER_THROW(x) (throw (x))
 
+#define PROFILER_IMPLEMENTATION
+
+/*! \endcond */
+
+
 namespace profiler
 {
     enum LogType
@@ -75,12 +82,14 @@ namespace profiler
         READABLE, MARKDOWN, JSON
     };
 
+    /*! \cond Doxygen_Suppress */
     template <LogType> struct Log_t {};
     template <> struct Log_t<profiler::LogType::READABLE> : std::stringstream {};
     template <> struct Log_t<profiler::LogType::MARKDOWN> : std::stringstream {};
     template <> struct Log_t<profiler::LogType::JSON> : nlohmann::json {
         std::vector<nlohmann::json *> entryStack;
     };
+    /*! \endcond */
 
     /**
      * \brief Used to output the profiling data to the file
@@ -128,7 +137,13 @@ namespace profiler
          */
         void clear();
 
+        /**
+         * \return The std::ostream the logger writes to.
+         */
         inline std::ostream *getOutputStream() { return m_output; }
+        /**
+         * \copydoc getOutputStream
+         */
         inline std::ostream const *getOutputStream() const { return m_output; }
     };
 
@@ -172,6 +187,8 @@ namespace profiler
     }
 } // namespace profiler
 
+
+#ifdef PROFILER_IMPLEMENTATION
 
 template<profiler::LogType type>
 inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
@@ -368,3 +385,5 @@ inline profiler::ScopedTimer<type>::~ScopedTimer()
     if(!m_logger.expired())
         m_logger.lock()->pop(std::chrono::duration_cast<std::chrono::nanoseconds>(Clock_t::now() - m_start));
 }
+
+#endif // PROFILER_IMPLEMENTATION

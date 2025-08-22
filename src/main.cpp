@@ -10,6 +10,8 @@ extern constexpr bool DEBUG = false;
 extern constexpr bool DEBUG = true;
 #endif
 
+/*! \cond Doxygen_Suppress */
+
 void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
     struct OpenGlError {
@@ -169,3 +171,5 @@ int main(int argc, char **argv) {
 
     // stuff goes here
 }
+
+/*! \endcond */

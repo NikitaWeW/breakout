@@ -75,7 +75,7 @@ else()
     endforeach()
 
     add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html"
-                       COMMAND "${DOXYGEN_EXECUTABLE}"2
+                       COMMAND "${DOXYGEN_EXECUTABLE}"
                        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                        MAIN_DEPENDENCY Doxyfile
                        DEPENDS ${header_paths}
@@ -84,6 +84,8 @@ else()
 
     add_custom_target(docs ALL SOURCES "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
 
+
+    cmake_policy(SET CMP0177 NEW)
     install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/html" DESTINATION ./docs)
 endif()
 

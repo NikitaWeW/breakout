@@ -7,6 +7,8 @@
 #include <mutex>
 #include "entt/entt.hpp"
 
+/*! \cond Doxygen_Suppress */
+
 struct Position { float  x = 0,  y = 0; };
 struct Velocity { float dx = 0, dy = 0; };
 
@@ -125,3 +127,5 @@ TEST_CASE("Invalid handles and double-add errors", "[errors]") {
     reg.add<Position>(e, Position{});
     REQUIRE_THROWS_AS(reg.add<Position>(e, Position{}), std::invalid_argument);
 }
+
+/** \endcond */

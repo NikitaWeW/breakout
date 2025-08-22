@@ -4,6 +4,8 @@
 #include <thread>
 #include <algorithm>
 
+/*! \cond Doxygen_Suppress */
+
 using namespace profiler;
 using namespace std::chrono_literals;
 
@@ -185,3 +187,5 @@ TEST_CASE("Concurrent ScopedTimer logging on READABLE logger", "[profiler][concu
 
     REQUIRE(count == thread_count * iterations);
 }
+
+/*! \endcond */
