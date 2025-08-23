@@ -678,6 +678,13 @@ namespace ecs
         ecs::entity create();
 
         /**
+         * \copydoc create
+         * \param components The components to move in.
+         */
+        template <typename... Components_t> 
+        ecs::entity create(Components_t&&... components);
+
+        /**
          * \brief Destroys an entity and its components.
          * \param entity A valid enitiy identifier.
          * \throws std::invalid_argument if the entity is not a valid identifier.
@@ -1001,7 +1008,7 @@ template <typename componentLock_t, typename... Included, typename... Excluded>
 inline std::vector<ecs::entity> const &ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::get() const
 {
     ECS_PROFILE();
-    return m_entities.value();
+    return m_entities.get();
 }
 template <typename componentLock_t, typename... Included, typename... Excluded>
 inline typename ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::const_iterator ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::begin() const 
@@ -1081,8 +1088,25 @@ inline ecs::entity ecs::registry::create()
 
     return entity;
 }
-template <typename component_t> 
-inline void ecs::registry::remove(entity const &entity) 
+template <typename... Components_t>
+inline ecs::entity ecs::registry::create(Components_t &&...components)
+{
+    ECS_PROFILE();
+    
+    ECS_LOCK_UNIQUE(m_entitiesMutex);
+    ECS_LOCK_UNIQUE(m_signaturesMutex);
+    ECS_LOCK_REGULAR(m_componentsMutex);
+    (m_componentManager.registerComponent<Components_t>(), ...);
+    signature signature = makeSignature<Components_t...>();
+
+    entity entity = m_entityManager.createEntity(signature);
+
+    (m_componentManager.add(entity, std::forward<Components_t>(components)), ...);
+
+    return entity;
+}
+template <typename component_t>
+inline void ecs::registry::remove(entity const &entity)
 {
     ECS_PROFILE();
     if(!valid(entity)) 
