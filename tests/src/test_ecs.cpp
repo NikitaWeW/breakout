@@ -13,6 +13,11 @@ struct Position { float  x = 0,  y = 0; };
 struct Velocity { float dx = 0, dy = 0; };
 struct Health   { float hp = 100; };
 
+bool operator==(Position const &first, Position const &second)
+{
+    return first.x == second.x && first.y == second.y;
+}
+
 TEST_CASE("Create and validate entities", "[entity]") {
     ecs::registry reg;
 
@@ -304,6 +309,65 @@ TEST_CASE("Concurrent entity creation and destruction", "[concurrency][write]") 
 
     // registry should be empty
     REQUIRE( registry.getEntities().empty() );
+}
+
+TEST_CASE("System basic usage", "[system]") {
+    ecs::registry registry;
+
+    struct Input
+    {
+        Velocity movementDir{0};
+    };
+    struct NoMove {};
+    
+    ecs::system inputSystem = {
+        .update = [](ecs::registry &reg){
+            for(auto entity : reg.view<Input>())
+                reg.destroy(entity);
+            reg.create(Input{
+                .movementDir = {0, 1}
+            });
+        },
+        .write = registry.makeSignature<Input>()
+    };
+    ecs::system movementSystem = {
+        .update = [](ecs::registry &reg){
+            for(auto einput : reg.view<Input>())
+            {
+                auto input = reg.get<Input>(einput);
+                for(auto e : reg.view<Position>(ecs::exclude_t<NoMove>{}))
+                {
+                    auto pos = reg.lock<Position>(e);
+                    pos->x += input.get().movementDir.dx;
+                    pos->y += input.get().movementDir.dy;
+                }
+            }
+        },
+        .read = registry.makeSignature<Input, NoMove>(),
+        .write = registry.makeSignature<Position>()
+    };
+    ecs::system rendererSystem = {
+        .update = [](ecs::registry &reg){
+            std::this_thread::sleep_for(std::chrono::milliseconds{10});
+        }
+    };
+
+    auto e0 = registry.create<Position, NoMove>({-3, 4.5}, {});
+    auto e1 = registry.create<Position>({-1, -3});
+    auto e2 = registry.create<Position>();
+
+
+    registry.getSystems().push_back(inputSystem);
+    registry.getSystems().push_back(movementSystem);
+    registry.getSystems().push_back(rendererSystem);
+
+    registry.update();
+    registry.update();
+    registry.update();
+
+    REQUIRE(registry.get<Position>(e0).value() == Position{-3, 4.5});
+    REQUIRE(registry.get<Position>(e1).value() == Position{-1, 0});
+    REQUIRE(registry.get<Position>(e2).value() == Position{ 0, 3});
 }
 
 /** \endcond */
