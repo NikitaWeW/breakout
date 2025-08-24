@@ -15,7 +15,7 @@
  * The intended way to use it is by creating the ecs::registry class and using all the functions from it. 
  * There is a config section below, which could be used to configure the behaviour of the library. For example, you could define ECS_DONT_LOCK if you dont need the synchronisation.
  * ecs::registry uses ECS_THROW when error checking. The rest of implementation uses ECS_ASSERT, because all the error checking was already done in the ecs::registry, however, they may still throw due to an error not regarding ecs.
- * Only ecs::registry has internal synchronisation, which could be disabled by changing the defenitions of ECS_LOCK_* below in the config section or defining ECS_DONT_LOCK.
+ * Only ecs::registry has internal synchronisation on the entity and component operations (component modification is not however), which could be disabled by changing the defenitions of ECS_LOCK_* below in the config section or defining ECS_DONT_LOCK.
  */
 /*
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -155,101 +155,6 @@ namespace ecs
      */
     using signature = std::bitset<MAX_COMPONENTS>;
 
-    /**
-     * \brief A locked value. Holds a value and its lock.
-     * \tparam value_t The type of a value (could be a reference).
-     * \tparam lock_t The type if a lock.
-     */
-    template<typename value_t, typename lock_t>
-    class locked
-    {
-    public:
-        /**
-         * \brief The type of the value.
-         */
-        using value_type = value_t;
-        /**
-         * \brief The type of the lock.
-         */
-        using lock_type = lock_t;
-    private:
-        value_type m_value;
-        lock_type m_lock;
-    public:
-        /**
-         * \brief Default constructor to make invalid, emply locked values.
-         */
-        locked() = default;
-
-        /**
-         * \brief The copy constructor. (deleted)
-         */
-        locked(locked const &) = delete;
-        /**
-         * \brief The copy operator. (deleted)
-         */
-        locked &operator=(locked const &) = delete;
-
-        /**
-         * \brief The move constructor.
-         */
-        locked(locked &&) noexcept = default;
-        /**
-         * \brief The move operator.
-         */
-        locked &operator=(locked &&) noexcept = default;
-
-        /**
-         * \brief Implicit conversion operator to the underlying value.
-         */
-        explicit operator value_type() const;
-        /**
-         * \brief Construct a locked value.
-         * \param value The value to hold.
-         * \param lock The lock to move in.
-         */
-        explicit locked(value_type value, lock_type &&lock);
-        /**
-         * \brief Access the underlying value.
-         */
-        std::remove_reference_t<value_type> *operator->();
-        /**
-         * \copydoc operator->
-         */
-        std::remove_reference_t<value_type> const *operator->() const;
-        /**
-         * \brief Get the underlying value.
-         * \returns The value with the same type as supplied.
-         */
-        value_type value() const;
-
-        /**
-         * \brief Get a rvalue reference to the underlying value.
-         */
-        std::add_lvalue_reference_t<std::remove_reference_t<value_type const>> get() const;
-        /**
-         * \copydoc get
-         */
-        std::add_lvalue_reference_t<std::remove_reference_t<value_type>> get();
-    };
-    /**
-     * \brief Empty, dummy ecs::locked.
-     */
-    template<typename lock_t> class locked<void, lock_t> {};
-    /**
-     * \brief Alias for the ecs::locked with the std::unique_lock<std::shared_mutex>.
-     */
-    template<typename value_t> using unique_locked = ecs::locked<value_t, std::unique_lock<std::shared_mutex>>;
-    /**
-     * \brief Alias for the ecs::locked with the std::shared_lock<std::shared_mutex>>.
-     */
-    template<typename value_t> using shared_locked = ecs::locked<value_t, std::shared_lock<std::shared_mutex>>;
-
-    /**
-     * \brief Unlocks a locked value.
-     */
-    template<typename T, typename L>
-    T remove_lock(ecs::locked<T, L> &&lock);
 
 
     /**
@@ -293,7 +198,7 @@ namespace ecs
         /**
          * \brief Gets the signature of a valid entity.
          * \param entity A valid entity identifier.
-         * \return A locked signature, discribing the components an entity has.
+         * \return A signature, discribing the components an entity has.
          */
         ecs::signature &getSignature(entity const &entity);
 
@@ -336,8 +241,6 @@ namespace ecs
         std::vector<component_t> m_components;
         std::unordered_map<entity, size_t> m_entityToIndex;
         std::unordered_map<size_t, entity> m_indexToEntity;
-
-        mutable std::shared_mutex m_componentMutex;
     public:
         /**
          * \brief Inserts a component to an entity.
@@ -356,37 +259,31 @@ namespace ecs
          * \brief Gets a component of an entity.
          * \param entity A valid entity identifier.
          * \tparam component_t The component type.
-         * \return A locked component lvalue reference.
+         * \return A component lvalue reference.
          */
-        ecs::shared_locked<component_t const &> get(entity const &entity) const;
+        component_t const &get(entity const &entity) const;
         /**
          * \copydoc get
          */
-        ecs::unique_locked<component_t &> lock(entity const &entity);
+        component_t &lock(entity const &entity);
 
         /**
          * \brief Gets a component of an entity.
          * \param entity A valid entity identifier.
          * \tparam component_t The component type.
-         * \return A locked component lvalue reference.
+         * \return A component lvalue reference.
          */
-        ecs::shared_locked<std::vector<component_t> const &> getComponents(entity const &entity) const;
+        std::vector<component_t> const &getComponents(entity const &entity) const;
         /**
          * \copydoc getComponents
          */
-        ecs::unique_locked<std::vector<component_t> &> lockComponents(entity const &entity);
+        std::vector<component_t> &lockComponents(entity const &entity);
 
         /**
          * \brief Notify the array that the entity is destroyed.
          * \param entity A destroyed entity identifier.
          */
         void onEntityDestroyed(entity const &entity) override;
-
-        /**
-         * \brief Get the per-component-type mutex.
-         * \return The underlying mutex.
-         */
-        std::shared_mutex &getMutex() const;
     };
 
     /**
@@ -438,16 +335,16 @@ namespace ecs
          * \brief Gets a component of an entity.
          * \param entity A valid entity identifier.
          * \tparam component_t The component type.
-         * \return A locked component lvalue reference.
+         * \return A component lvalue reference.
          */
         template <typename component_t> 
-        ecs::unique_locked<component_t &> lock(entity const &entity);
+        component_t &lock(entity const &entity);
 
         /**
          * \copydoc lock
          */
         template <typename component_t> 
-        ecs::shared_locked<component_t const &> get(entity const &entity) const;
+        component_t const &get(entity const &entity) const;
 
         /**
          * \brief Get the per-component-type mutex.
@@ -470,7 +367,6 @@ namespace ecs
         ecs::component_array<component_t> const *getComponentArray() const;
         /*! \endcond */
     };
-
 
     /**
      * \brief A class to use to push around lists of types.
@@ -502,87 +398,6 @@ namespace ecs
         explicit constexpr include_t() = default;
     };
 
-    /**
-     * \brief A view on entities that contain given included components and do not contain excluded ones. 
-     * Holds a shared lock on the entities and components of an ecs::registry so every entity is valid during the lifetime of a view.
-     * When the parent registry is destroyed, the view becomes invalid.
-     * \tparam Included Included components each entity in the view must have. Deduced from the ecs::include_t<Included...>.
-     * \tparam Excluded Excluded components each entity in the view must not have. Deduced from the ecs::exclude_t<Excluded...>.
-     */
-    template<typename, typename, typename>
-    class view;
-
-    /**
-     * \copydoc view
-     */
-    template<typename componentLock_t, typename... Included, typename... Excluded>
-    class view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>
-    {
-    public:
-        /**
-         * \brief The lock each view has.
-         * Locks the entities and per component mutexes of the registry the view belongs to.
-         */
-        struct view_lock
-        {
-            /**
-             * \brief The lock of the entities mutex of the parent registry.
-             */
-            std::shared_lock<std::shared_mutex> entitiesLock;
-            /**
-             * \brief The per-component mutex locks of the parent registry. 
-             */
-            std::array<std::shared_lock<std::shared_mutex>, sizeof...(Included)> componentLocks;
-        };
-        /**
-         * \brief Alias for the locked storage of the entities.
-         */
-        using entities_t = ecs::locked<std::vector<ecs::entity>, view_lock>;
-    private:
-        entities_t m_entities;
-    public:
-        /**
-         * \brief Alias for the type list of the included components.
-         */
-        using included_types = ecs::include_t<Included...>;
-        /**
-         * \brief Alias for the type list of the excluded components.
-         */
-        using excluded_types = ecs::exclude_t<Excluded...>;
-        /**
-         * \brief Alias for the const iterator of the entities.
-         */
-        using const_iterator = typename entities_t::value_type::const_iterator;
-
-        /**
-         * \brief Default constructor.
-         * Create empty, invalid views.
-         */
-        view() = default;
-        /**
-         * \brief Create a view.
-         * \param entities A locked list of entities to move into the view.
-         */
-        explicit view(entities_t &&entities);
-        /**
-         * \brief Get entities in the view.
-         */
-        std::vector<ecs::entity> const &get() const;
-
-        /**
-         * \brief Access the underlying entities.
-         */
-        std::vector<ecs::entity> const *operator->() const;
-
-        /**
-         * \brief The entities iterator.
-         */
-        const_iterator begin() const;
-        /**
-         * \brief The entities iterator.
-         */
-        const_iterator end() const;
-    };
 
     class registry;
 
@@ -619,12 +434,7 @@ namespace ecs
         std::vector<ecs::system> m_systems;
 
         /*
-        |                lock order                 |
-        | ========================================= |
-        |1| m_entitiesMutex     | std::shared_mutex |
-        |2| m_signaturesMutex   | std::shared_mutex |
-        |3| m_componentsMutex   | std::mutex        |
-        |4| component_array component locking       |
+        lock order: m_entitiesMutex, m_signaturesMutex, m_componentsMutex
          */
         mutable std::shared_mutex m_entitiesMutex;
         mutable std::shared_mutex m_signaturesMutex;
@@ -664,12 +474,12 @@ namespace ecs
          * \return The locked component lvalue reference.
          */
         template <typename component_t> 
-        ecs::unique_locked<component_t &> lock(entity const &entity);
+        component_t &lock(entity const &entity);
         /**
          * \copydoc lock
          */
         template <typename component_t> 
-        ecs::shared_locked<component_t const &> get(entity const &entity) const;
+        component_t const &get(entity const &entity) const;
 
         /**
          * \brief Removes a component from a valid entity.
@@ -767,52 +577,6 @@ namespace ecs
 #ifdef ECS_IMPLEMENTATION
 /*! \cond Doxygen_Suppress */
 
-template<typename value_t, typename lock_t>
-ECS_INLINE ecs::locked<value_t, lock_t>::operator value_t() const
-{
-    ECS_PROFILE();
-    return value();
-}
-template<typename value_t, typename lock_t>
-ECS_INLINE ecs::locked<value_t, lock_t>::locked(value_type value, lock_type &&lock) : m_value(value), m_lock(std::move(lock)) {};
-template<typename value_t, typename lock_t>
-ECS_INLINE std::remove_reference_t<value_t> *ecs::locked<value_t, lock_t>::operator->()
-{
-    ECS_PROFILE();
-    return &get();
-}
-template<typename value_t, typename lock_t>
-ECS_INLINE std::remove_reference_t<value_t> const *ecs::locked<value_t, lock_t>::operator->() const
-{
-    ECS_PROFILE();
-    return &get();
-}
-template<typename value_t, typename lock_t>
-ECS_INLINE value_t ecs::locked<value_t, lock_t>::value() const
-{
-    ECS_PROFILE();
-    return m_value;
-}
-template<typename value_t, typename lock_t>
-ECS_INLINE std::add_lvalue_reference_t<std::remove_reference_t<value_t const>> ecs::locked<value_t, lock_t>::get() const
-{
-    ECS_PROFILE();
-    return m_value;
-}
-template<typename value_t, typename lock_t>
-ECS_INLINE std::add_lvalue_reference_t<std::remove_reference_t<value_t>> ecs::locked<value_t, lock_t>::get()
-{
-    ECS_PROFILE();
-    return m_value;
-}
-
-template <typename T, typename L>
-ECS_INLINE T ecs::remove_lock(ecs::locked<T, L> &&lock)
-{
-    ECS_PROFILE();
-    return lock.value();
-}
-
 ECS_INLINE ecs::entity_manager::entity_manager()
 {
     ECS_PROFILE();
@@ -908,32 +672,31 @@ ECS_INLINE void ecs::component_array<component_t>::remove(entity const &entity)
     m_indexToEntity.erase(lastEntityIndex);
 }
 template <typename component_t>
-ECS_INLINE ecs::shared_locked<component_t const &> ecs::component_array<component_t>::get(entity const &entity) const
+ECS_INLINE component_t const &ecs::component_array<component_t>::get(entity const &entity) const
 {
     ECS_PROFILE();
     ECS_ASSERT(m_entityToIndex.find(entity) != m_entityToIndex.end(), "retrieving non-existent component");
 
     auto lock = ECS_LOCK_SHARED_UNNAMED(m_componentMutex);
-    return ecs::shared_locked<component_t const &>{m_components[m_entityToIndex.at(entity)], std::move(lock)};
+    return component_t const &{m_components[m_entityToIndex.at(entity)], std::move(lock)};
 }
 template <typename component_t>
-ECS_INLINE ecs::unique_locked<component_t &> ecs::component_array<component_t>::lock(entity const &entity)
+ECS_INLINE component_t &ecs::component_array<component_t>::lock(entity const &entity)
 {
     ECS_PROFILE();
     ECS_ASSERT(m_entityToIndex.find(entity) != m_entityToIndex.end(), "retrieving non-existent component");
 
-    auto lock = ECS_LOCK_UNIQUE_UNNAMED(m_componentMutex);
-    return ecs::unique_locked<component_t &>{m_components[m_entityToIndex.at(entity)], std::move(lock)};
+    return m_components[m_entityToIndex.at(entity)];
 }
 template <typename component_t>
-ECS_INLINE ecs::shared_locked<std::vector<component_t> const &> ecs::component_array<component_t>::getComponents(entity const &entity) const
+ECS_INLINE std::vector<component_t> const &ecs::component_array<component_t>::getComponents(entity const &entity) const
 {
     ECS_PROFILE();
     auto lock = ECS_LOCK_SHARED_UNNAMED(m_componentMutex);
     return ecs::shared_locked<std::vector<component_t> const &>{m_components, std::move(lock)};
 }
 template <typename component_t>
-ECS_INLINE ecs::unique_locked<std::vector<component_t> &> ecs::component_array<component_t>::lockComponents(entity const &entity)
+ECS_INLINE std::vector<component_t> &ecs::component_array<component_t>::lockComponents(entity const &entity)
 {
     ECS_PROFILE();
     auto lock = ECS_LOCK_UNIQUE_UNNAMED(m_componentMutex);
@@ -987,13 +750,13 @@ ECS_INLINE void ecs::component_manager::remove(entity const &entity)
     getComponentArray<component_t>()->remove(entity);
 }
 template <typename component_t>
-ECS_INLINE ecs::unique_locked<component_t &> ecs::component_manager::lock(entity const &entity)
+ECS_INLINE component_t &ecs::component_manager::lock(entity const &entity)
 {
     ECS_PROFILE();
     return getComponentArray<component_t>()->lock(entity);
 }
 template <typename component_t>
-ECS_INLINE ecs::shared_locked<component_t const &> ecs::component_manager::get(entity const &entity) const
+ECS_INLINE component_t const &ecs::component_manager::get(entity const &entity) const
 {
     ECS_PROFILE();
     return getComponentArray<component_t>()->get(entity);
@@ -1027,29 +790,29 @@ ECS_INLINE void ecs::component_manager::entityDestroyed(entity const &entity) co
     }
 }
 
-template <typename componentLock_t, typename... Included, typename... Excluded>
-ECS_INLINE ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::view(entities_t &&entities) : m_entities(std::move(entities)) {}
-template <typename componentLock_t, typename... Included, typename... Excluded>
-ECS_INLINE std::vector<ecs::entity> const &ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::get() const
+template <typename... Included, typename... Excluded>
+ECS_INLINE ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::view(std::vector<ecs::entity> &&entities) : m_entities(std::move(entities)) {}
+template <typename... Included, typename... Excluded>
+ECS_INLINE std::vector<ecs::entity> const &ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::get() const
 {
     ECS_PROFILE();
     return m_entities.get();
 }
-template <typename componentLock_t, typename... Included, typename... Excluded>
-ECS_INLINE typename ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::const_iterator ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::begin() const 
+template <typename... Included, typename... Excluded>
+ECS_INLINE typename ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::const_iterator ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::begin() const 
 { 
     ECS_PROFILE();
     return m_entities->cbegin(); 
 }
-template <typename componentLock_t, typename... Included, typename... Excluded>
-typename ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::const_iterator ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::end() const 
+template <typename... Included, typename... Excluded>
+typename ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::const_iterator ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::end() const 
 { 
     ECS_PROFILE();
     return m_entities->cend(); 
 }
 
-template <typename componentLock_t, typename... Included, typename... Excluded>
-ECS_INLINE std::vector<ecs::entity> const *ecs::view<componentLock_t, ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::operator->() const
+template <typename... Included, typename... Excluded>
+ECS_INLINE std::vector<ecs::entity> const *ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::operator->() const
 {
     ECS_PROFILE();
     return &m_entities.get();
@@ -1077,7 +840,7 @@ ECS_INLINE bool ecs::registry::has(entity const &entity) const
     return m_entityManager.getSignature(entity).test(m_componentManager.getComponentID<component_t>()); 
 }
 template <typename component_t>
-ECS_INLINE ecs::unique_locked<component_t &> ecs::registry::lock(entity const &entity) 
+ECS_INLINE component_t &ecs::registry::lock(entity const &entity) 
 {
     ECS_PROFILE();
     if(!valid(entity)) 
@@ -1088,7 +851,7 @@ ECS_INLINE ecs::unique_locked<component_t &> ecs::registry::lock(entity const &e
     return m_componentManager.lock<component_t>(entity);
 }
 template <typename component_t>
-ECS_INLINE ecs::shared_locked<component_t const &> ecs::registry::get(entity const &entity) const
+ECS_INLINE component_t const &ecs::registry::get(entity const &entity) const
 {
     ECS_PROFILE();
     if(!valid(entity)) 
@@ -1215,36 +978,17 @@ ECS_INLINE std::vector<ecs::entity> ecs::registry::getView(exclude_t<Exclude...>
 template<typename Type, typename... Other, typename... Exclude>
 ECS_INLINE ecs::view<std::shared_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>> ecs::registry::view(exclude_t<Exclude...> toExclude) const
 {
-    using view_type = ecs::view<std::shared_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>>;
+    using view_type = ecs::view<ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>>;
     ECS_PROFILE();
     auto entitiesLock = ECS_LOCK_SHARED_UNNAMED(m_entitiesMutex);
     ECS_LOCK_SHARED(m_signaturesMutex);
     ECS_LOCK_SHARED(m_componentsMutex);
-    typename view_type::view_lock viewLock{
-        std::move(entitiesLock),
-        {
-            ECS_LOCK_SHARED_UNNAMED(m_componentManager.getMutex<Type>()),
-            ECS_LOCK_SHARED_UNNAMED(m_componentManager.getMutex<Other>())...
-        }
-    };
-    return view_type{typename view_type::entities_t{getView<Type, Other...>(toExclude), std::move(viewLock)}};
+    return view_type{getView<Type, Other...>(toExclude)};
 }
 template<typename Type, typename... Other, typename... Exclude>
 ECS_INLINE ecs::view<std::unique_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>> ecs::registry::view(exclude_t<Exclude...> toExclude)
 {
-    using view_type = ecs::view<std::unique_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>>;
-    ECS_PROFILE();
-    auto entitiesLock = ECS_LOCK_SHARED_UNNAMED(m_entitiesMutex);
-    ECS_LOCK_SHARED(m_signaturesMutex);
-    ECS_LOCK_SHARED(m_componentsMutex);
-    typename view_type::view_lock viewLock{
-        std::move(entitiesLock),
-        {
-            ECS_LOCK_SHARED_UNNAMED(m_componentManager.getMutex<Type>()),
-            ECS_LOCK_SHARED_UNNAMED(m_componentManager.getMutex<Other>())...
-        }
-    };
-    return view_type{typename view_type::entities_t{getView<Type, Other...>(toExclude), std::move(viewLock)}};
+    // TODO
 }
 ECS_INLINE ecs::signature ecs::registry::getSignature(entity const &entity) const
 {
