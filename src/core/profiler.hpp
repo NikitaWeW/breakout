@@ -10,6 +10,8 @@ Profiler with scoped timers to measure performance and find bottlenecks.
 To use it, add PROFILER_PROFILE(), PROFILER_PROFILE_IN_FILE(filepath), 
 PROFILER_PROFILE_IN_FILE_LOG_TYPE(filepath, logtype) at the beginning of the 
 function you want to profile. See the profiler::LogType to see the log types available.
+
+For performance reasons, I removed most of the error checking.
 */
 /*
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -56,66 +58,59 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #define PROFILER_CONCAT_DETAIL(A, B) A##B
 #define PROFILER_CONCAT(A, B) PROFILER_CONCAT_DETAIL(A, B)
-#define PROFILER_UNIQUE_VAR(base) PROFILER_CONCAT(base, __LINE__)
 
-#define PROFILER_PROFILE() PROFILER_PROFILE_IN_FILE("log/profiler")
-#define PROFILER_PROFILE_IN_FILE(filepath) PROFILER_PROFILE_IN_FILE_LOG_TYPE(filepath, profiler::LogType::MARKDOWN)
-#define PROFILER_PROFILE_IN_FILE_LOG_TYPE(filepath, logtype) profiler::ScopedTimer<logtype> PROFILER_UNIQUE_VAR(_profiler_scope_timer_){BOOST_CURRENT_FUNCTION, profiler::getLogger<logtype>(filepath)}
+#define PROFILER_PROFILE() profiler::ScopedTimer PROFILER_CONCAT(_profiler_scope_timer_, __LINE__){BOOST_CURRENT_FUNCTION, profiler::getLogger()}
 #else
 #define PROFILER_PROFILE()
-#define PROFILER_PROFILE_IN_FILE(filepath)
-#define PROFILER_PROFILE_IN_FILE_LOG_TYPE(filepath, logtype)
 #endif
 
 #define PROFILER_ASSERT(x, msg) assert((x) && (msg))
 #define PROFILER_STATIC_ASSERT(x, msg) static_assert((x) && (msg))
 #define PROFILER_THROW(x) (throw (x))
 
+// https://www.speedscope.app/
+#define PROFILER_LOG_FILE "speedscope.json"
+
 /*! \endcond */
 
 
 namespace profiler
 {
+    /**
+     * \brief The clock alias.
+     */
     using Clock_t = std::chrono::high_resolution_clock;
+    /**
+     * \brief The timepoint alias.
+     */
     using Timepoint_t = std::chrono::time_point<Clock_t>;
 
     /**
-     * \brief The type of logging.
-     * 
+     * \brief The timer identifier alias.
      */
-    enum class LogType
-    {
-        /**
-         * \brief Outputs in a markdown format.
-         */
-        MARKDOWN, 
-        /**
-         * \brief Outputs in a NDJSON format.
-         * 
-         * | Field name |    Type    |                             Description                              |
-         * | ---------- | ---------- | -------------------------------------------------------------------- |
-         * | timestamp  | uint       | Timestamp in nanoseconds                                             |
-         * | event      | string     | Either enter or exit                                                 |
-         * | id         | uint       | Unique identifier for this scope instance                            |
-         * | name       | string     | A name of the function                                               |
-         * | duration   | uint       | Duration of the scope instance in milliseconds. Only for exit event. |
-         */
-        JSON
-    };
+    using id_t = unsigned long long;
+
 
     /**
-     * \brief Used to output the profiling data to the file
-     * \tparam type The log type.
+     * \brief Used to output the profiling data to the file in a json format.
      */
-    template<LogType type>
     class Logger
     {
     private:
         std::ostream *m_output = nullptr;
         std::fstream m_file;
+#ifndef PROFILER_DONT_LOCK
         std::mutex m_logMutex;
-        std::size_t m_nextID = 0;
-        std::vector<std::string_view> m_stack;
+#endif
+        bool m_isFirstPush = true;
+
+        // format functions
+        void header();
+        void open(std::string_view name, id_t id);
+        void close(std::string_view name, id_t id);
+        void foot();
+
+        long timestamp() const;
     public:
         Logger() = default;
         Logger(const Logger&) = delete;
@@ -130,19 +125,23 @@ namespace profiler
          * \param stream The stream object. Must be alive during the lifetime of a logger!!
          */
         explicit Logger(std::ostream &stream);
+
+        /**
+         * \brief Destructor.
+         */
         ~Logger();
 
         /**
          * Pushes the timer to the stack.
-         * \tparam name The name of a timer.
+         * \param name The name of a timer.
          */
-        void push(std::string_view name);
+        void push(std::string_view name, id_t id);
 
         /**
          * pops and registers the top timer with the time.
-         * \param time The time of a timer.
+         * \param name The name of a timer.
          */
-        void pop(std::chrono::nanoseconds const &time);
+        void pop(std::string_view name, id_t id);
 
         /**
          * \brief Clears the log.
@@ -163,43 +162,91 @@ namespace profiler
      * \brief The timer that starts at the construction and stops when destroys. Outputs data to the Logger class via singleton getter.
      * \tparam type The logger type 
      */
-    template <LogType type>
     class ScopedTimer 
     {
     private:
-        Timepoint_t m_start;
-        std::weak_ptr<Logger<type>> m_logger;
+        Logger *m_logger;
+        std::string_view m_name;
+        id_t m_id;
+        static std::atomic_ullong nextID;
     public:
         ScopedTimer() = default;
         /**
          * \param name The name of the timer. Usually the name of the function.
          * \param logger An lvalue reference to the logger to write to.
          */
-        explicit ScopedTimer(std::string_view name, std::weak_ptr<Logger<type>> logger);
+        explicit ScopedTimer(std::string_view name, Logger *logger);
         ~ScopedTimer();
+
+        explicit ScopedTimer(ScopedTimer const &other) = delete;
+        explicit ScopedTimer(ScopedTimer &&other) = delete;
+
+        ScopedTimer &operator=(ScopedTimer const &other) = delete;
+        ScopedTimer &operator=(ScopedTimer &&other) = delete;
     };
 
     /**
      * \brief Singleton getter to get the logger for the filename easily.
-     * \param name The filename.
      * \return The lvalue reference to the requested logger.
      */
-    template <LogType type>
-    inline std::shared_ptr<Logger<type>> getLogger(std::string_view name) {
-        static std::mutex loggersMutex;
-        static std::map<std::string, std::shared_ptr<Logger<type>>> loggers;
-        std::scoped_lock lock{loggersMutex};
-
-        if(loggers.find(std::string{name}) == loggers.end()) {
-            loggers.try_emplace(std::string{name}, std::move(std::make_unique<Logger<type>>(name)));
-        }
-        return loggers.at(std::string{name});
+    inline Logger *getLogger() {
+        static Logger logger{PROFILER_LOG_FILE};
+        return &logger;
     }
 } // namespace profiler
 
+// ===============================================================]
+// ===============================================================]
 
-template<profiler::LogType type>
-inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
+inline void profiler::Logger::header()
+{
+    *m_output << "{\n\t\"type\": \"evented\",\n\t\"name\": \"Profile\",\n\t\"unit\": \"nanoseconds\",\n\t\"events\": [";
+}
+
+inline void profiler::Logger::open(std::string_view name, id_t id)
+{
+    if(!m_isFirstPush)
+        *m_output << ',';
+
+    *m_output 
+    << "\n\t\t{\n"
+    << "\t\t\t\"at\":        "   << timestamp() << ",\n"
+    << "\t\t\t\"type\":      "   << "\"O\",\n"
+    << "\t\t\t\"pid\":       "   << "1,\n"
+    << "\t\t\t\"tid\":       "   << id << ",\n"
+    << "\t\t\t\"frame\":     \"" << name << "\"\n"
+    << "\t\t}";
+}
+
+inline void profiler::Logger::close(std::string_view name, id_t id)
+{
+    if(!m_isFirstPush)
+        *m_output << ',';
+
+    *m_output 
+    << "\n\t\t{\n"
+    << "\t\t\t\"at\":        "   << timestamp() << ",\n"
+    << "\t\t\t\"type\":      "   << "\"C\",\n"
+    << "\t\t\t\"pid\":       "   << "1,\n"
+    << "\t\t\t\"tid\":       "   << id << ",\n"
+    << "\t\t\t\"frame\":     \"" << name << "\"\n"
+    << "\t\t}";
+}
+
+inline void profiler::Logger::foot()
+{
+    *m_output << "\n\t]\n}\n";
+}
+
+// ===============================================================]
+// ===============================================================]
+
+inline long profiler::Logger::timestamp() const
+{
+    return std::chrono::time_point_cast<std::chrono::nanoseconds>(Clock_t::now()).time_since_epoch().count();
+}
+
+inline profiler::Logger::Logger(std::filesystem::path const &filename)
 {
     if(filename.has_parent_path())
         std::filesystem::create_directories(filename.parent_path());
@@ -208,103 +255,53 @@ inline profiler::Logger<type>::Logger(std::filesystem::path const &filename)
         PROFILER_THROW(std::runtime_error{"failed to open file " + filename.string()});
     }
     m_output = &m_file;
+    header();
 }
 
-template <profiler::LogType type>
-inline profiler::Logger<type>::Logger(std::ostream &stream) : m_output(&stream) {}
-
-template<profiler::LogType type>
-inline profiler::Logger<type>::~Logger()
+inline profiler::Logger::Logger(std::ostream &stream) : m_output(&stream) 
 {
-    PROFILER_STATIC_ASSERT(type == LogType::MARKDOWN || type == LogType::JSON, "log type not supported!");
+    header();
+}
+
+inline profiler::Logger::~Logger()
+{
+    foot();
     m_output->flush();
 }
 
-template <>
-inline void profiler::Logger<profiler::LogType::MARKDOWN>::push(std::string_view name)
+inline void profiler::Logger::push(std::string_view name, id_t id)
 {
+#ifndef PROFILER_DONT_LOCK
     std::scoped_lock lock{m_logMutex};
-    if(m_stack.empty())
-        *m_output << '\n';
+#endif
 
-    *m_output << m_nextID << ": " << std::string(m_stack.size() * 2, ' ') << "- `" << name << "`\n";
-
-    m_stack.emplace_back(name);
-    ++m_nextID;
-}
-template <>
-inline void profiler::Logger<profiler::LogType::MARKDOWN>::pop(std::chrono::nanoseconds const& time)
-{
-    const std::size_t depth = m_stack.size();
-    float timeMS = static_cast<float>(time.count()) * 1e-6f;
-    std::string_view color;
-    if(timeMS < 1) color = "#b5cea8";
-    else if(timeMS < 5) color = "#ce9178";
-    else color = "#f44747";
-
-    std::scoped_lock lock{m_logMutex};
-    *m_output 
-        << m_nextID << ": " 
-         << std::string(depth * 2, ' ')
-         << "+ **finished in** "
-         << "<span style=\"color:" << color << "\">"
-         << timeMS << "</span> ms\n";
-
-    m_stack.pop_back();
-    ++m_nextID;
-}
-
-template <> 
-inline void profiler::Logger<profiler::LogType::JSON>::push(std::string_view name)
-{
-    std::scoped_lock lock{m_logMutex};
-
-    *m_output 
-    << "{"
-    << "\n\t\"timestamp\": " << std::chrono::time_point_cast<std::chrono::nanoseconds>(Clock_t::now()).time_since_epoch().count()
-    << "\n\t\"event\":     " << "\"enter\""
-    << "\n\t\"id\":        " << m_nextID
-    << "\n\t\"name\":      " << name
-    << "\n}\n";
+    open(name, id);
     
-    m_stack.emplace_back(name);
-    ++m_nextID;
+    m_isFirstPush = false;
 }
-template <> 
-inline void profiler::Logger<profiler::LogType::JSON>::pop(std::chrono::nanoseconds const &time)
+inline void profiler::Logger::pop(std::string_view name, id_t id)
 {
+#ifndef PROFILER_DONT_LOCK
     std::scoped_lock lock{m_logMutex};
+#endif
 
-    *m_output 
-    << "{"
-    << "\n\t\"timestamp\": " << std::chrono::time_point_cast<std::chrono::nanoseconds>(Clock_t::now()).time_since_epoch().count()
-    << "\n\t\"event\":     " << "\"exit\""
-    << "\n\t\"id\":        " << m_nextID
-    << "\n\t\"name\":      " << m_stack.front()
-    << "\n\t\"duration\"   " << static_cast<float>(time.count()) * 1e-6f
-    << "\n}\n";
-    
-    m_stack.pop_back();
-    ++m_nextID;
+    close(name, id);
+
+    m_isFirstPush = false;
 }
 
-template<profiler::LogType type>
-inline void profiler::Logger<type>::clear() 
+inline void profiler::Logger::clear() 
 {
-    PROFILER_STATIC_ASSERT(type == LogType::MARKDOWN || type == LogType::JSON, "log type not supported!");
     m_output->clear();
+    m_isFirstPush = true;
 }
 
-template <profiler::LogType type>
-inline profiler::ScopedTimer<type>::ScopedTimer(std::string_view name, std::weak_ptr<Logger<type>> logger) : m_logger(logger)
+inline profiler::ScopedTimer::ScopedTimer(std::string_view name, Logger *logger) : m_logger(logger), m_name(name), m_id(nextID++)
 {
-    m_start = Clock_t::now();
-    if(!m_logger.expired())
-        m_logger.lock()->push(name);
+    m_logger->push(m_name, m_id);
 }
-template <profiler::LogType type>
-inline profiler::ScopedTimer<type>::~ScopedTimer()
+inline profiler::ScopedTimer::~ScopedTimer()
 {
-    if(!m_logger.expired())
-        m_logger.lock()->pop(std::chrono::duration_cast<std::chrono::nanoseconds>(Clock_t::now() - m_start));
+    m_logger->pop(m_name, m_id);
 }
+inline std::atomic_ullong profiler::ScopedTimer::nextID = 0;
