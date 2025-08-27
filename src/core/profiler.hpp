@@ -3,15 +3,12 @@
      _ __  _ __ ___  / _(_) | ___ _ __ 
     | '_ \| '__/ _ \| |_| | |/ _ \ '__|    Copyright (c) 2024 Nikita Martynau
     | |_) | | | (_) |  _| | |  __/ |       https://opensource.org/license/mit
-    | .__/|_|  \___/|_| |_|_|\___|_|       <todo: insert repo name here>
+    | .__/|_|  \___/|_| |_|_|\___|_|       <TODO: insert repo name here>
     |_|                                
 
-Profiler with scoped timers to measure performance and find bottlenecks. 
-To use it, add PROFILER_PROFILE(), PROFILER_PROFILE_IN_FILE(filepath), 
-PROFILER_PROFILE_IN_FILE_LOG_TYPE(filepath, logtype) at the beginning of the 
-function you want to profile. See the profiler::LogType to see the log types available.
-
-For performance reasons, I removed most of the error checking.
+Instrumental profiler with scoped timers to measure performance and find bottlenecks. 
+To use it, add PROFILER_PROFILE(), at the beginning of the 
+function you want to profile.
 */
 /*
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -29,7 +26,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <filesystem>
 #include <mutex>
 #include <future>
-#include "concurrentqueue.h"
+#include "MPMCQueue.h"
 
 /*! \cond Doxygen_Suppress */
 
@@ -68,7 +65,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #define PROFILER_STATIC_ASSERT(x, msg) static_assert((x) && (msg))
 #define PROFILER_THROW(x) (throw (x))
 
-// https://www.speedscope.app/
 #define PROFILER_LOG_FILE "log.json"
 
 /*! \endcond */
@@ -92,14 +88,42 @@ namespace profiler
      */
     using id_t = unsigned long;
 
+    /**
+     * \brief Get current timestamp.
+     */    
+    Timestamp_t timestamp();
+
+    /**
+     * \brief The profiling event.
+     */
     struct Event
     {
+        /**
+         * \brief The type of the event.
+         */
         enum : unsigned char {
-            ENTER, EXIT, STOP, NONE
-        } type = NONE;
-        Timestamp_t ts;
-        id_t id;
-        std::string_view name;
+            ENTER, EXIT
+        } type;
+        /**
+         * \brief The timestamp of the event.
+         */
+        Timestamp_t timestamp = 0;
+        /**
+         * \brief The id of the event.
+         */
+        id_t id = 0;
+        /**
+         * \brief The process id of the event.
+         */
+        id_t pid = 0;
+        /**
+         * \brief The thread id of the event.
+         */
+        std::thread::id tid;
+        /**
+         * \brief The name of the scope instance.`
+         */
+        std::string_view name = "";
     };
 
     /**
@@ -111,22 +135,27 @@ namespace profiler
         std::ostream *m_output = nullptr;
         std::fstream m_file;
         bool m_isFirstPush = true;
-        moodycamel::ConcurrentQueue<Event> m_events;
+        bool m_runWriter = true;
+        rigtorp::MPMCQueue<Event> m_events{100};
         std::future<void> m_writer;
 
         // format functions
         void header();
-        void print(Event const &event);
         void foot();
-
-        Timestamp_t timestamp() const;
+        
         void startWriter();
         void stopWriter();
     public:
         Logger() = default;
         explicit Logger(const Logger&) = delete;
         Logger& operator=(const Logger&) = delete;
+        /**
+         * \brief Default move constructor.
+         */
         explicit Logger(Logger&&) = default;
+        /**
+         * \brief Default move operator.
+         */
         Logger& operator=(Logger&&) = default;
         /**
          * \brief Write to a file.
@@ -145,16 +174,22 @@ namespace profiler
         ~Logger();
 
         /**
-         * Pushes the timer to the stack.
-         * \param name The name of a timer.
+         * \brief Prints an event to the output stream.
+         * \param event The event to print.
+         * \note This is not correct way to log profiling data. Use push to add an event.
          */
-        void push(std::string_view name, id_t id);
+        void print(Event const &event);
 
         /**
-         * pops and registers the top timer with the time.
-         * \param name The name of a timer.
+         * \brief Pushes the event to register.
+         * \param event The event to print.
          */
-        void pop(std::string_view name, id_t id);
+        void push(Event const &event);
+
+        /**
+         * \copydoc push
+         */
+        void push(Event &&event);
 
         /**
          * \brief Clears the log.
@@ -211,9 +246,14 @@ namespace profiler
 // ===============================================================|
 // ===============================================================|
 
+// Current format: https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview?tab=t.0
+
 inline void profiler::Logger::header()
 {
-    *m_output << "{\n\t\"traceEvents\": [";
+    *m_output 
+    << "{\n"
+    << "\t\"displayTimeUnit\": \"ns\",\n"
+    << "\t\"traceEvents\": [";
 }
 
 inline void profiler::Logger::print(Event const &event)
@@ -222,10 +262,13 @@ inline void profiler::Logger::print(Event const &event)
         *m_output << ',';
     *m_output 
     << "\n\t\t{\n"
-    << "\t\t\t\"ts\":        "   << event.ts << ",\n"
-    << "\t\t\t\"ph\":        "   << (event.type == Event::ENTER ? "\"B\",\n" : "\"E\",\n")
-    << "\t\t\t\"tid\":       "   << event.id << ",\n"
-    << "\t\t\t\"name\":      \"" << event.name << "\"\n"
+    << "\t\t\t\"ts\":        "   << event.timestamp                          << ",\n"
+    << "\t\t\t\"ph\":        \"" << (event.type == Event::ENTER ? "B" : "E") << "\",\n"
+    << "\t\t\t\"tid\":       "   << event.tid                                << ",\n"
+    << "\t\t\t\"pid\":       "   << event.pid                                << ",\n"
+    << "\t\t\t\"id\":        "   << event.id                                 << ",\n"
+    << "\t\t\t\"name\":      \"" << event.name                               << "\",\n"
+    << "\t\t\t\"cat\":       \""    "profiler"                                  "\"\n"
     << "\t\t}";
 
     m_isFirstPush = false;
@@ -236,9 +279,9 @@ inline void profiler::Logger::foot()
     *m_output << "\n\t]\n}\n";
 }
 
-inline long profiler::Logger::timestamp() const
+inline long profiler::timestamp()
 {
-    return std::chrono::time_point_cast<std::chrono::microseconds>(Clock_t::now()).time_since_epoch().count();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(Clock_t::now().time_since_epoch()).count();
 }
 
 // ===============================================================|
@@ -248,12 +291,10 @@ inline void profiler::Logger::startWriter()
 {
     m_writer = std::async(std::launch::async, std::function{[this](){
         Event event{};
-        while(true)
+        while(m_runWriter)
         {
-            if(!m_events.try_dequeue(event))
+            if(!m_events.try_pop(event))
                 continue;
-            if(event.type == Event::STOP)
-                break;
 
             print(event);
         }
@@ -262,9 +303,7 @@ inline void profiler::Logger::startWriter()
 
 inline void profiler::Logger::stopWriter()
 {
-    m_events.enqueue(Event{
-        .type = Event::STOP
-    });
+    m_runWriter = false;
     m_writer.wait();
 }
 
@@ -294,23 +333,13 @@ inline profiler::Logger::~Logger()
     m_output->flush();
 }
 
-inline void profiler::Logger::push(std::string_view name, id_t id)
+inline void profiler::Logger::push(Event const &event)
 {
-    m_events.enqueue(Event{
-        .type = Event::ENTER,
-        .ts = timestamp(),
-        .id = id,
-        .name = name
-    });
+    m_events.push(event);
 }
-inline void profiler::Logger::pop(std::string_view name, id_t id)
+inline void profiler::Logger::push(Event &&event)
 {
-    m_events.enqueue(Event{
-        .type = Event::EXIT,
-        .ts = timestamp(),
-        .id = id,
-        .name = name
-    });
+    m_events.push(std::move(event));
 }
 
 inline void profiler::Logger::clear() 
@@ -320,10 +349,24 @@ inline void profiler::Logger::clear()
 
 inline profiler::ScopedTimer::ScopedTimer(std::string_view name, Logger *logger) : m_logger(logger), m_name(name), m_id(nextID++)
 {
-    m_logger->push(m_name, m_id);
+    m_logger->push(Event{
+        .type = Event::ENTER,
+        .timestamp = timestamp(),
+        .id = m_id,
+        .pid = 1,
+        .tid = std::this_thread::get_id(),
+        .name = m_name
+    });
 }
 inline profiler::ScopedTimer::~ScopedTimer()
 {
-    m_logger->pop(m_name, m_id);
+    m_logger->push(Event{
+        .type = Event::EXIT,
+        .timestamp = timestamp(),
+        .id = m_id,
+        .pid = 1,
+        .tid = std::this_thread::get_id(),
+        .name = m_name
+    });
 }
 inline std::atomic_ullong profiler::ScopedTimer::nextID = 0;
