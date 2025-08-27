@@ -57,6 +57,10 @@ target_precompile_headers(main PRIVATE
 if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
+if(BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
+
 
 set(DOXYGEN_SKIP_DOT TRUE)
 find_package(Doxygen)
@@ -74,7 +78,7 @@ else()
         string(APPEND GLFW_DOXYGEN_INPUT " \\\n\"${path}\"")
     endforeach()
 
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html"
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/docs/html/index.html"
                        COMMAND "${DOXYGEN_EXECUTABLE}"
                        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                        MAIN_DEPENDENCY Doxyfile
@@ -82,7 +86,7 @@ else()
                        COMMENT "Generating HTML documentation"
                        VERBATIM)
 
-    add_custom_target(docs ALL SOURCES "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
+    add_custom_target(docs ALL SOURCES "${CMAKE_CURRENT_BINARY_DIR}/docs/html/index.html")
 
 
     cmake_policy(SET CMP0177 NEW)

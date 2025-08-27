@@ -26,6 +26,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <filesystem>
 #include <mutex>
 #include <future>
+#include <thread>
 #include "MPMCQueue.h"
 
 /*! \cond Doxygen_Suppress */

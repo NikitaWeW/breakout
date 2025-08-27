@@ -6,16 +6,16 @@
 */
 /**
  * \file ecs.hpp
- * \brief My c++17 thread safe Entity Component System implementation.
+ * \brief My c++17 thread safe* Entity Component System implementation.
  * 
- * Thanks to this article: https://austinmorlan.com/posts/entity_component_system
- * Took a bit of inspiration from https://github.com/skypjack/entt
+ * Thanks to this article: https://austinmorlan.com/posts/entity_component_system.
+ * Took a bit of inspiration from https://github.com/skypjack/entt.
  * 
  * The main focus was on the simplicity, small size and reasonable performance (one header, ~1000 lines of code).
  * The intended way to use it is by creating the ecs::registry class and using all the functions from it. 
  * There is a config section below, which could be used to configure the behaviour of the library. For example, you could define ECS_DONT_LOCK if you dont need the synchronisation.
  * ecs::registry uses ECS_THROW when error checking. The rest of implementation uses ECS_ASSERT, because all the error checking was already done in the ecs::registry, however, they may still throw due to an error not regarding ecs.
- * Only ecs::registry has internal synchronisation on the entity and component operations (component modification is not however), which could be disabled by changing the defenitions of ECS_LOCK_* below in the config section or defining ECS_DONT_LOCK.
+ * Only ecs::registry has internal synchronisation on the entity and component operations (component modification is not however), which could be disabled by changing the definitions of ECS_LOCK_* below in the config section or defining ECS_DONT_LOCK.
  */
 /*
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -43,87 +43,42 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <string>
 #include <atomic>
 #include <functional>
-#include <thread>
 
 // ===============
 // Config section 
 // May be moved in a separate config file.
 // ===============
+/*! \cond Doxygen_Suppress */
 
+#ifdef ECS_DONT_LOCK
+#define PROFILER_DONT_LOCK
+#endif
 #include "profiler.hpp"
-/**
- * \brief Plug-in profiler.
- * The macro is being called at the beginning of every function.
- */
-#define ECS_PROFILE() PROFILER_PROFILE_IN_FILE_LOG_TYPE("log/ecs.log", profiler::JSON)
+#define ECS_PROFILE() PROFILER_PROFILE()
 
 #include <cassert>
-/**
- * \brief Assertation override.
- */
 #define ECS_ASSERT(x, msg) assert((x) && (msg))
-/**
- * \brief Throw override.
- */
 #define ECS_THROW(x) (throw (x))
-/**
- * \brief The inline override.
- */
 #define ECS_INLINE inline
 
+#define ECS_DONT_LOCK // fuck it
 
 #ifndef ECS_DONT_LOCK
-/*! \cond Doxygen_Suppress */
 #define ECS_CONCAT_DETAIL(A, B) A##B
 #define ECS_CONCAT(A, B) ECS_CONCAT_DETAIL(A, B)
-/*! \endcond */
 
-/**
- * \brief Lock the given mutex for the current scope.
- */
 #define ECS_LOCK_REGULAR(mutex) std::scoped_lock ECS_CONCAT(lock, __LINE__){mutex}
-/**
- * \brief Uniquely lock the given mutex for the current scope.
- */
 #define ECS_LOCK_UNIQUE(mutex)  std::unique_lock ECS_CONCAT(lock, __LINE__){mutex}
-/**
- * \brief Shared lock the given mutex for the current scope.
- */
 #define ECS_LOCK_SHARED(mutex)  std::shared_lock ECS_CONCAT(lock, __LINE__){mutex}
-
-/**
- * \brief Construct a scoped lock with the given mutex.
- */
-#define ECS_LOCK_REGULAR_UNNAMED(mutex) std::scoped_lock{mutex}
-/**
- * \brief Construct a unique lock with the given mutex.
- */
-#define ECS_LOCK_UNIQUE_UNNAMED(mutex)  std::unique_lock{mutex}
-/**
- * \brief Construct a shared lock with the given mutex.
- */
-#define ECS_LOCK_SHARED_UNNAMED(mutex)  std::shared_lock{mutex}
 #else
-/*! \copydoc ECS_LOCK_REGULAR */
 #define ECS_LOCK_REGULAR(mutex)
-/*! \copydoc ECS_LOCK_UNIQUE */
 #define ECS_LOCK_UNIQUE(mutex)
-/*! \copydoc ECS_LOCK_SHARED */
 #define ECS_LOCK_SHARED(mutex)
-
-/*! \copydoc ECS_LOCK_REGULAR_UNNAMED */
-#define ECS_LOCK_REGULAR_UNNAMED(mutex) std::scoped_lock<std::mutex>{}
-/*! \copydoc ECS_LOCK_UNIQUE_UNNAMED */
-#define ECS_LOCK_UNIQUE_UNNAMED(mutex)  std::unique_lock<std::shared_mutex>{}
-/*! \copydoc ECS_LOCK_SHARED_UNNAMED */
-#define ECS_LOCK_SHARED_UNNAMED(mutex)  std::shared_lock<std::shared_mutex>{}
 #endif // ECS_DONT_LOCK
 
-/**
- * \brief The implementation definition.
- * Just in case someone needs only the declarations.
- */
 #define ECS_IMPLEMENTATION
+
+/*! \endcond */
 
 // ============
 // Declaration 
@@ -136,14 +91,14 @@ namespace ecs
      */
     using entity = std::uint32_t;
     /**
-     * \brief Component ID. Used with signature
+     * \brief Component ID. Used with signature.
      */
     using ComponentID_t = std::uint8_t;
 
     /**
      * \brief Controls the maximum number of entities allowed to exist simultaneously.
      */
-    const entity MAX_ENTITIES = 5000;
+    const entity MAX_ENTITIES = 100000;
     /**
      * \brief Controls the maximum number of registered components allowed to exist simultaneously.
      */
@@ -192,13 +147,13 @@ namespace ecs
         /**
          * \brief Gets the signature of a valid entity.
          * \param entity A valid entity identifier.
-         * \return A copy of a signature, discribing the components an entity has.
+         * \return A copy of a signature, describing the components an entity has.
          */
         ecs::signature getSignature(entity const &entity) const;
         /**
          * \brief Gets the signature of a valid entity.
          * \param entity A valid entity identifier.
-         * \return A signature, discribing the components an entity has.
+         * \return A signature, describing the components an entity has.
          */
         ecs::signature &getSignature(entity const &entity);
 
@@ -214,6 +169,11 @@ namespace ecs
          * \return True if the identifier is valid, false otherwise.
          */
         bool valid(entity const &entity) const;
+
+        /**
+         * \return True if next createEntity call will produce a valid entity, false otherwise,
+         */
+        bool nextEntityValid() const;
     };
 
     /**
@@ -231,7 +191,7 @@ namespace ecs
     };
 
     /**
-     * \brief Stores components of entities of a specific type as a sparce set.
+     * \brief Stores components of entities of a specific type as a sparse set.
      * @tparam component_t The type of stored components.
      */
     template <typename component_t>
@@ -245,9 +205,17 @@ namespace ecs
         /**
          * \brief Inserts a component to an entity.
          * \param entity A valid entity identifier.
-         * \param component A rvalue reference to the component to move.
+         * \param component A reference to the component to move.
          */
-        void insert(entity const &entity, component_t &&component);
+        void insert(entity const &entity, component_t const &component);
+
+        /**
+         * \brief The container is extended by inserting a new element at entity position. This new element is constructed in place using args as the arguments for its construction.
+         * \param entity A valid entity identifier.
+         * \param args Arguments forwarded to construct the new element.
+         */
+        template <class... Args>
+        void emplace(entity const &entity, Args&&... args);
 
         /**
          * \brief Removes a component of an entity.
@@ -257,6 +225,7 @@ namespace ecs
 
         /**
          * \brief Gets a component of an entity.
+         * Not synchronized!
          * \param entity A valid entity identifier.
          * \tparam component_t The component type.
          * \return A component lvalue reference.
@@ -265,19 +234,19 @@ namespace ecs
         /**
          * \copydoc get
          */
-        component_t &lock(entity const &entity);
+        component_t &get(entity const &entity);
 
         /**
-         * \brief Gets a component of an entity.
-         * \param entity A valid entity identifier.
+         * \brief Gets components of a specified type.
+         * Not synchronized!
          * \tparam component_t The component type.
          * \return A component lvalue reference.
          */
-        std::vector<component_t> const &getComponents(entity const &entity) const;
+        std::vector<component_t> const &getComponents() const;
         /**
          * \copydoc getComponents
          */
-        std::vector<component_t> &lockComponents(entity const &entity);
+        std::vector<component_t> &getComponents();
 
         /**
          * \brief Notify the array that the entity is destroyed.
@@ -321,7 +290,15 @@ namespace ecs
          * \tparam component_t A component type.
          */
         template <typename component_t> 
-        void add(entity const &entity, component_t &&component);
+        void add(entity const &entity, component_t const &component);
+
+        /**
+         * \brief Emplaces a component to a valid entity.
+         * \param entity A valid entity identifier.
+         * \param args Arguments forwarded to construct the new component.
+         */
+        template <typename component_t, class... Args>
+        void emplace(entity const &entity, Args&&... args);
 
         /**
          * \brief Removes component from an entity.
@@ -333,26 +310,19 @@ namespace ecs
 
         /**
          * \brief Gets a component of an entity.
+         * Not synchronized!
          * \param entity A valid entity identifier.
          * \tparam component_t The component type.
          * \return A component lvalue reference.
          */
         template <typename component_t> 
-        component_t &lock(entity const &entity);
+        component_t &get(entity const &entity);
 
         /**
-         * \copydoc lock
+         * \copydoc get
          */
         template <typename component_t> 
         component_t const &get(entity const &entity) const;
-
-        /**
-         * \brief Get the per-component-type mutex.
-         * \tparam component_t The component type.
-         * \return The underlying mutex.
-         */
-        template <typename component_t> 
-        std::shared_mutex &getMutex() const;
 
         /**
          * \brief Notify component arrays that the entity is destroyed.
@@ -374,9 +344,9 @@ namespace ecs
      */
     template<typename... Type>
     struct type_list {
-        /*! @brief Type list type. */
+        /*! \brief Type list type. */
         using type = type_list;
-        /*! @brief Compile-time number of elements in the type list. */
+        /*! \brief Compile-time number of elements in the type list. */
         static constexpr auto size = sizeof...(Type);
     };
     /**
@@ -428,20 +398,17 @@ namespace ecs
     {
     private:
         ecs::entity_manager m_entityManager;
-        // ugly fix for lazy component registration
+        // ugly fix for lazy component registration.
         mutable ecs::component_manager m_componentManager;
 
         std::vector<ecs::system> m_systems;
 
         /*
-        lock order: m_entitiesMutex, m_signaturesMutex, m_componentsMutex
+        lock order: m_entitiesMutex, m_signaturesMutex, m_componentsMutex.
          */
         mutable std::shared_mutex m_entitiesMutex;
         mutable std::shared_mutex m_signaturesMutex;
         mutable std::shared_mutex m_componentsMutex;
-
-        template<typename... Include, typename... Exclude>
-        std::vector<ecs::entity> getView(exclude_t<Exclude...> toExclude) const;
     public:
         /**
          * \copydoc ecs::entity_manager::valid
@@ -458,7 +425,7 @@ namespace ecs
 
         /**
          * \brief Checks if a valid entity has a component.
-         * \param entity A valid enitiy identifier.
+         * \param entity A valid entity identifier.
          * \tparam component_t The component type.
          * \throws std::invalid_argument if the entity is not a valid identifier.
          * \return True if the entity has the component, false otherwise.
@@ -467,23 +434,23 @@ namespace ecs
 
         /**
          * \brief Gets a component from a a valid entity.
-         * \param entity A valid enitiy identifier.
+         * \param entity A valid entity identifier.
          * \tparam component_t The component type.
          * \throws std::invalid_argument if the entity is not a valid identifier.
          * \throws std::out_of_range if the component is not added.
-         * \return The locked component lvalue reference.
+         * \return The component lvalue reference.
          */
         template <typename component_t> 
-        component_t &lock(entity const &entity);
+        component_t &get(entity const &entity);
         /**
-         * \copydoc lock
+         * \copydoc get
          */
         template <typename component_t> 
         component_t const &get(entity const &entity) const;
 
         /**
          * \brief Removes a component from a valid entity.
-         * \param entity A valid enitiy identifier.
+         * \param entity A valid entity identifier.
          * \throws std::invalid_argument if the entity is not a valid identifier.
          * \throws std::out_of_range if the component is not added.
          * \tparam component_t The component type.
@@ -491,18 +458,27 @@ namespace ecs
         template <typename component_t> 
         void remove(entity const &entity);
         /**
-         * \brief Adds a component from a valid entity.
-         * \param entity A valid enitiy identifier.
+         * \brief Adds a component to a valid entity.
+         * \param entity A valid entity identifier.
          * \param component An optional component value to move.
          * \throws std::invalid_argument if the entity is not a valid identifier.
          * \throws std::invalid_argument if the component is already added.
          * \tparam component_t The component type.
          */
         template <typename component_t> 
-        void add(entity const &entity, component_t &&component = {});
+        void add(entity const &entity, component_t const &component = {});
+        
+        /**
+         * \copydoc ecs::component_manager::emplace
+         * \throws std::invalid_argument if the entity is not a valid identifier.
+         * \throws std::invalid_argument if the component is already added.
+         */
+        template <typename component_t, class... Args>
+        void emplace(entity const &entity, Args&&... args);
 
         /**
          * \brief Creates entity with optional components.
+         * \throws std::length_error If the next entity is invalid. Perhaps too many entities?
          * \tparam Components_t Components (optional).
          * \return Unique valid entity id managed by entity_manager.
          */
@@ -518,7 +494,7 @@ namespace ecs
 
         /**
          * \brief Destroys an entity and its components.
-         * \param entity A valid enitiy identifier.
+         * \param entity A valid entity identifier.
          * \throws std::invalid_argument if the entity is not a valid identifier.
          */
         void destroy(ecs::entity const &entity);
@@ -528,17 +504,11 @@ namespace ecs
          * \tparam Type Type of element used to construct the view.
          * \tparam Other Other types of elements used to construct the view.
          * \tparam Exclude Types of elements used to filter the view.
-         * \param toExclude The type list used to deduce Exclude varidatic template argument.
-         * \return A newly created view.
+         * \param toExclude The type list used to deduce Exclude variadic template argument.
+         * \return A view on entities that are valid at the time of calling this member function and contain given included components and do not contain excluded ones at the time of calling this member function.
          */
         template<typename Type, typename... Other, typename... Exclude>
-        ecs::view<std::shared_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>> view(exclude_t<Exclude...> toExclude = exclude_t{}) const;
-
-        /**
-         * \copydoc view
-         */
-        template<typename Type, typename... Other, typename... Exclude>
-        ecs::view<std::unique_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>> view(exclude_t<Exclude...> toExclude = exclude_t{});
+        std::vector<ecs::entity> view(exclude_t<Exclude...> toExclude = exclude_t{}) const;
 
         /**
          * \brief Get entities of this registry.
@@ -559,9 +529,19 @@ namespace ecs
         ComponentID_t getComponentID();
 
         /**
+         * \brief Get entities mutex in case external synchronisation is needed.
+         */
+        std::shared_mutex &getEntitiesMutex() const;
+
+        /**
+         * \brief Get components mutex in case external synchronisation is needed.
+         */
+        std::shared_mutex &getComponentsMutex() const;
+
+        /**
          * \return Systems of this registry.
          */
-        std::vector<ecs::system> &getSystems();
+        std::vector<ecs::system> &systems();
 
         /**
          * \brief Execute the system groups.
@@ -587,7 +567,7 @@ ECS_INLINE ecs::entity_manager::entity_manager()
 ECS_INLINE ecs::entity ecs::entity_manager::createEntity(signature signature)
 {
     ECS_PROFILE();
-    ECS_ASSERT(!m_availableEntityIDs.empty(), "too many entities!");
+    ECS_ASSERT(nextEntityValid(), "too many entities!");
 
     entity entity = m_availableEntityIDs.front();
     m_availableEntityIDs.pop();
@@ -604,51 +584,61 @@ ECS_INLINE void ecs::entity_manager::destroyEntity(entity const &entity)
     --m_livingEntitiesCount;
     m_availableEntityIDs.push(entity);
     m_entities.erase(entity);
-    m_signatures[entity].reset();
+    m_signatures[entity-1].reset();
 }
 ECS_INLINE void ecs::entity_manager::setSignature(entity const &entity, signature signature)
 {
     ECS_PROFILE();
     ECS_ASSERT(valid(entity), "invalid entity identifier!");
-    m_signatures[entity] = signature;
+    m_signatures[entity-1] = signature;
 }
 ECS_INLINE ecs::signature ecs::entity_manager::getSignature(entity const &entity) const
 {
     ECS_PROFILE();
     ECS_ASSERT(valid(entity), "invalid entity identifier!");
     
-    return m_signatures[entity];
+    return m_signatures[entity-1];
 }
 ECS_INLINE ecs::signature &ecs::entity_manager::getSignature(entity const &entity)
 {
     ECS_PROFILE();
     ECS_ASSERT(valid(entity), "invalid entity identifier!");
 
-    return m_signatures[entity];
+    return m_signatures[entity-1];
 }
 ECS_INLINE bool ecs::entity_manager::valid(entity const &entity) const
 {
     ECS_PROFILE();
     return 1 <= entity && entity <= MAX_ENTITIES && m_entities.find(entity) != m_entities.end();
 }
-ECS_INLINE std::vector<ecs::entity> ecs::entity_manager::getEntities() const 
+ECS_INLINE bool ecs::entity_manager::nextEntityValid() const
+{
+    ECS_PROFILE();
+    return !m_availableEntityIDs.empty();
+}
+ECS_INLINE std::vector<ecs::entity> ecs::entity_manager::getEntities() const
 {
     ECS_PROFILE();
     return std::vector<ecs::entity>{m_entities.begin(), m_entities.end()};
 } 
 
 template <typename component_t>
-ECS_INLINE void ecs::component_array<component_t>::insert(entity const &entity, component_t &&component)
+template <class... Args>
+ECS_INLINE void ecs::component_array<component_t>::emplace(entity const &entity, Args &&...args)
 {
     ECS_PROFILE();
     ECS_ASSERT(m_entityToIndex.find(entity) == m_entityToIndex.end(), "component added to the same entity more than once!");
 
-    ECS_LOCK_UNIQUE(m_componentMutex);
-
     size_t index = m_components.size();
     m_entityToIndex[entity] = index;
     m_indexToEntity[index] = entity;
-    m_components.emplace_back(std::move(component));
+    m_components.emplace_back(std::forward<Args>(args)...);
+}
+template <typename component_t>
+ECS_INLINE void ecs::component_array<component_t>::insert(entity const &entity, component_t const &component)
+{
+    ECS_PROFILE();
+    emplace(entity, component);
 }
 template <typename component_t>
 ECS_INLINE void ecs::component_array<component_t>::remove(entity const &entity)
@@ -656,8 +646,6 @@ ECS_INLINE void ecs::component_array<component_t>::remove(entity const &entity)
     ECS_PROFILE();
     ECS_ASSERT(m_entityToIndex.find(entity) != m_entityToIndex.end(), "removing non-existing component");
 
-    ECS_LOCK_UNIQUE(m_componentMutex);
-    
     size_t removedEntityIndex = m_entityToIndex[entity];
     size_t lastEntityIndex = m_components.size() - 1;
 
@@ -677,11 +665,10 @@ ECS_INLINE component_t const &ecs::component_array<component_t>::get(entity cons
     ECS_PROFILE();
     ECS_ASSERT(m_entityToIndex.find(entity) != m_entityToIndex.end(), "retrieving non-existent component");
 
-    auto lock = ECS_LOCK_SHARED_UNNAMED(m_componentMutex);
-    return component_t const &{m_components[m_entityToIndex.at(entity)], std::move(lock)};
+    return m_components[m_entityToIndex.at(entity)];
 }
 template <typename component_t>
-ECS_INLINE component_t &ecs::component_array<component_t>::lock(entity const &entity)
+ECS_INLINE component_t &ecs::component_array<component_t>::get(entity const &entity)
 {
     ECS_PROFILE();
     ECS_ASSERT(m_entityToIndex.find(entity) != m_entityToIndex.end(), "retrieving non-existent component");
@@ -689,18 +676,16 @@ ECS_INLINE component_t &ecs::component_array<component_t>::lock(entity const &en
     return m_components[m_entityToIndex.at(entity)];
 }
 template <typename component_t>
-ECS_INLINE std::vector<component_t> const &ecs::component_array<component_t>::getComponents(entity const &entity) const
+ECS_INLINE std::vector<component_t> const &ecs::component_array<component_t>::getComponents() const
 {
     ECS_PROFILE();
-    auto lock = ECS_LOCK_SHARED_UNNAMED(m_componentMutex);
-    return ecs::shared_locked<std::vector<component_t> const &>{m_components, std::move(lock)};
+    return m_components;
 }
 template <typename component_t>
-ECS_INLINE std::vector<component_t> &ecs::component_array<component_t>::lockComponents(entity const &entity)
+ECS_INLINE std::vector<component_t> &ecs::component_array<component_t>::getComponents()
 {
     ECS_PROFILE();
-    auto lock = ECS_LOCK_UNIQUE_UNNAMED(m_componentMutex);
-    return ecs::unique_locked<std::vector<component_t> &>{m_components, std::move(lock)};
+    return m_components;
 }
 template <typename component_t>
 ECS_INLINE void ecs::component_array<component_t>::onEntityDestroyed(entity const &entity)
@@ -710,20 +695,15 @@ ECS_INLINE void ecs::component_array<component_t>::onEntityDestroyed(entity cons
         remove(entity);
     }   
 }
-template <typename component_t>
-ECS_INLINE std::shared_mutex &ecs::component_array<component_t>::getMutex() const
-{
-    return m_componentMutex;
-}
 
 template <typename component_t>
 ECS_INLINE void ecs::component_manager::registerComponent()
 {
     ECS_PROFILE();
     auto name = std::type_index{typeid(component_t)};
-    ECS_ASSERT(m_nextID < MAX_COMPONENTS, "too many components registred!");
     if(m_componentIDs.find(name) != m_componentIDs.end())
         return;
+    ECS_ASSERT(m_nextID < MAX_COMPONENTS, "too many components registered!");
     m_componentIDs.insert({name, m_nextID});
     m_componentArrays.insert({name, std::make_unique<component_array<component_t>>()});
 
@@ -738,10 +718,10 @@ ECS_INLINE ecs::ComponentID_t ecs::component_manager::getComponentID() const
     return m_componentIDs.at(name);
 }
 template <typename component_t>
-ECS_INLINE void ecs::component_manager::add(entity const &entity, component_t &&component)
+ECS_INLINE void ecs::component_manager::add(entity const &entity, component_t const &component)
 {
     ECS_PROFILE();
-    getComponentArray<component_t>()->insert(entity, std::forward<component_t>(component));
+    getComponentArray<component_t>()->insert(entity, component);
 }
 template <typename component_t>
 ECS_INLINE void ecs::component_manager::remove(entity const &entity)
@@ -750,10 +730,10 @@ ECS_INLINE void ecs::component_manager::remove(entity const &entity)
     getComponentArray<component_t>()->remove(entity);
 }
 template <typename component_t>
-ECS_INLINE component_t &ecs::component_manager::lock(entity const &entity)
+ECS_INLINE component_t &ecs::component_manager::get(entity const &entity)
 {
     ECS_PROFILE();
-    return getComponentArray<component_t>()->lock(entity);
+    return getComponentArray<component_t>()->get(entity);
 }
 template <typename component_t>
 ECS_INLINE component_t const &ecs::component_manager::get(entity const &entity) const
@@ -777,11 +757,6 @@ ECS_INLINE ecs::component_array<component_t> const *ecs::component_manager::getC
     ECS_ASSERT(m_componentIDs.find(name) != m_componentIDs.end(), "component not registered before use");
     return static_cast<component_array<component_t> const *>(m_componentArrays.at(name).get());
 }
-template <typename component_t>
-ECS_INLINE std::shared_mutex &ecs::component_manager::getMutex() const
-{
-    return getComponentArray<component_t>()->getMutex();
-}
 ECS_INLINE void ecs::component_manager::entityDestroyed(entity const &entity) const
 {
     ECS_PROFILE();
@@ -789,33 +764,11 @@ ECS_INLINE void ecs::component_manager::entityDestroyed(entity const &entity) co
         componentArray->onEntityDestroyed(entity);
     }
 }
-
-template <typename... Included, typename... Excluded>
-ECS_INLINE ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::view(std::vector<ecs::entity> &&entities) : m_entities(std::move(entities)) {}
-template <typename... Included, typename... Excluded>
-ECS_INLINE std::vector<ecs::entity> const &ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::get() const
+template <typename component_t, class... Args>
+ECS_INLINE void ecs::component_manager::emplace(entity const &entity, Args&&... args)
 {
     ECS_PROFILE();
-    return m_entities.get();
-}
-template <typename... Included, typename... Excluded>
-ECS_INLINE typename ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::const_iterator ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::begin() const 
-{ 
-    ECS_PROFILE();
-    return m_entities->cbegin(); 
-}
-template <typename... Included, typename... Excluded>
-typename ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::const_iterator ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::end() const 
-{ 
-    ECS_PROFILE();
-    return m_entities->cend(); 
-}
-
-template <typename... Included, typename... Excluded>
-ECS_INLINE std::vector<ecs::entity> const *ecs::view<ecs::include_t<Included...>, ecs::exclude_t<Excluded...>>::operator->() const
-{
-    ECS_PROFILE();
-    return &m_entities.get();
+    getComponentArray<component_t>()->emplace(entity, std::forward<Args>(args)...);
 }
 
 template <typename... Components_t>
@@ -840,7 +793,7 @@ ECS_INLINE bool ecs::registry::has(entity const &entity) const
     return m_entityManager.getSignature(entity).test(m_componentManager.getComponentID<component_t>()); 
 }
 template <typename component_t>
-ECS_INLINE component_t &ecs::registry::lock(entity const &entity) 
+ECS_INLINE component_t &ecs::registry::get(entity const &entity) 
 {
     ECS_PROFILE();
     if(!valid(entity)) 
@@ -848,7 +801,7 @@ ECS_INLINE component_t &ecs::registry::lock(entity const &entity)
     if(!has<component_t>(entity)) 
         ECS_THROW(std::out_of_range{"component to get is not added!"});
     
-    return m_componentManager.lock<component_t>(entity);
+    return m_componentManager.get<component_t>(entity);
 }
 template <typename component_t>
 ECS_INLINE component_t const &ecs::registry::get(entity const &entity) const
@@ -865,6 +818,8 @@ template <typename... Components_t>
 ECS_INLINE ecs::entity ecs::registry::create()
 {
     ECS_PROFILE();
+    if(!m_entityManager.nextEntityValid())
+        throw std::length_error{"Invalid entity creation. (too many entities?)"};
     
     ECS_LOCK_UNIQUE(m_entitiesMutex);
     ECS_LOCK_UNIQUE(m_signaturesMutex);
@@ -883,6 +838,8 @@ template <typename... Components_t>
 ECS_INLINE ecs::entity ecs::registry::create(Components_t &&...components)
 {
     ECS_PROFILE();
+    if(!m_entityManager.nextEntityValid())
+        throw std::length_error{"Invalid entity creation. (too many entities?)"};
     
     ECS_LOCK_UNIQUE(m_entitiesMutex);
     ECS_LOCK_UNIQUE(m_signaturesMutex);
@@ -911,19 +868,25 @@ ECS_INLINE void ecs::registry::remove(entity const &entity)
     m_entityManager.getSignature(entity).set(m_componentManager.getComponentID<component_t>(), false);
     m_componentManager.remove<component_t>(entity);
 }
-template <typename component_t>
-ECS_INLINE void ecs::registry::add(entity const &entity, component_t &&component)
+template <typename component_t, class... Args>
+ECS_INLINE void ecs::registry::emplace(entity const &entity, Args&&... args)
 {
     ECS_PROFILE();
     if(!valid(entity)) 
         ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
     if(has<component_t>(entity)) 
-        ECS_THROW(std::invalid_argument{"component to add already added!"});
-        
+        ECS_THROW(std::invalid_argument{"component to emplace already added!"});
+
     ECS_LOCK_UNIQUE(m_signaturesMutex);
     ECS_LOCK_UNIQUE(m_componentsMutex);
     m_entityManager.getSignature(entity).set(m_componentManager.getComponentID<component_t>(), true);
-    m_componentManager.add<component_t>(entity, std::forward<component_t>(component));
+    m_componentManager.emplace<component_t>(entity, std::forward<Args>(args)...);
+}
+template <typename component_t>
+ECS_INLINE void ecs::registry::add(entity const &entity, component_t const &component)
+{
+    ECS_PROFILE();
+    emplace<component_t>(entity, component);
 }
 ECS_INLINE bool ecs::registry::valid(entity const &entity) const
 {
@@ -950,16 +913,23 @@ ECS_INLINE std::vector<ecs::entity> ecs::registry::getEntities() const
     ECS_LOCK_SHARED(m_entitiesMutex);
     return m_entityManager.getEntities();
 }
-template <typename... Include, typename... Exclude>
-ECS_INLINE std::vector<ecs::entity> ecs::registry::getView(exclude_t<Exclude...> toExclude) const
+template<typename Type, typename... Other, typename... Exclude>
+ECS_INLINE std::vector<ecs::entity> ecs::registry::view(exclude_t<Exclude...>) const
 {
     ECS_PROFILE();
 
+    ECS_LOCK_SHARED(m_entitiesMutex);
+
     auto entities = m_entityManager.getEntities();
-    (m_componentManager.registerComponent<Include>(), ...);
+
+    ECS_LOCK_SHARED(m_signaturesMutex);
+    ECS_LOCK_UNIQUE(m_componentsMutex);
+    m_componentManager.registerComponent<Type>();
+    (m_componentManager.registerComponent<Other>(), ...);
     (m_componentManager.registerComponent<Exclude>(), ...);
     ecs::signature required;
-    (required.set(m_componentManager.getComponentID<Include>()), ...);
+    required.set(m_componentManager.getComponentID<Type>());
+    (required.set(m_componentManager.getComponentID<Other>()), ...);
     ecs::signature excluded;
     (excluded.set(m_componentManager.getComponentID<Exclude>()), ...);
 
@@ -975,21 +945,6 @@ ECS_INLINE std::vector<ecs::entity> ecs::registry::getView(exclude_t<Exclude...>
 
     return result;
 }
-template<typename Type, typename... Other, typename... Exclude>
-ECS_INLINE ecs::view<std::shared_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>> ecs::registry::view(exclude_t<Exclude...> toExclude) const
-{
-    using view_type = ecs::view<ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>>;
-    ECS_PROFILE();
-    auto entitiesLock = ECS_LOCK_SHARED_UNNAMED(m_entitiesMutex);
-    ECS_LOCK_SHARED(m_signaturesMutex);
-    ECS_LOCK_SHARED(m_componentsMutex);
-    return view_type{getView<Type, Other...>(toExclude)};
-}
-template<typename Type, typename... Other, typename... Exclude>
-ECS_INLINE ecs::view<std::unique_lock<std::shared_mutex>, ecs::include_t<Type, Other...>, ecs::exclude_t<Exclude...>> ecs::registry::view(exclude_t<Exclude...> toExclude)
-{
-    // TODO
-}
 ECS_INLINE ecs::signature ecs::registry::getSignature(entity const &entity) const
 {
     ECS_PROFILE();
@@ -999,20 +954,31 @@ ECS_INLINE ecs::signature ecs::registry::getSignature(entity const &entity) cons
     ECS_LOCK_SHARED(m_signaturesMutex);
     return m_entityManager.getSignature(entity);
 }
-ECS_INLINE std::vector<ecs::system> &ecs::registry::getSystems()
+ECS_INLINE std::shared_mutex &ecs::registry::getEntitiesMutex() const
 {
+    ECS_PROFILE();
+    return m_entitiesMutex;
+}
+ECS_INLINE std::shared_mutex &ecs::registry::getComponentsMutex() const
+{
+    ECS_PROFILE();
+    return m_componentsMutex;
+}
+ECS_INLINE std::vector<ecs::system> &ecs::registry::systems()
+{
+    ECS_PROFILE();
     return m_systems;
 }
 ECS_INLINE void ecs::registry::update()
 {
-    for(auto &system : m_systems)
+    ECS_PROFILE();
+    for(auto const &system : m_systems)
         system.update(*this);
 }
 template <typename component_t>
 ECS_INLINE ecs::ComponentID_t ecs::registry::getComponentID()
 {
     ECS_PROFILE();
-    
     ECS_LOCK_REGULAR(m_componentsMutex);    
     m_componentManager.registerComponent<component_t>();
     return m_componentManager.getComponentID<component_t>();

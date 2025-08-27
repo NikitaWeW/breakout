@@ -1,24 +1,35 @@
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/benchmark/catch_benchmark.hpp"
 #include "core/ecs.hpp"
-#include <thread>
+#include "core/ecs.hpp" // check if there are no odr issues
+// #include <thread>
 #include <vector>
-#include <atomic>
-#include <mutex>
-#include "entt/entt.hpp"
 
 /*! \cond Doxygen_Suppress */
 
-struct Position { float  x = 0,  y = 0; };
-struct Velocity { float dx = 0, dy = 0; };
-struct Health   { float hp = 100; };
+struct Position {
+    float x = 0, y = 0;
+    Position() = default;
+    Position(float _x, float _y) : x(_x), y(_y) {}
+    bool operator==(Position const& o) const { return x == o.x && y == o.y; }
+};
 
-bool operator==(Position const &first, Position const &second)
-{
-    return first.x == second.x && first.y == second.y;
-}
+struct Velocity {
+    float dx = 0, dy = 0;
+    Velocity() = default;
+    Velocity(float _dx, float _dy) : dx(_dx), dy(_dy) {}
+    bool operator==(Velocity const& o) const { return dx == o.dx && dy == o.dy; }
+};
+
+struct Health {
+    float hp = 100;
+    Health() = default;
+    explicit Health(float _hp) : hp(_hp) {}
+    bool operator==(Health const& o) const { return hp == o.hp; }
+};
 
 TEST_CASE("Create and validate entities", "[entity]") {
+    ECS_PROFILE();
     ecs::registry reg;
 
     // Initially no entities
@@ -39,7 +50,8 @@ TEST_CASE("Create and validate entities", "[entity]") {
     REQUIRE(std::find(all.begin(), all.end(), e1) != all.end());
     REQUIRE(std::find(all.begin(), all.end(), e2) != all.end());
 }
-TEST_CASE("Add, has and get components", "[component]") {
+TEST_CASE("emplace, has and get components", "[component]") {
+    ECS_PROFILE();
     ecs::registry reg;
     auto e = reg.create<>();
 
@@ -47,27 +59,22 @@ TEST_CASE("Add, has and get components", "[component]") {
     REQUIRE_FALSE(reg.has<Position>(e));
 
     // Add and verify
-    reg.add<Position>(e, Position{1.0f, 2.0f});
+    reg.emplace<Position>(e, 1.0f, 2.0f);
     REQUIRE(reg.has<Position>(e));
 
-    // Retrieve via get (const) and lock (mutable)
-    {
-        auto constPos = reg.get<Position>(e);
-        REQUIRE(constPos->x == 1.0f);
-        REQUIRE(constPos->y == 2.0f);
-    }
+    auto const &constPos = reg.get<Position>(e);
+    REQUIRE(constPos.x == 1.0f);
+    REQUIRE(constPos.y == 2.0f);
 
-    {
-        auto mutPos = reg.lock<Position>(e);
-        mutPos->x = 5.0f;
-    }
-    REQUIRE(reg.get<Position>(e)->x == 5.0f);
+    reg.get<Position>(e).x = 5.0f;
+    REQUIRE(reg.get<Position>(e).x == 5.0f);
 }
 TEST_CASE("Remove components", "[component]") {
+    ECS_PROFILE();
     ecs::registry reg;
     auto e = reg.create<>();
 
-    reg.add<Velocity>(e, Velocity{0.1f, 0.2f});
+    reg.emplace<Velocity>(e, 0.1f, 0.2f);
     REQUIRE(reg.has<Velocity>(e));
 
     reg.remove<Velocity>(e);
@@ -77,6 +84,7 @@ TEST_CASE("Remove components", "[component]") {
     REQUIRE_THROWS_AS(reg.remove<Velocity>(e), std::out_of_range);
 }
 TEST_CASE("View entities by component signature", "[view]") {
+    ECS_PROFILE();
     ecs::registry reg;
 
     // Create 3 entities with different combos
@@ -87,25 +95,26 @@ TEST_CASE("View entities by component signature", "[view]") {
     {
         // View entities that have Position
         auto posOnly = reg.view<Position>();
-        REQUIRE(posOnly->size() == 2);
+        REQUIRE(posOnly.size() == 2);
         REQUIRE(std::find(posOnly.begin(), posOnly.end(), a) != posOnly.end());
         REQUIRE(std::find(posOnly.begin(), posOnly.end(), b) != posOnly.end());
     }
     {
         // View entities that have Position but exclude Velocity
         auto purePos = reg.view<Position>(ecs::exclude_t<Velocity>{});
-        REQUIRE(purePos->size() == 1);
-        REQUIRE(purePos->front() == a);
+        REQUIRE(purePos.size() == 1);
+        REQUIRE(purePos.front() == a);
     }
     {
         // View only Velocity
         auto velOnly = reg.view<Velocity>();
-        REQUIRE(velOnly->size() == 2);
+        REQUIRE(velOnly.size() == 2);
         REQUIRE(std::find(velOnly.begin(), velOnly.end(), b) != velOnly.end());
         REQUIRE(std::find(velOnly.begin(), velOnly.end(), c) != velOnly.end());
     }
 }
 TEST_CASE("Destroy entity and its components", "[destroy]") {
+    ECS_PROFILE();
     ecs::registry reg;
     auto e = reg.create<Position, Velocity>();
 
@@ -121,6 +130,7 @@ TEST_CASE("Destroy entity and its components", "[destroy]") {
     REQUIRE_THROWS_AS(reg.has<Position>(e), std::invalid_argument);
 }
 TEST_CASE("Invalid handles and double-add errors", "[errors]") {
+    ECS_PROFILE();
     ecs::registry reg;
     ecs::entity bad = ecs::MAX_ENTITIES + 10;
 
@@ -133,8 +143,8 @@ TEST_CASE("Invalid handles and double-add errors", "[errors]") {
     reg.add<Position>(e, Position{});
     REQUIRE_THROWS_AS(reg.add<Position>(e, Position{}), std::invalid_argument);
 }
-
 TEST_CASE("Basic entity creation and destruction", "[entity]") {
+    ECS_PROFILE();
     ecs::registry registry;
 
     SECTION("Create and validate") {
@@ -153,8 +163,8 @@ TEST_CASE("Basic entity creation and destruction", "[entity]") {
         REQUIRE_THROWS_AS(registry.destroy(9999u), std::invalid_argument);
     }
 }
-
 TEST_CASE("Component add / remove / access", "[component]") {
+    ECS_PROFILE();
     ecs::registry registry;
     auto e = registry.create<>();
     
@@ -169,20 +179,20 @@ TEST_CASE("Component add / remove / access", "[component]") {
         {
             // shared get
             auto p_read = registry.get<Position>(e);
-            REQUIRE( p_read->x == 1.5f );
-            REQUIRE( p_read->y == 2.5f );
+            REQUIRE( p_read.x == 1.5f );
+            REQUIRE( p_read.y == 2.5f );
         }
 
         {
             // unique lock and modify
-            auto p_write = registry.lock<Position>(e);
-            p_write->x = 9.0f;
-            p_write->y = -3.0f;
+            auto &p_write = registry.get<Position>(e);
+            p_write.x = 9.0f;
+            p_write.y = -3.0f;
         }
         {
             auto p_read = registry.get<Position>(e);
-            REQUIRE( p_read->x == 9.0f );
-            REQUIRE( p_read->y == -3.0f );
+            REQUIRE( p_read.x == 9.0f );
+            REQUIRE( p_read.y == -3.0f );
         }
 
         // remove and recheck
@@ -202,12 +212,12 @@ TEST_CASE("Component add / remove / access", "[component]") {
 
     SECTION("Access on invalid entity throws") {
         REQUIRE_THROWS_AS(registry.get<Position>(999u), std::invalid_argument);
-        REQUIRE_THROWS_AS(registry.lock<Position>(999u), std::invalid_argument);
+        REQUIRE_THROWS_AS(registry.get<Position>(999u), std::invalid_argument);
         REQUIRE_THROWS_AS(registry.has<Position>(999u), std::invalid_argument);
     }
 }
-
 TEST_CASE("Views: include and exclude semantics", "[view]") {
+    ECS_PROFILE();
     ecs::registry registry;
 
     auto e1 = registry.create<Position>(Position{1,1});
@@ -217,36 +227,222 @@ TEST_CASE("Views: include and exclude semantics", "[view]") {
 
     SECTION("Include only Position") {
         auto viewPos = registry.view<Position>();
-        auto entities = viewPos.get();
-        std::vector<ecs::entity> got(entities.begin(), entities.end());
+        std::vector<ecs::entity> got(viewPos.begin(), viewPos.end());
         std::sort(got.begin(), got.end());
         REQUIRE( got == std::vector<ecs::entity>{e1, e2, e3} );
     }
 
     SECTION("Include Position, exclude Velocity") {
         auto viewPosNoVel = registry.view<Position>(ecs::exclude_t<Velocity>{});
-        auto entities = viewPosNoVel.get();
-        std::vector<ecs::entity> got(entities.begin(), entities.end());
+        std::vector<ecs::entity> got(viewPosNoVel.begin(), viewPosNoVel.end());
         std::sort(got.begin(), got.end());
         REQUIRE( got == std::vector<ecs::entity>{e1, e2} );
     }
 
     SECTION("Include both Position and Velocity") {
         auto viewPosVel = registry.view<Position, Velocity>();
-        auto entities = viewPosVel.get();
-        REQUIRE( entities.size() == 1 );
-        REQUIRE( entities.front() == e3 );
+        REQUIRE( viewPosVel.size() == 1 );
+        REQUIRE( viewPosVel.front() == e3 );
     }
 
     SECTION("Exclude Position only Velocity left") {
         auto viewVelOnly = registry.view<Velocity>(ecs::exclude_t<Position>{});
-        auto entities = viewVelOnly.get();
-        REQUIRE( entities.size() == 1 );
-        REQUIRE( entities.front() == e4 );
+        REQUIRE( viewVelOnly.size() == 1 );
+        REQUIRE( viewVelOnly.front() == e4 );
     }
 }
+TEST_CASE("EntityManager: create, destroy, valid, signature", "[entity_manager]") {
+    ECS_PROFILE();
+    ecs::entity_manager em;
 
+    // Initially no entities exist
+    REQUIRE_FALSE(em.valid(1));
+
+    // Create one entity
+    auto e1 = em.createEntity();
+    REQUIRE(e1 >= 1);
+    REQUIRE(em.valid(e1));
+
+    // Signature should be empty by default
+    auto sig0 = em.getSignature(e1);
+    for (size_t i = 0; i < sig0.size(); ++i)
+        REQUIRE_FALSE(sig0.test(i));
+
+    // Set and get signature
+    ecs::signature s2;
+    s2.set(3).set(5);
+    em.setSignature(e1, s2);
+    auto got = em.getSignature(e1);
+    REQUIRE(got.test(3));
+    REQUIRE(got.test(5));
+    REQUIRE_FALSE(got.test(4));
+
+    // Destroying makes it invalid
+    em.destroyEntity(e1);
+    REQUIRE_FALSE(em.valid(e1));
+}
+TEST_CASE("ComponentManager: register & id uniqueness", "[component_manager]") {
+    ECS_PROFILE();
+    ecs::component_manager cm;
+
+    // Register two component types
+    cm.registerComponent<Position>();
+    cm.registerComponent<Velocity>();
+
+    auto pid = cm.getComponentID<Position>();
+    auto vid = cm.getComponentID<Velocity>();
+    REQUIRE(pid != vid);
+
+    // Re-registering Position doesn't change its ID
+    cm.registerComponent<Position>();
+    REQUIRE(cm.getComponentID<Position>() == pid);
+}
+TEST_CASE("Registry basic add/get/remove/has semantics", "[registry][components]") {
+    ECS_PROFILE();
+    ecs::registry reg;
+
+    // Invalid entity queries
+    REQUIRE_THROWS_AS(reg.has<Position>(0), std::invalid_argument);
+    REQUIRE_THROWS_AS(reg.get<Position>(0), std::invalid_argument);
+    REQUIRE_THROWS_AS(reg.remove<Position>(0), std::invalid_argument);
+    REQUIRE_THROWS_AS(reg.add<Position>(0, Position{}), std::invalid_argument);
+
+    // Create entity with no components
+    auto e = reg.create<>();
+    REQUIRE(reg.valid(e));
+    REQUIRE_FALSE(reg.has<Position>(e));
+
+    // get() on missing component
+    REQUIRE_THROWS_AS(reg.get<Position>(e), std::out_of_range);
+
+    // add a component
+    Position p{10, 20};
+    reg.add<Position>(e, p);
+    REQUIRE(reg.has<Position>(e));
+    REQUIRE(reg.get<Position>(e) == p);
+
+    // add same component again → invalid_argument
+    REQUIRE_THROWS_AS(reg.add<Position>(e, Position{}), std::invalid_argument);
+
+    // remove component
+    reg.remove<Position>(e);
+    REQUIRE_FALSE(reg.has<Position>(e));
+
+    // remove missing → out_of_range
+    REQUIRE_THROWS_AS(reg.remove<Position>(e), std::out_of_range);
+}
+TEST_CASE("Registry create with initial components", "[registry][create]") {
+    ECS_PROFILE();
+    ecs::registry reg;
+
+    auto e = reg.create<Position, Velocity>({5, 5}, {1, -1});
+    REQUIRE(reg.has<Position>(e));
+    REQUIRE(reg.has<Velocity>(e));
+    REQUIRE(reg.get<Position>(e) == Position{5,5});
+    REQUIRE(reg.get<Velocity>(e) == Velocity{1,-1});
+}
+TEST_CASE("Registry destroy cleans up components and signature", "[registry][destroy]") {
+    ECS_PROFILE();
+    ecs::registry reg;
+    auto e = reg.create<Position, Health>({1,2}, Health{50});
+
+    REQUIRE(reg.has<Position>(e));
+    REQUIRE(reg.has<Health>(e));
+
+    reg.destroy(e);
+    REQUIRE_FALSE(reg.valid(e));
+
+    // After destruction, queries throw invalid_argument
+    REQUIRE_THROWS_AS(reg.has<Position>(e), std::invalid_argument);
+    REQUIRE_THROWS_AS(reg.get<Position>(e), std::invalid_argument);
+    REQUIRE_THROWS_AS(reg.remove<Health>(e), std::invalid_argument);
+}
+TEST_CASE("Registry view with includes and excludes", "[registry][view]") {
+    ECS_PROFILE();
+    ecs::registry reg;
+
+    // Create 4 entities with various component combos
+    // e1: Position only
+    auto e1 = reg.create<Position>({0,0});
+    // e2: Position + Velocity
+    auto e2 = reg.create<Position, Velocity>({1,1}, {2,2});
+    // e3: Velocity only
+    auto e3 = reg.create<Velocity>({-1,0});
+    // e4: Position + Health
+    auto e4 = reg.create<Position, Health>({5,5}, Health{80});
+
+    // View entities with Position (include)
+    auto posOnly = reg.view<Position>();
+    REQUIRE(std::find(posOnly.begin(), posOnly.end(), e1) != posOnly.end());
+    REQUIRE(std::find(posOnly.begin(), posOnly.end(), e2) != posOnly.end());
+    REQUIRE(std::find(posOnly.begin(), posOnly.end(), e4) != posOnly.end());
+    REQUIRE(std::find(posOnly.begin(), posOnly.end(), e3) == posOnly.end());
+
+    // View entities with Position but exclude Velocity
+    auto vExcluded = reg.view<Position>(ecs::exclude_t<Velocity>{});
+    REQUIRE(std::find(vExcluded.begin(), vExcluded.end(), e1) != vExcluded.end());
+    REQUIRE(std::find(vExcluded.begin(), vExcluded.end(), e4) != vExcluded.end());
+    REQUIRE(std::find(vExcluded.begin(), vExcluded.end(), e2) == vExcluded.end());
+
+    // View pure Velocity
+    auto velOnly = reg.view<Velocity>(ecs::exclude_t<Position>{});
+    REQUIRE(velOnly.size() == 1);
+    REQUIRE(velOnly[0] == e3);
+
+    // View with no matches
+    auto none = reg.view<Health>(ecs::exclude_t<Health>{});
+    REQUIRE(none.empty());
+}
+TEST_CASE("Registry systems processing", "[registry][systems]") {
+    ECS_PROFILE();
+    ecs::registry reg;
+
+    auto e1 = reg.create<Position, Velocity>({0,0}, {3,4});
+    auto e2 = reg.create<Position, Velocity>({5,5}, {1,-1});
+    auto e3 = reg.create<Position>({9,9});
+
+    ecs::system mover;
+    mover.read = reg.makeSignature<Position>();
+    mover.read = reg.makeSignature<Velocity>();
+    mover.write = mover.read;
+    mover.update = [](ecs::registry& r) {
+        auto entities = r.view<Position, Velocity>();
+        for (auto id : entities) {
+            auto& pos = r.get<Position>(id);
+            auto const& vel = r.get<Velocity>(id);
+            pos.x += vel.dx;
+            pos.y += vel.dy;
+        }
+    };
+    reg.systems().push_back(std::move(mover));
+
+    reg.update();
+
+    REQUIRE(reg.get<Position>(e1) == Position{3,4});
+    REQUIRE(reg.get<Position>(e2) == Position{6,4});
+    REQUIRE(reg.get<Position>(e3) == Position{9,9});
+}
+TEST_CASE("Registry getEntities reflects live entities only", "[registry][entities]") {
+    ECS_PROFILE();
+    ecs::registry reg;
+    reg.create<>();
+    auto e2 = reg.create<>();
+    reg.create<>();
+
+    auto all = reg.getEntities();
+    REQUIRE(all.size() == 3);
+    REQUIRE(std::find(all.begin(), all.end(), e2) != all.end());
+
+    reg.destroy(e2);
+
+    auto after = reg.getEntities();
+    REQUIRE(after.size() == 2);
+    REQUIRE(std::find(after.begin(), after.end(), e2) == after.end());
+}
+
+#ifndef ECS_DONT_LOCK
 TEST_CASE("Concurrent read access to the same component", "[concurrency][read]") {
+    ECS_PROFILE();
     ecs::registry registry;
     constexpr int N = 1000;
     constexpr int R = 4;
@@ -262,8 +458,8 @@ TEST_CASE("Concurrent read access to the same component", "[concurrency][read]")
         readers.emplace_back([t, &registry, &sums]() {
             float local = 0.0f;
             auto view = registry.view<Position>();
-            for(auto e : view.get())
-                local += registry.get<Position>(e)->x;
+            for(auto e : view)
+                local += registry.get<Position>(e).x;
             sums[t] = local;
         });
     }
@@ -273,8 +469,8 @@ TEST_CASE("Concurrent read access to the same component", "[concurrency][read]")
     for(int t = 0; t < R; ++t)
         REQUIRE( abs(sums[t] - static_cast<float>(N)) < 0.01 );
 }
-
 TEST_CASE("Concurrent entity creation and destruction", "[concurrency][write]") {
+    ECS_PROFILE();
     ecs::registry registry;
     constexpr int T = 4;
     constexpr int M = 500;
@@ -310,13 +506,13 @@ TEST_CASE("Concurrent entity creation and destruction", "[concurrency][write]") 
     // registry should be empty
     REQUIRE( registry.getEntities().empty() );
 }
-
 TEST_CASE("System basic usage", "[system]") {
+    ECS_PROFILE();
     ecs::registry registry;
 
     struct Input
     {
-        Velocity movementDir{0};
+        Velocity movementDir{0, 0};
     };
     struct NoMove {};
     
@@ -334,12 +530,12 @@ TEST_CASE("System basic usage", "[system]") {
         .update = [](ecs::registry &reg){
             for(auto einput : reg.view<Input>())
             {
-                auto input = reg.get<Input>(einput);
+                auto &input = reg.get<Input>(einput);
                 for(auto e : reg.view<Position>(ecs::exclude_t<NoMove>{}))
                 {
-                    auto pos = reg.lock<Position>(e);
-                    pos->x += input.get().movementDir.dx;
-                    pos->y += input.get().movementDir.dy;
+                    auto &pos = reg.get<Position>(e);
+                    pos.x += input.movementDir.dx;
+                    pos.y += input.movementDir.dy;
                 }
             }
         },
@@ -357,17 +553,18 @@ TEST_CASE("System basic usage", "[system]") {
     auto e2 = registry.create<Position>();
 
 
-    registry.getSystems().push_back(inputSystem);
-    registry.getSystems().push_back(movementSystem);
-    registry.getSystems().push_back(rendererSystem);
+    registry.systems().push_back(inputSystem);
+    registry.systems().push_back(movementSystem);
+    registry.systems().push_back(rendererSystem);
 
     registry.update();
     registry.update();
     registry.update();
 
-    REQUIRE(registry.get<Position>(e0).value() == Position{-3, 4.5});
-    REQUIRE(registry.get<Position>(e1).value() == Position{-1, 0});
-    REQUIRE(registry.get<Position>(e2).value() == Position{ 0, 3});
+    REQUIRE(registry.get<Position>(e0) == Position{-3, 4.5});
+    REQUIRE(registry.get<Position>(e1) == Position{-1, 0});
+    REQUIRE(registry.get<Position>(e2) == Position{ 0, 3});
 }
+#endif
 
 /** \endcond */
