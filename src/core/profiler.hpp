@@ -25,11 +25,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <chrono>
 #include <string>
 #include <fstream>
-#include <vector>
 #include <stdexcept>
 #include <filesystem>
 #include <mutex>
-#include <map>
+#include <future>
+#include "concurrentqueue.h"
 
 /*! \cond Doxygen_Suppress */
 
@@ -69,7 +69,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #define PROFILER_THROW(x) (throw (x))
 
 // https://www.speedscope.app/
-#define PROFILER_LOG_FILE "speedscope.json"
+#define PROFILER_LOG_FILE "log.json"
 
 /*! \endcond */
 
@@ -85,11 +85,22 @@ namespace profiler
      */
     using Timepoint_t = std::chrono::time_point<Clock_t>;
 
+    using Timestamp_t = long;
+
     /**
      * \brief The timer identifier alias.
      */
-    using id_t = unsigned long long;
+    using id_t = unsigned long;
 
+    struct Event
+    {
+        enum : unsigned char {
+            ENTER, EXIT, STOP, NONE
+        } type = NONE;
+        Timestamp_t ts;
+        id_t id;
+        std::string_view name;
+    };
 
     /**
      * \brief Used to output the profiling data to the file in a json format.
@@ -99,22 +110,24 @@ namespace profiler
     private:
         std::ostream *m_output = nullptr;
         std::fstream m_file;
-#ifndef PROFILER_DONT_LOCK
-        std::mutex m_logMutex;
-#endif
         bool m_isFirstPush = true;
+        moodycamel::ConcurrentQueue<Event> m_events;
+        std::future<void> m_writer;
 
         // format functions
         void header();
-        void open(std::string_view name, id_t id);
-        void close(std::string_view name, id_t id);
+        void print(Event const &event);
         void foot();
 
-        long timestamp() const;
+        Timestamp_t timestamp() const;
+        void startWriter();
+        void stopWriter();
     public:
         Logger() = default;
-        Logger(const Logger&) = delete;
+        explicit Logger(const Logger&) = delete;
         Logger& operator=(const Logger&) = delete;
+        explicit Logger(Logger&&) = default;
+        Logger& operator=(Logger&&) = default;
         /**
          * \brief Write to a file.
          * \param filename The path to a file to write in.
@@ -173,7 +186,7 @@ namespace profiler
         ScopedTimer() = default;
         /**
          * \param name The name of the timer. Usually the name of the function.
-         * \param logger An lvalue reference to the logger to write to.
+         * \param logger An pointer to the logger to write to.
          */
         explicit ScopedTimer(std::string_view name, Logger *logger);
         ~ScopedTimer();
@@ -186,8 +199,8 @@ namespace profiler
     };
 
     /**
-     * \brief Singleton getter to get the logger for the filename easily.
-     * \return The lvalue reference to the requested logger.
+     * \brief Singleton getter.
+     * \return The pointer to the requested logger.
      */
     inline Logger *getLogger() {
         static Logger logger{PROFILER_LOG_FILE};
@@ -195,42 +208,27 @@ namespace profiler
     }
 } // namespace profiler
 
-// ===============================================================]
-// ===============================================================]
+// ===============================================================|
+// ===============================================================|
 
 inline void profiler::Logger::header()
 {
-    *m_output << "{\n\t\"type\": \"evented\",\n\t\"name\": \"Profile\",\n\t\"unit\": \"nanoseconds\",\n\t\"events\": [";
+    *m_output << "{\n\t\"traceEvents\": [";
 }
 
-inline void profiler::Logger::open(std::string_view name, id_t id)
+inline void profiler::Logger::print(Event const &event)
 {
     if(!m_isFirstPush)
         *m_output << ',';
-
     *m_output 
     << "\n\t\t{\n"
-    << "\t\t\t\"at\":        "   << timestamp() << ",\n"
-    << "\t\t\t\"type\":      "   << "\"O\",\n"
-    << "\t\t\t\"pid\":       "   << "1,\n"
-    << "\t\t\t\"tid\":       "   << id << ",\n"
-    << "\t\t\t\"frame\":     \"" << name << "\"\n"
+    << "\t\t\t\"ts\":        "   << event.ts << ",\n"
+    << "\t\t\t\"ph\":        "   << (event.type == Event::ENTER ? "\"B\",\n" : "\"E\",\n")
+    << "\t\t\t\"tid\":       "   << event.id << ",\n"
+    << "\t\t\t\"name\":      \"" << event.name << "\"\n"
     << "\t\t}";
-}
 
-inline void profiler::Logger::close(std::string_view name, id_t id)
-{
-    if(!m_isFirstPush)
-        *m_output << ',';
-
-    *m_output 
-    << "\n\t\t{\n"
-    << "\t\t\t\"at\":        "   << timestamp() << ",\n"
-    << "\t\t\t\"type\":      "   << "\"C\",\n"
-    << "\t\t\t\"pid\":       "   << "1,\n"
-    << "\t\t\t\"tid\":       "   << id << ",\n"
-    << "\t\t\t\"frame\":     \"" << name << "\"\n"
-    << "\t\t}";
+    m_isFirstPush = false;
 }
 
 inline void profiler::Logger::foot()
@@ -238,12 +236,36 @@ inline void profiler::Logger::foot()
     *m_output << "\n\t]\n}\n";
 }
 
-// ===============================================================]
-// ===============================================================]
-
 inline long profiler::Logger::timestamp() const
 {
-    return std::chrono::time_point_cast<std::chrono::nanoseconds>(Clock_t::now()).time_since_epoch().count();
+    return std::chrono::time_point_cast<std::chrono::microseconds>(Clock_t::now()).time_since_epoch().count();
+}
+
+// ===============================================================|
+// ===============================================================|
+
+inline void profiler::Logger::startWriter()
+{
+    m_writer = std::async(std::launch::async, std::function{[this](){
+        Event event{};
+        while(true)
+        {
+            if(!m_events.try_dequeue(event))
+                continue;
+            if(event.type == Event::STOP)
+                break;
+
+            print(event);
+        }
+    }});
+}
+
+inline void profiler::Logger::stopWriter()
+{
+    m_events.enqueue(Event{
+        .type = Event::STOP
+    });
+    m_writer.wait();
 }
 
 inline profiler::Logger::Logger(std::filesystem::path const &filename)
@@ -256,44 +278,44 @@ inline profiler::Logger::Logger(std::filesystem::path const &filename)
     }
     m_output = &m_file;
     header();
+    startWriter();
 }
 
 inline profiler::Logger::Logger(std::ostream &stream) : m_output(&stream) 
 {
     header();
+    startWriter();
 }
 
 inline profiler::Logger::~Logger()
 {
+    stopWriter();
     foot();
     m_output->flush();
 }
 
 inline void profiler::Logger::push(std::string_view name, id_t id)
 {
-#ifndef PROFILER_DONT_LOCK
-    std::scoped_lock lock{m_logMutex};
-#endif
-
-    open(name, id);
-    
-    m_isFirstPush = false;
+    m_events.enqueue(Event{
+        .type = Event::ENTER,
+        .ts = timestamp(),
+        .id = id,
+        .name = name
+    });
 }
 inline void profiler::Logger::pop(std::string_view name, id_t id)
 {
-#ifndef PROFILER_DONT_LOCK
-    std::scoped_lock lock{m_logMutex};
-#endif
-
-    close(name, id);
-
-    m_isFirstPush = false;
+    m_events.enqueue(Event{
+        .type = Event::EXIT,
+        .ts = timestamp(),
+        .id = id,
+        .name = name
+    });
 }
 
 inline void profiler::Logger::clear() 
 {
     m_output->clear();
-    m_isFirstPush = true;
 }
 
 inline profiler::ScopedTimer::ScopedTimer(std::string_view name, Logger *logger) : m_logger(logger), m_name(name), m_id(nextID++)
