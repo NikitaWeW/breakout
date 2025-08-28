@@ -3,20 +3,16 @@
      / _ \/ __/ __|    Copyright (c) 2024 Nikita Martynau
     |  __/ (__\__ \    https://opensource.org/license/mit
      \___|\___|___/    https://github.com/nikitawew/ecs  
+
+Thanks to this article: https://austinmorlan.com/posts/entity_component_system.
+Took a bit of inspiration from https://github.com/skypjack/entt.
+
+The main focus was on the simplicity, small size and reasonable performance (one header, ~1000 lines of code).
+The intended way to use it is by creating the ecs::registry class and using all the functions from it. 
+There is a config section below, which could be used to configure the behaviour of the library.
+ecs::registry uses ECS_THROW when error checking. The rest of implementation uses ECS_ASSERT, because all the error checking was already done in the ecs::registry, however, they may still throw due to an error not regarding ecs.
 */
-/**
- * \file ecs.hpp
- * \brief My c++17 thread safe* Entity Component System implementation.
- * 
- * Thanks to this article: https://austinmorlan.com/posts/entity_component_system.
- * Took a bit of inspiration from https://github.com/skypjack/entt.
- * 
- * The main focus was on the simplicity, small size and reasonable performance (one header, ~1000 lines of code).
- * The intended way to use it is by creating the ecs::registry class and using all the functions from it. 
- * There is a config section below, which could be used to configure the behaviour of the library. For example, you could define ECS_DONT_LOCK if you dont need the synchronisation.
- * ecs::registry uses ECS_THROW when error checking. The rest of implementation uses ECS_ASSERT, because all the error checking was already done in the ecs::registry, however, they may still throw due to an error not regarding ecs.
- * Only ecs::registry has internal synchronisation on the entity and component operations (component modification is not however), which could be disabled by changing the definitions of ECS_LOCK_* below in the config section or defining ECS_DONT_LOCK.
- */
+
 /*
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -34,8 +30,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <mutex>
-#include <shared_mutex>
 #include <vector>
 #include <typeinfo>
 #include <type_traits>
@@ -43,39 +37,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <string>
 #include <atomic>
 #include <functional>
+#include <stdexcept>
 
-// ===============
-// Config section 
-// May be moved in a separate config file.
-// ===============
 /*! \cond Doxygen_Suppress */
-
-#ifdef ECS_DONT_LOCK
-#define PROFILER_DONT_LOCK
-#endif
-#include "profiler.hpp"
-#define ECS_PROFILE() PROFILER_PROFILE()
+// Config section 
 
 #include <cassert>
+#define ECS_PROFILE()
 #define ECS_ASSERT(x, msg) assert((x) && (msg))
 #define ECS_THROW(x) (throw (x))
 #define ECS_INLINE inline
-
-#define ECS_DONT_LOCK // fuck it
-
-#ifndef ECS_DONT_LOCK
-#define ECS_CONCAT_DETAIL(A, B) A##B
-#define ECS_CONCAT(A, B) ECS_CONCAT_DETAIL(A, B)
-
-#define ECS_LOCK_REGULAR(mutex) std::scoped_lock ECS_CONCAT(lock, __LINE__){mutex}
-#define ECS_LOCK_UNIQUE(mutex)  std::unique_lock ECS_CONCAT(lock, __LINE__){mutex}
-#define ECS_LOCK_SHARED(mutex)  std::shared_lock ECS_CONCAT(lock, __LINE__){mutex}
-#else
-#define ECS_LOCK_REGULAR(mutex)
-#define ECS_LOCK_UNIQUE(mutex)
-#define ECS_LOCK_SHARED(mutex)
-#endif // ECS_DONT_LOCK
-
 #define ECS_IMPLEMENTATION
 
 /*! \endcond */
@@ -371,24 +342,6 @@ namespace ecs
 
     class registry;
 
-    /**
-     * \brief A system description.
-     */
-    struct system
-    {
-        /**
-         * \brief The function to call on update.
-         */
-        std::function<void(ecs::registry &)> update;
-        /**
-         * \brief Components the system reads and only reads.
-         */
-        ecs::signature read;
-        /**
-         * \brief Components the system writes. Write implies read.
-         */
-        ecs::signature write;
-    };
 
     /**
      * \brief An ECS interface.
@@ -400,15 +353,6 @@ namespace ecs
         ecs::entity_manager m_entityManager;
         // ugly fix for lazy component registration.
         mutable ecs::component_manager m_componentManager;
-
-        std::vector<ecs::system> m_systems;
-
-        /*
-        lock order: m_entitiesMutex, m_signaturesMutex, m_componentsMutex.
-         */
-        mutable std::shared_mutex m_entitiesMutex;
-        mutable std::shared_mutex m_signaturesMutex;
-        mutable std::shared_mutex m_componentsMutex;
     public:
         /**
          * \copydoc ecs::entity_manager::valid
@@ -527,26 +471,6 @@ namespace ecs
          */
         template <typename component_t> 
         ComponentID_t getComponentID();
-
-        /**
-         * \brief Get entities mutex in case external synchronisation is needed.
-         */
-        std::shared_mutex &getEntitiesMutex() const;
-
-        /**
-         * \brief Get components mutex in case external synchronisation is needed.
-         */
-        std::shared_mutex &getComponentsMutex() const;
-
-        /**
-         * \return Systems of this registry.
-         */
-        std::vector<ecs::system> &systems();
-
-        /**
-         * \brief Execute the system groups.
-         */
-        void update();
     };
 } // namespace ecs
 
@@ -774,7 +698,6 @@ ECS_INLINE void ecs::component_manager::emplace(entity const &entity, Args&&... 
 template <typename... Components_t>
 constexpr ecs::signature ecs::registry::makeSignature() const
 {
-    ECS_LOCK_UNIQUE(m_componentsMutex);
     (m_componentManager.registerComponent<Components_t>(), ...);
     ecs::signature signature;
     (signature.set(m_componentManager.getComponentID<Components_t>()), ...);
@@ -787,8 +710,6 @@ ECS_INLINE bool ecs::registry::has(entity const &entity) const
     if(!valid(entity)) 
         ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
     
-    ECS_LOCK_SHARED(m_signaturesMutex);
-    ECS_LOCK_UNIQUE(m_componentsMutex);
     m_componentManager.registerComponent<component_t>();
     return m_entityManager.getSignature(entity).test(m_componentManager.getComponentID<component_t>()); 
 }
@@ -821,9 +742,6 @@ ECS_INLINE ecs::entity ecs::registry::create()
     if(!m_entityManager.nextEntityValid())
         throw std::length_error{"Invalid entity creation. (too many entities?)"};
     
-    ECS_LOCK_UNIQUE(m_entitiesMutex);
-    ECS_LOCK_UNIQUE(m_signaturesMutex);
-    ECS_LOCK_UNIQUE(m_componentsMutex);
     (m_componentManager.registerComponent<Components_t>(), ...);
     ecs::signature signature;
     (signature.set(m_componentManager.getComponentID<Components_t>()), ...);
@@ -841,9 +759,6 @@ ECS_INLINE ecs::entity ecs::registry::create(Components_t &&...components)
     if(!m_entityManager.nextEntityValid())
         throw std::length_error{"Invalid entity creation. (too many entities?)"};
     
-    ECS_LOCK_UNIQUE(m_entitiesMutex);
-    ECS_LOCK_UNIQUE(m_signaturesMutex);
-    ECS_LOCK_UNIQUE(m_componentsMutex);
     (m_componentManager.registerComponent<Components_t>(), ...);
     ecs::signature signature;
     (signature.set(m_componentManager.getComponentID<Components_t>()), ...);
@@ -863,8 +778,6 @@ ECS_INLINE void ecs::registry::remove(entity const &entity)
     if(!has<component_t>(entity)) 
         ECS_THROW(std::out_of_range{"component to remove is not added!"});
     
-    ECS_LOCK_UNIQUE(m_signaturesMutex);
-    ECS_LOCK_UNIQUE(m_componentsMutex);
     m_entityManager.getSignature(entity).set(m_componentManager.getComponentID<component_t>(), false);
     m_componentManager.remove<component_t>(entity);
 }
@@ -877,8 +790,6 @@ ECS_INLINE void ecs::registry::emplace(entity const &entity, Args&&... args)
     if(has<component_t>(entity)) 
         ECS_THROW(std::invalid_argument{"component to emplace already added!"});
 
-    ECS_LOCK_UNIQUE(m_signaturesMutex);
-    ECS_LOCK_UNIQUE(m_componentsMutex);
     m_entityManager.getSignature(entity).set(m_componentManager.getComponentID<component_t>(), true);
     m_componentManager.emplace<component_t>(entity, std::forward<Args>(args)...);
 }
@@ -891,7 +802,6 @@ ECS_INLINE void ecs::registry::add(entity const &entity, component_t const &comp
 ECS_INLINE bool ecs::registry::valid(entity const &entity) const
 {
     ECS_PROFILE();
-    ECS_LOCK_SHARED(m_entitiesMutex);
     return m_entityManager.valid(entity);
 }
 ECS_INLINE void ecs::registry::destroy(ecs::entity const &entity)
@@ -900,17 +810,13 @@ ECS_INLINE void ecs::registry::destroy(ecs::entity const &entity)
     if(!valid(entity)) 
         ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
 
-    ECS_LOCK_UNIQUE(m_entitiesMutex);
-    ECS_LOCK_UNIQUE(m_signaturesMutex);
     m_entityManager.destroyEntity(entity);
 
-    ECS_LOCK_REGULAR(m_componentsMutex);
     m_componentManager.entityDestroyed(entity);
 }
 ECS_INLINE std::vector<ecs::entity> ecs::registry::getEntities() const
 {
     ECS_PROFILE();
-    ECS_LOCK_SHARED(m_entitiesMutex);
     return m_entityManager.getEntities();
 }
 template<typename Type, typename... Other, typename... Exclude>
@@ -918,12 +824,8 @@ ECS_INLINE std::vector<ecs::entity> ecs::registry::view(exclude_t<Exclude...>) c
 {
     ECS_PROFILE();
 
-    ECS_LOCK_SHARED(m_entitiesMutex);
-
     auto entities = m_entityManager.getEntities();
 
-    ECS_LOCK_SHARED(m_signaturesMutex);
-    ECS_LOCK_UNIQUE(m_componentsMutex);
     m_componentManager.registerComponent<Type>();
     (m_componentManager.registerComponent<Other>(), ...);
     (m_componentManager.registerComponent<Exclude>(), ...);
@@ -951,35 +853,12 @@ ECS_INLINE ecs::signature ecs::registry::getSignature(entity const &entity) cons
     if(!valid(entity)) 
         ECS_THROW(std::invalid_argument{"invalid entity identifier!"});
 
-    ECS_LOCK_SHARED(m_signaturesMutex);
     return m_entityManager.getSignature(entity);
-}
-ECS_INLINE std::shared_mutex &ecs::registry::getEntitiesMutex() const
-{
-    ECS_PROFILE();
-    return m_entitiesMutex;
-}
-ECS_INLINE std::shared_mutex &ecs::registry::getComponentsMutex() const
-{
-    ECS_PROFILE();
-    return m_componentsMutex;
-}
-ECS_INLINE std::vector<ecs::system> &ecs::registry::systems()
-{
-    ECS_PROFILE();
-    return m_systems;
-}
-ECS_INLINE void ecs::registry::update()
-{
-    ECS_PROFILE();
-    for(auto const &system : m_systems)
-        system.update(*this);
 }
 template <typename component_t>
 ECS_INLINE ecs::ComponentID_t ecs::registry::getComponentID()
 {
     ECS_PROFILE();
-    ECS_LOCK_REGULAR(m_componentsMutex);    
     m_componentManager.registerComponent<component_t>();
     return m_componentManager.getComponentID<component_t>();
 }

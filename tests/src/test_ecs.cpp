@@ -393,35 +393,6 @@ TEST_CASE("Registry view with includes and excludes", "[registry][view]") {
     auto none = reg.view<Health>(ecs::exclude_t<Health>{});
     REQUIRE(none.empty());
 }
-TEST_CASE("Registry systems processing", "[registry][systems]") {
-    ECS_PROFILE();
-    ecs::registry reg;
-
-    auto e1 = reg.create<Position, Velocity>({0,0}, {3,4});
-    auto e2 = reg.create<Position, Velocity>({5,5}, {1,-1});
-    auto e3 = reg.create<Position>({9,9});
-
-    ecs::system mover;
-    mover.read = reg.makeSignature<Position>();
-    mover.read = reg.makeSignature<Velocity>();
-    mover.write = mover.read;
-    mover.update = [](ecs::registry& r) {
-        auto entities = r.view<Position, Velocity>();
-        for (auto id : entities) {
-            auto& pos = r.get<Position>(id);
-            auto const& vel = r.get<Velocity>(id);
-            pos.x += vel.dx;
-            pos.y += vel.dy;
-        }
-    };
-    reg.systems().push_back(std::move(mover));
-
-    reg.update();
-
-    REQUIRE(reg.get<Position>(e1) == Position{3,4});
-    REQUIRE(reg.get<Position>(e2) == Position{6,4});
-    REQUIRE(reg.get<Position>(e3) == Position{9,9});
-}
 TEST_CASE("Registry getEntities reflects live entities only", "[registry][entities]") {
     ECS_PROFILE();
     ecs::registry reg;
@@ -439,7 +410,43 @@ TEST_CASE("Registry getEntities reflects live entities only", "[registry][entiti
     REQUIRE(after.size() == 2);
     REQUIRE(std::find(after.begin(), after.end(), e2) == after.end());
 }
+TEST_CASE("Registry example", "[registry]")
+{
+    struct position {
+        float x;
+        float y;
 
+        // cant emplace structs using brace initialization D:
+        position(float x = 0, float y = 0) : x(x), y(y) {}
+    };
+    struct velocity {
+        float dx;
+        float dy;
+
+        velocity(float dx = 0, float dy = 0) : dx(dx), dy(dy) {}
+    };
+    struct tag {};
+
+    ecs::registry registry;
+
+    for(auto i = 0u; i < 10u; ++i) {
+        const auto entity = registry.create();
+        registry.emplace<position>(entity, i * 1.f, i * 1.f);
+        if(i % 2 == 0) { registry.emplace<velocity>(entity, i * .1f, i * .1f); }
+        
+        std::vector<ecs::entity> view = registry.view<position, velocity>(ecs::exclude_t<tag>{});
+
+        for(auto const &e : view) {
+            registry.get<position>(e).x += registry.get<velocity>(e).dx;
+            registry.get<position>(e).y += registry.get<velocity>(e).dy;
+        }
+
+        if(i%2==0)
+            registry.destroy(entity);
+    }
+}
+
+/*
 #ifndef ECS_DONT_LOCK
 TEST_CASE("Concurrent read access to the same component", "[concurrency][read]") {
     ECS_PROFILE();
@@ -566,5 +573,6 @@ TEST_CASE("System basic usage", "[system]") {
     REQUIRE(registry.get<Position>(e2) == Position{ 0, 3});
 }
 #endif
+*/
 
 /** \endcond */
