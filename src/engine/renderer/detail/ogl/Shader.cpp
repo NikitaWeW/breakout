@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <iostream>
 
-bool compileShader(opengl::ShaderProgram::Shader &shader, std::string &log) noexcept {
+bool compileShader(ogl::ShaderProgram::Shader &shader, std::string &log) noexcept {
     shader.renderID = glCreateShader(shader.type);
     char *source = &*shader.source.begin();
     glShaderSource(shader.renderID, 1, &source, nullptr);
@@ -23,7 +23,7 @@ bool compileShader(opengl::ShaderProgram::Shader &shader, std::string &log) noex
     return true;
 }
 
-bool linkProgram(unsigned &program, std::vector<opengl::ShaderProgram::Shader> shaders, std::string &log) noexcept {
+bool linkProgram(unsigned &program, std::vector<ogl::ShaderProgram::Shader> shaders, std::string &log) noexcept {
     program = glCreateProgram();
     for(auto const &shader : shaders) {
         glAttachShader(program, shader.renderID);
@@ -44,7 +44,7 @@ bool linkProgram(unsigned &program, std::vector<opengl::ShaderProgram::Shader> s
     return true;
 }
 
-void opengl::ShaderProgram::deallocate() noexcept
+void ogl::ShaderProgram::deallocate() noexcept
 {
     if(m_renderID) glDeleteProgram(m_renderID);
     for(Shader const &shader : m_shaders) {
@@ -52,7 +52,7 @@ void opengl::ShaderProgram::deallocate() noexcept
     }   
 }
 
-opengl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
+ogl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
 {
     if(!collectShaders(directory)) {
         m_log.insert(0, "failed to collect shaders in directory \"" + directory + "\"\n");
@@ -66,14 +66,14 @@ opengl::ShaderProgram::ShaderProgram(std::string const &directory, bool showLog)
     }
 }
 
-opengl::ShaderProgram::~ShaderProgram()
+ogl::ShaderProgram::~ShaderProgram()
 {
     if(canDeallocate()) {
         deallocate();
     }
 }
 
-bool opengl::ShaderProgram::collectShaders(std::string const &directory) noexcept
+bool ogl::ShaderProgram::collectShaders(std::string const &directory) noexcept
 {
     assert(std::filesystem::exists(directory));
     m_dirPath = directory;
@@ -112,7 +112,7 @@ std::string shaderTypeToString(unsigned type) noexcept {
     default:                 return "unknown type";
     }
 }
-bool opengl::ShaderProgram::compileShaders() noexcept
+bool ogl::ShaderProgram::compileShaders() noexcept
 {
     if(canDeallocate()) 
         deallocate();
@@ -135,27 +135,27 @@ bool opengl::ShaderProgram::compileShaders() noexcept
     return true;
 }
 
-int opengl::ShaderProgram::getUniform(std::string const &name) const noexcept
+int ogl::ShaderProgram::getUniform(std::string const &name) const noexcept
 {
     if(m_uniformLocationCache.find(name) != m_uniformLocationCache.end()) return m_uniformLocationCache[name];
     int location = glGetUniformLocation(m_renderID, name.c_str());
     m_uniformLocationCache[name] = location;
-    // if(location == -1) {
-    //     std::cout << "uniform \"" << name << "\" in shaders \"" << getPath() << "\" is not used or does not exist.\n";
-    // }
+    if(location == -1) {
+        std::cout << "uniform \"" << name << "\" in shaders \"" << getPath() << "\" is not used or does not exist.\n";
+    }
     return location;
 }
 
-int opengl::ShaderProgram::getUniformBlock(std::string const &name) const noexcept
+int ogl::ShaderProgram::getUniformBlock(std::string const &name) const noexcept
 {
     int location = glGetUniformBlockIndex(m_renderID, name.c_str());
     return location;
 }
 
-int opengl::ShaderProgram::getStorageBlock(std::string const &name) const noexcept
+int ogl::ShaderProgram::getStorageBlock(std::string const &name) const noexcept
 {
     int location = glGetProgramResourceIndex(m_renderID, GL_SHADER_STORAGE_BLOCK, name.c_str());
     return location;
 }
 
-void opengl::ShaderProgram::bind(unsigned slot) const noexcept { glUseProgram(m_renderID); }
+void ogl::ShaderProgram::bind(unsigned slot) const noexcept { glUseProgram(m_renderID); }

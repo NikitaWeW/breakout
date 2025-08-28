@@ -2,7 +2,6 @@
 #include "Model.hpp"
 #include "assimp/postprocess.h"
 #include <iostream>
-#include "utils/Profiler.hpp" // for profiing
 
 constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
 {
@@ -154,7 +153,6 @@ void processAnimationNode( // ignore the argument count
     std::vector<glm::mat4> &boneTransformations, std::vector<glm::mat4> const &tposeTransform
 )
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     std::string nodeName = sceneNode->mName.C_Str();
     glm::mat4 nodeTransformation = toMat4(sceneNode->mTransformation);
     aiNodeAnim const *nodeAnim = findNodeAnim(animation, nodeName);
@@ -194,7 +192,6 @@ void processAnimationNode( // ignore the argument count
 
 void model::Model::processNode(aiNode const *node, int flags, aiScene const *scene)
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     for(unsigned i = 0; i < node->mNumMeshes; ++i) {
         m_meshes.emplace_back(std::move(processMesh(scene->mMeshes[node->mMeshes[i]], flags, scene)));
     }
@@ -205,7 +202,6 @@ void model::Model::processNode(aiNode const *node, int flags, aiScene const *sce
 
 void makeDrawable(game::Drawable &drawable, model::MeshData &data) 
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     drawable.vb = opengl::VertexBuffer{
         data.positions.size()     * sizeof(data.positions[0]) + 
         data.normals.size()       * sizeof(data.normals[0]) + 
@@ -254,7 +250,6 @@ void makeDrawable(game::Drawable &drawable, model::MeshData &data)
 }
 void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMap, std::vector<glm::mat4> &boneTransformations, aiMesh const *aimesh, aiScene const *scene) 
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     static unsigned boneCounter = 0;
     std::array<int, model::MAX_BONES_PER_VERTEX> boneIDs{}; boneIDs.fill(-1); data.boneIDs.resize(data.positions.size(), boneIDs); // i hate it
     std::array<float, model::MAX_BONES_PER_VERTEX> weights{}; weights.fill(-1); data.weights.resize(data.positions.size(), weights);
@@ -289,7 +284,6 @@ void extractBones(model::MeshData &data, std::map<std::string, unsigned> &boneMa
 }
 void extractVertexData(model::MeshData &data, aiMesh const *aimesh)
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     for(unsigned i = 0; i < aimesh->mNumVertices; ++i) {
         // i use vec4's for potential byte alignment. lets hope it wont be that bad on large models
         data.positions.emplace_back(    aimesh->mVertices[i].x,         aimesh->mVertices[i].y, aimesh->mVertices[i].z, 1);
@@ -307,7 +301,6 @@ void extractVertexData(model::MeshData &data, aiMesh const *aimesh)
 
 void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial const *material, aiTextureType const type, int flags, std::vector<std::pair<std::string, opengl::Texture>> &loadedTextureCache, std::filesystem::path const &textureDirectory, std::string const &typeName, std::string const &grayscaleTypeName = "")
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     aiString str;
     for(unsigned int i = 0; i < material->GetTextureCount(type); i++) {
         material->GetTexture(type, i, &str);
@@ -332,7 +325,6 @@ void loadMaterialTextures(std::vector<opengl::Texture> &textures, aiMaterial con
 }
 model::Mesh model::Model::processMesh(aiMesh const *aimesh, int flags, aiScene const *scene)
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     assert(aimesh->HasTextureCoords(0));
     assert(aimesh->HasNormals());
     assert(aimesh->HasTangentsAndBitangents());
@@ -366,7 +358,6 @@ model::Mesh model::Model::processMesh(aiMesh const *aimesh, int flags, aiScene c
 
 model::Model::Model(std::filesystem::path const &filePath, int flags)
 {
-    PROFILER_PROFILE_IN_FILE("log/loading");
     m_importer = std::make_shared<Assimp::Importer>();
     m_scene = m_importer->ReadFile( filePath.string().c_str(),
         aiProcess_SplitLargeMeshes      |
@@ -408,14 +399,12 @@ std::vector<glm::mat4> const &model::Model::getBoneTransformations(float firstTi
 
 std::vector<glm::mat4> const &model::Model::getBoneTransformations(aiAnimation const *animation, float animationTimeTicks)
 {
-    PROFILER_PROFILE();
     assert(animationTimeTicks <= animation->mDuration);
     processAnimationNode(getScene()->mRootNode, animation, animationTimeTicks, nullptr, 0, 0, glm::mat4{1.0f}, m_globalInverseTransorm, m_boneMap, m_boneTransformations, m_tposeTransform);
     return m_boneTransformations;
 }
 std::vector<glm::mat4> const &model::Model::getBoneTransformations(aiAnimation const *first, aiAnimation const *second, float factor, float firstTimeTicks, float secondTimeTicks)
 {
-    PROFILER_PROFILE();
     assert(firstTimeTicks <= first->mDuration);
     assert(secondTimeTicks <= second->mDuration);
     processAnimationNode(getScene()->mRootNode, first, firstTimeTicks, second, secondTimeTicks, factor, glm::mat4{1.0f}, m_globalInverseTransorm, m_boneMap, m_boneTransformations, m_tposeTransform);

@@ -1,7 +1,6 @@
 #pragma once
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
-#include "utils/ECS.hpp"
 #include "glm/glm.hpp"
 #include <optional>
 

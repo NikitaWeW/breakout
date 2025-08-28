@@ -1,4 +1,10 @@
 build
+install
 .vscode
 *.ini
-log
+.log
+log*
+callgrind*
+*perf*
+out
+CMakeUserPresets.json

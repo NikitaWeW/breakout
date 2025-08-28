@@ -1,6 +1,5 @@
 #pragma once
 #include "game/Renderer.hpp" // for Drawable struct
-#include "utils/ECS.hpp" // for entity from model construction
 #include "assimp/scene.h"
 #include "assimp/Importer.hpp"
 #include "glm/gtc/quaternion.hpp"

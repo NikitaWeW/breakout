@@ -1,7 +1,6 @@
 #pragma once
 #include <filesystem>
 #include <fstream>
-#include "utils/ECS.hpp"
 #include "utils/Model.hpp"
 #include "utils/Text.hpp"
 #include "json.hpp"

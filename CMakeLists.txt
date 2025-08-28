@@ -1,16 +1,10 @@
-# This line will be changed if reconfiguration is required       
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 option(GENERATE_MSDF_FONTS OFF "generate msdf fonts using github.com/Chlumsky/msdf-atlas-gen")
 
 project(breakout C CXX)
-
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
-add_executable(main ${SOURCES} ${DEPENDENCIES_SOURCES})
 
 if(WIN32)
     file(GLOB_RECURSE LIBRARIES "dependencies/lib/windows/*")
@@ -43,8 +37,51 @@ if(GENERATE_MSDF_FONTS)
     endforeach()
 endif()
 
-target_link_libraries(main PRIVATE ${LIBRARIES})
-target_include_directories(main PRIVATE dependencies/include src)
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
+
+add_library(dependencies ${DEPENDENCIES_SOURCES})
+target_include_directories(dependencies PRIVATE dependencies/include)
+
+add_executable(main ${SOURCES})
+target_link_libraries(main PRIVATE ${LIBRARIES} dependencies)
+target_include_directories(main PRIVATE dependencies/include src src/engine)
+
+target_precompile_headers(main PRIVATE 
+    dependencies/include/entt.hpp
+    dependencies/include/glm/glm.hpp
+    dependencies/include/glm/gtc/quaternion.hpp
+    dependencies/include/glm/gtc/matrix_transform.hpp
+)
+
+# if(BUILD_TESTS)
+#     add_subdirectory(tests)
+# endif()
+# if(BUILD_BENCHMARKS)
+#     add_subdirectory(benchmarks)
+# endif()
+
+
+set(DOXYGEN_SKIP_DOT TRUE)
+find_package(Doxygen)
+
+if (NOT DOXYGEN_FOUND OR DOXYGEN_VERSION VERSION_LESS "1.9.8")
+    message(STATUS "Documentation generation requires Doxygen 1.9.8 or later")
+else()
+
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/docs/html/index.html"
+                       COMMAND "${DOXYGEN_EXECUTABLE}"
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                       MAIN_DEPENDENCY Doxyfile
+                       DEPENDS ${SOURCES}
+                       COMMENT "Generating HTML documentation"
+                       VERBATIM)
+
+
+    cmake_policy(SET CMP0177 NEW)
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/html" DESTINATION ./docs)
+endif()
+
 
 install(DIRECTORY res DESTINATION .)
 install(DIRECTORY shaders DESTINATION .)
