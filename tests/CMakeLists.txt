@@ -1,12 +1,6 @@
-Include(FetchContent)
-FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        v3.9.1
-)
+include(../cmake/cpm.cmake)
 
-message(STATUS "TESTS: Fetching Catch2...")
-FetchContent_MakeAvailable(Catch2)
+CPMAddPackage("gh:catchorg/Catch2@3.4.0")
 
 file(GLOB_RECURSE TESTS_SOURCES "src/*.cpp")
 file(GLOB_RECURSE TESTS_DEPENDENCIES_SOURCES "dependencies/compile/*")
