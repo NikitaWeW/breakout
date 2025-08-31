@@ -2,87 +2,40 @@ cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(GENERATE_MSDF_FONTS OFF "generate msdf fonts using github.com/Chlumsky/msdf-atlas-gen")
-
 project(breakout C CXX)
 
-if(WIN32)
-    file(GLOB_RECURSE LIBRARIES "dependencies/lib/windows/*")
-elseif(UNIX AND NOT APPLE) # linux
-    file(GLOB_RECURSE LIBRARIES "dependencies/lib/linux/*")
-elseif(APPLE)
-    message(WARNING "mac users will have to set LIBRARIES variable manualy via adding -DLIBRRAIES=\"all the necessary library files\" to cmake configure command.")
-    # "Poor mac ysers" -- DEA__TH (Cosmic Horizons Dev) - 3/21/25, 5:30 PM
-endif() 
+######################################################################
 
-if(GENERATE_MSDF_FONTS)
-    if(NOT MSDF_ATLAS_GEN_PATH)
-        set(MSDF_ATLAS_GEN_PATH msdf-atlas-gen)
-    endif()
-    if(NOT MSDF_MIN_GLYPH_SIZE)
-        set(MSDF_MIN_GLYPH_SIZE 32)
-    endif()
-    set(MSDF_RESULT_FONTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/res/msdf-fonts")
-    set(MSDF_CHARSET_FILEPATH "${CMAKE_CURRENT_SOURCE_DIR}/res/fonts/charset.txt")
+include(cmake/cpm.cmake)
 
-    file(GLOB_RECURSE TTF_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/res/fonts/*.ttf") # TODO: change the regular expression to recognize other supported types
+CPMAddPackage("gh:glfw/glfw#3.4")
+CPMAddPackage("gh:nikitawew/ecs@1.0.1")
 
-    foreach(TTF_FONT_FILE IN LISTS TTF_FONTS)
-        get_filename_component(RESULT_FILE_NAME "${TTF_FONT_FILE}" NAME_WE)
-        execute_process(
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            OUTPUT_QUIET ERROR_QUIET
-            COMMAND ${MSDF_ATLAS_GEN_PATH} -font "${TTF_FONT_FILE}" -charset "${MSDF_CHARSET_FILEPATH}" -json "${MSDF_RESULT_FONTS_DIR}/${RESULT_FILE_NAME}.json" -imageout "${MSDF_RESULT_FONTS_DIR}/${RESULT_FILE_NAME}.png" -minsize "${MSDF_MIN_GLYPH_SIZE}"
-        )
-    endforeach()
-endif()
+file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
+add_library(dependencies ${DEPENDENCIES_SOURCES})
+target_include_directories(dependencies PUBLIC dependencies/include)
+
+######################################################################
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
-file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
-
-add_library(dependencies ${DEPENDENCIES_SOURCES})
-target_include_directories(dependencies PRIVATE dependencies/include)
 
 add_executable(main ${SOURCES})
-target_link_libraries(main PRIVATE ${LIBRARIES} dependencies)
-target_include_directories(main PRIVATE dependencies/include src src/engine)
+target_link_libraries(main PRIVATE ecs glfw dependencies)
+target_include_directories(main PRIVATE src)
 
 target_precompile_headers(main PRIVATE 
-    dependencies/include/entt.hpp
-    dependencies/include/glm/glm.hpp
-    dependencies/include/glm/gtc/quaternion.hpp
-    dependencies/include/glm/gtc/matrix_transform.hpp
+    ${ECS_SOURCE_DIR}/ecs.hpp
+    ${GLM_SOURCE_DIR}/glm/glm.hpp
+    ${GLM_SOURCE_DIR}/glm/gtc/quaternion.hpp
+    ${GLM_SOURCE_DIR}/glm/gtc/matrix_transform.hpp
 )
-
-# if(BUILD_TESTS)
-#     add_subdirectory(tests)
-# endif()
-# if(BUILD_BENCHMARKS)
-#     add_subdirectory(benchmarks)
-# endif()
-
-
-set(DOXYGEN_SKIP_DOT TRUE)
-find_package(Doxygen)
-
-if (NOT DOXYGEN_FOUND OR DOXYGEN_VERSION VERSION_LESS "1.9.8")
-    message(STATUS "Documentation generation requires Doxygen 1.9.8 or later")
-else()
-
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/docs/html/index.html"
-                       COMMAND "${DOXYGEN_EXECUTABLE}"
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                       MAIN_DEPENDENCY Doxyfile
-                       DEPENDS ${SOURCES}
-                       COMMENT "Generating HTML documentation"
-                       VERBATIM)
-
-
-    cmake_policy(SET CMP0177 NEW)
-    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/html" DESTINATION ./docs)
-endif()
-
 
 install(DIRECTORY res DESTINATION .)
 install(DIRECTORY shaders DESTINATION .)
 install(TARGETS main DESTINATION .)
+
+######################################################################
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
