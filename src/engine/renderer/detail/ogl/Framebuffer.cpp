@@ -11,10 +11,6 @@ ogl::Framebuffer::~Framebuffer()
     }
 }
 
-void ogl::Framebuffer::bind(unsigned slot) const noexcept
-{
-    glBindFramebuffer(GL_FRAMEBUFFER, m_renderID);
-}
 bool ogl::Framebuffer::isComplete()
 {
     return glCheckNamedFramebufferStatus(m_renderID, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
@@ -47,6 +43,4 @@ ogl::Renderbuffer::~Renderbuffer()
         glDeleteRenderbuffers(1, &m_renderID);
     }
 }
-
-void ogl::Renderbuffer::bind(unsigned slot) const noexcept { glBindRenderbuffer(GL_RENDERBUFFER, m_renderID); }
 

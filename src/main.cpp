@@ -1,14 +1,10 @@
 #include <iostream>
 #include <cmath>
+#include <chrono>
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
-#include "game/LevelParser.hpp"
-
-#ifdef NDEBUG
-extern constexpr bool DEBUG = false;
-#else
-extern constexpr bool DEBUG = true;
-#endif
+#include "engine/systems.hpp"
+#include "engine/renderer/renderer.hpp"
 
 class Deallocator {
 public: 
@@ -16,10 +12,13 @@ public:
         glfwTerminate();
     }
 };
-bool init(GLFWwindow** window) {
-    assert(window);
+
+int main(int argc, char **argv) {
+    std::unique_ptr<Deallocator> cleanup{new Deallocator};
+    GLFWwindow* window;
+    
     if (!glfwInit())
-        return false;
+        return -1;
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
@@ -29,36 +28,26 @@ bool init(GLFWwindow** window) {
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
 
-    *window = glfwCreateWindow(640, 480, "breakout", NULL, NULL);
-    if (!*window) {
+    window = glfwCreateWindow(640, 480, "engine", NULL, NULL);
+    if (!window) {
         std::cout << "ERROR: failed to init the window!\n";
-        return false;
-    }
-
-    glfwMakeContextCurrent(*window);
-    glfwSwapInterval(DEBUG ? 0 : 1);
-
-    int version = gladLoadGL(glfwGetProcAddress);
-    if (version == 0) {
-        std::cout << "ERROR: Failed to initialize OpenGL context\n";
-        return false;
-    }
-
-    return true;
-}
-
-namespace game
-{
-    void gameMain(GLFWwindow *mainWindow);
-} // namespace game
-
-int main(int argc, char **argv) {
-    std::unique_ptr<Deallocator> cleanup{new Deallocator};
-    GLFWwindow* window;
-    if(!init(&window)) {
-        std::cout << "failed to init!\n";
         return -1;
-    };
+    }
 
-    game::gameMain(window);
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(0);
+
+    engine::SystemManager smanager;
+    smanager.getRegistry().create<engine::renderer::Window>(engine::renderer::Window{ window });
+
+    float deltatime = 0.1;
+
+    while(!glfwWindowShouldClose(window))
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+        smanager.update(deltatime);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 }

@@ -9,7 +9,7 @@ project(breakout C CXX)
 include(cmake/cpm.cmake)
 
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/ecs@1.0.1")
+CPMAddPackage("gh:nikitawew/ecs@1.1.0")
 
 file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
 add_library(dependencies ${DEPENDENCIES_SOURCES})
@@ -25,9 +25,9 @@ target_include_directories(main PRIVATE src)
 
 target_precompile_headers(main PRIVATE 
     ${ECS_SOURCE_DIR}/ecs.hpp
-    ${GLM_SOURCE_DIR}/glm/glm.hpp
-    ${GLM_SOURCE_DIR}/glm/gtc/quaternion.hpp
-    ${GLM_SOURCE_DIR}/glm/gtc/matrix_transform.hpp
+    dependencies/include/glm/glm.hpp
+    dependencies/include/glm/gtc/quaternion.hpp
+    dependencies/include/glm/gtc/matrix_transform.hpp
 )
 
 install(DIRECTORY res DESTINATION .)

@@ -13,7 +13,6 @@ ogl::UniformBuffer::~UniformBuffer()
     }
 }
 
-void ogl::UniformBuffer::bind(unsigned slot) const noexcept { glBindBuffer(GL_UNIFORM_BUFFER, m_renderID); }
 void ogl::UniformBuffer::bindingPoint(unsigned index) const noexcept { glBindBufferBase(GL_UNIFORM_BUFFER, index, m_renderID); }
 
 ogl::SSBO::SSBO(int) noexcept
@@ -28,5 +27,4 @@ ogl::SSBO::~SSBO()
     }
 }
 
-void ogl::SSBO::bind(unsigned slot) const noexcept { glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_renderID); }
 void ogl::SSBO::bindingPoint(unsigned index) const noexcept { glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, m_renderID); }

@@ -1,25 +1,16 @@
 #include <cassert>
 #include "VertexBuffer.hpp"
 
-ogl::VertexBuffer::VertexBuffer(size_t size, GLenum usage)
-{
-    glGenBuffers(1, &m_renderID);
-    bind();
-    glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
-}
 ogl::VertexBuffer::VertexBuffer(size_t size, void const *data, GLenum usage)
 {
-    glGenBuffers(1, &m_renderID);
-    bind();
-    glBufferData(GL_ARRAY_BUFFER, size, data, usage);
+    glCreateBuffers(1, &m_renderID);
+    glNamedBufferData(m_renderID, size, data, usage);
 }
 ogl::VertexBuffer::~VertexBuffer()
 {
     if(canDeallocate()) 
         glDeleteBuffers(1, &m_renderID);
 }
-
-void ogl::VertexBuffer::bind(unsigned) const noexcept { glBindBuffer(GL_ARRAY_BUFFER, m_renderID); }
 
 size_t ogl::getSizeOfGLType(GLenum type)
 {
@@ -38,10 +29,12 @@ size_t ogl::getSizeOfGLType(GLenum type)
     }
 }
 
+// TODO: switch this to ogl 4.5 dsa
 void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, InterleavedVertexBufferLayout const &layout)
 {
-    bind();
-    buffer.bind();
+    glBindVertexArray(m_renderID);
+    glBindBuffer(GL_ARRAY_BUFFER, m_renderID);
+    
     unsigned offset = 0;
     for(InterleavedVertexBufferLayout::Element const &element : layout.getElements()) {
         glVertexAttribPointer(m_vertexAttribIndex, element.count, element.type, false, layout.getStride(), reinterpret_cast<void const *>(offset));
@@ -52,7 +45,9 @@ void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, InterleavedVertexBu
 }
 void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, VertexBufferLayout const &layout)
 {
-    bind(); buffer.bind();
+    glBindVertexArray(m_renderID);
+    glBindBuffer(GL_ARRAY_BUFFER, m_renderID);
+    
     for(VertexBufferLayout::Element const &element : layout.getElements()) {
         glVertexAttribPointer(m_vertexAttribIndex, element.count, element.type, false, element.count * getSizeOfGLType(element.type), reinterpret_cast<void const *>(element.offset));
         glEnableVertexAttribArray(m_vertexAttribIndex);
@@ -61,7 +56,9 @@ void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, VertexBufferLayout 
 }
 void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, InterleavedInstancingVertexBufferLayout const &layout)
 {
-    bind(); buffer.bind();
+    glBindVertexArray(m_renderID);
+    glBindBuffer(GL_ARRAY_BUFFER, m_renderID);
+    
     unsigned offset = 0;
     for(auto const &element : layout.getElements()) {
         glVertexAttribPointer(m_vertexAttribIndex, element.count, element.type, false, layout.getStride(), reinterpret_cast<void const *>(offset));
@@ -73,7 +70,9 @@ void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, InterleavedInstanci
 }
 void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, InstancingVertexBufferLayout const &layout)
 {
-    bind(); buffer.bind();
+    glBindVertexArray(m_renderID);
+    glBindBuffer(GL_ARRAY_BUFFER, m_renderID);
+    
     for(InstancingVertexBufferLayout::Element const &element : layout.getElements()) {
         glVertexAttribPointer(m_vertexAttribIndex, element.count, element.type, false, element.count * getSizeOfGLType(element.type), reinterpret_cast<void const *>(element.offset));
         glEnableVertexAttribArray(m_vertexAttribIndex);
@@ -81,8 +80,6 @@ void ogl::VertexArray::addBuffer(VertexBuffer const &buffer, InstancingVertexBuf
         ++m_vertexAttribIndex;
     }
 }
-
-void ogl::VertexArray::bind(unsigned) const noexcept { glBindVertexArray(m_renderID); }
 
 ogl::VertexArray::~VertexArray()
 {
