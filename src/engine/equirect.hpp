@@ -23,8 +23,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "glm/gtc/constants.hpp"
 #include <array>
 #include "bitmap.hpp"
+#include "config.hpp"
 
-#define EQUIRECT_ASSERT(x, msg) assert((x) && (msg))
+#define EQUIRECT_ASSERT(x, msg) ENGINE_ASSERT(x, msg)
 
 namespace engine::eqr
 {

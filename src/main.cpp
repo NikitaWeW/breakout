@@ -3,8 +3,8 @@
 #include <chrono>
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
-#include "engine/systems.hpp"
 #include "engine/renderer/renderer.hpp"
+#include "engine/loader/loader.hpp"
 
 class Deallocator {
 public: 
@@ -37,17 +37,29 @@ int main(int argc, char **argv) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
 
-    engine::SystemManager smanager;
-    smanager.getRegistry().create<engine::renderer::Window>(engine::renderer::Window{ window });
-
     float deltatime = 0.1;
+    ecs::registry registry;
+
+    engine::loader::setup(registry);
+    auto cube = engine::loader::load(registry, "res/models/cube.obj");
+    auto cube0 = registry.create(engine::renderer::Draw{cube});
+    
+    engine::renderer::setup(registry);
+    engine::renderer::processData(registry);
+
+    ecs::entity rendererConfig = registry.view<engine::renderer::RendererContext>().at(0);
+
+    auto &config = registry.get<engine::renderer::RendererContext>(rendererConfig);
+    config.camera.viewMat = glm::lookAt(glm::vec3{0, 2, 5}, glm::vec3{0, 0, 0}, glm::vec3{0,1,0});
 
     while(!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
-        smanager.update(deltatime);
+        engine::renderer::render(registry);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        deltatime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count();
     }
 }

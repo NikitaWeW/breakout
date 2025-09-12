@@ -1,53 +1,70 @@
 #include "engine/loader/loader.hpp"
-#include "ILoader.hpp"
 #include "engine/data.hpp"
 #include "engine/config.hpp"
-#include "loader.hpp"
+#include "../loader.hpp"
 
 #include <fstream>
 #include <unordered_map>
 
 #include "Loaders.hpp"
 
-struct LoaderMap : std::unordered_map<std::string, std::unique_ptr<engine::loader::detail::ILoader>> {};
+struct LoaderData {
+    std::vector<std::unique_ptr<engine::loader::detail::ILoader>> loaders;
+    std::unordered_map<std::string_view, engine::loader::detail::ILoader *> loaderMap;
+};
 
-static LoaderMap &getLoaderMap(ecs::registry &reg)
+static std::string_view getExtension(std::string_view path)
 {
-    auto loaderMaps = reg.view<LoaderMap>();
+    if(path.find_last_of(".") != std::string::npos)
+        return path.substr(path.find_last_of(".") + 1);
+    return "";
+}
+static LoaderData &getLoaderData(ecs::registry &reg)
+{
+    auto loaderMaps = reg.view<LoaderData>();
     ENGINE_ASSERT(loaderMaps.size() == 1, "Incorrect number of loader maps (has to be one)!");
 
-    return reg.get<LoaderMap>(loaderMaps[0]);
+    return reg.get<LoaderData>(loaderMaps[0]);
 }
 
 ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path) 
 {
-    using namespace nlohmann;
+    auto &data = getLoaderData(reg);
+    std::string_view extension = path.substr(0, path.find_last_of('.'));
 
-    auto &loaders = getLoaderMap(reg);
-
-    std::ifstream filestream{std::string{path}};
-    if(!filestream) {
-        std::cout << "[loader] failed to open file \"" << path << "\"!\n";
-        assert(false);
-    }
-    
-    json data = json::parse(filestream);
-
-    std::string type = data.contains("type") ? data["type"].get<std::string>() : "undefined";
-
-    if(loaders.find(type) != loaders.end())
+    if(data.loaderMap.find(extension) != data.loaderMap.end())
     {
-        ENGINE_OUT << "[loader] Unrecognised type: \"" << type << "\"!\n";
-        ENGINE_ASSERT(false, "");
+        ENGINE_OUT << "Unrecognised extension: \"" << extension << "\"!\n";
+        ENGINE_OUT << "Supported extensions: ";
+        bool first = true;
+        for(auto const &[extension, loader] : data.loaderMap)
+        {
+            if(!first)
+            {
+                ENGINE_OUT << ", ";
+            }
+            ENGINE_OUT << extension;
+            first = false;
+        }
+        if(first)
+        {
+            ENGINE_OUT << "none D:";
+        }
+        ENGINE_OUT << '\n';
+        ENGINE_ASSERT(false, "Unrecognised extension");
         return 0;
     }
 
-    return loaders.at(type)->load(reg, data);
+    return data.loaderMap.at(extension)->load(reg, path);
 }
 
 void engine::loader::setup(ecs::registry &reg)
 {
-    auto e = reg.create<LoaderMap>();
-    auto &loaderMap = reg.get<LoaderMap>(e);
-    loaderMap.emplace("model", std::make_unique<detail::ModelLoader>());
+    auto e = reg.create<LoaderData>();
+    auto &data = reg.get<LoaderData>(e);
+    data.loaders.emplace_back(std::move(std::make_unique<detail::ObjModelLoader>()));
+    data.loaders.emplace_back(std::move(std::make_unique<detail::GLTFModelLoader>()));
+    data.loaderMap.emplace("obj",  data.loaders[0].get());
+    data.loaderMap.emplace("gltf", data.loaders[1].get());
+    data.loaderMap.emplace("glb",  data.loaders[1].get());
 }

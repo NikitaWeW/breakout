@@ -1,6 +1,7 @@
 #pragma once
 #include "glm/glm.hpp"
 #include <vector>
+#include "config.hpp"
 
 namespace engine
 {
@@ -77,7 +78,7 @@ namespace engine
 template <typename Format_t, size_t components>
 inline engine::Bitmap<Format_t, components>::Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *src) : m_width(width), m_height(height), m_numComponents(numComponents)
 {
-    EQUIRECT_ASSERT(m_numComponents <= 4, "Components > 4 is yet not supported!");
+    ENGINE_ASSERT(m_numComponents <= 4, "Components > 4 is yet not supported!");
     m_data.resize(width * height * numComponents);
     if(src) {
         std::copy(src, src + m_data.size(), m_data.begin());
@@ -86,8 +87,8 @@ inline engine::Bitmap<Format_t, components>::Bitmap(unsigned width, unsigned hei
 template <typename Format_t, size_t components>
 inline void engine::Bitmap<Format_t, components>::setPixel(unsigned x, unsigned y, glm::vec<components, Format_t> const &value)
 {
-    EQUIRECT_ASSERT(x < m_width && y < m_height, "x or y is out of range!");
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(x < m_width && y < m_height, "x or y is out of range!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     Format_t *data = m_data.data();
     size_t offset = getOffsetOf(x, y);
     if (m_numComponents > 0) data[offset + 0] = value.x;
@@ -98,8 +99,8 @@ inline void engine::Bitmap<Format_t, components>::setPixel(unsigned x, unsigned 
 template <typename Format_t, size_t components>
 inline glm::vec<components, Format_t> engine::Bitmap<Format_t, components>::getPixel(unsigned x, unsigned y) const
 {
-    EQUIRECT_ASSERT(x < m_width && y < m_height, "x or y is out of range!");
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(x < m_width && y < m_height, "x or y is out of range!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     Format_t const *data = m_data.data();
     size_t offset = getOffsetOf(x, y);
     return glm::vec4(
@@ -112,37 +113,37 @@ inline glm::vec<components, Format_t> engine::Bitmap<Format_t, components>::getP
 template <typename Format_t, size_t components> 
 inline unsigned engine::Bitmap<Format_t, components>::getWidth() const 
 { 
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_width; 
 }
 template <typename Format_t, size_t components> 
 inline unsigned engine::Bitmap<Format_t, components>::getHeight() const 
 { 
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_height; 
 }
 template <typename Format_t, size_t components> 
 inline unsigned engine::Bitmap<Format_t, components>::getNumComponents() const 
 { 
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_numComponents; 
 }
 template <typename Format_t, size_t components> 
 inline glm::vec2 engine::Bitmap<Format_t, components>::getDimensions() const 
 { 
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return glm::vec2{getWidth(), getHeight()}; 
 }
 template <typename Format_t, size_t components> 
 inline Format_t const *engine::Bitmap<Format_t, components>::getData() const 
 { 
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_data.data(); 
 }
 template <typename Format_t, size_t components> 
 inline Format_t *engine::Bitmap<Format_t, components>::getData() 
 { 
-    EQUIRECT_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
+    ENGINE_ASSERT(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_data.data(); 
 }
 /*! \endcond */

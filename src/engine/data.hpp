@@ -16,12 +16,12 @@ namespace engine
         std::vector<glm::vec2> texCoords;
         std::vector<glm::vec4> normals;
         std::vector<glm::vec4> tangents;
-        std::vector<unsigned>  indices;
-        std::vector<std::array<int, MAX_BONES_PER_VERTEX>> boneIDs;
+        std::vector<std::array<int,   MAX_BONES_PER_VERTEX>> boneIDs;
         std::vector<std::array<float, MAX_BONES_PER_VERTEX>> weights;
+        std::vector<unsigned> indices;
     };
     struct MaterialTextures
-    {
+    { // entity with the Texture component
         ecs::entity ambient;
         ecs::entity diffuse;
         ecs::entity specular;
@@ -46,11 +46,23 @@ namespace engine
         Bitmap<float> data;
         std::string_view type = "unknown";
         bool grayscale = false;
+        std::string path;
     };
     struct Model
     {
         Mesh mesh;
         MaterialTextures textures;
         Material material;
+        std::string path;
+    };
+    struct Camera
+    {
+        glm::uvec2 size{0};
+        glm::mat4 viewMat{1.0f};
+        glm::mat4 projMat{1.0f};
+    };
+    struct ModelMatrix 
+    {
+        glm::mat4 value;
     };
 } // namespace engine

@@ -1,9 +1,11 @@
-#pragma once
 #include "engine/config.hpp"
 #include "ecs.hpp"
 #include "glad/gl.h"
 #include "../renderer.hpp"
 #include <iostream>
+#include "engine/renderer/renderer.hpp"
+#include "renderer.hpp"
+#include "render/render.hpp"
 
 namespace engine::renderer::detail
 {
@@ -105,7 +107,7 @@ namespace engine::renderer::detail
             break;
         }
     
-        ENGINE_OUT << "[opengl renderer] " << error.id << ": opengl " << error.severity << " severity " << error.type << ", raised from " << error.source << ":\n\t" << error.message << '\n';
+        ENGINE_OUT << error.id << ": opengl " << error.severity << " severity " << error.type << ", raised from " << error.source << ":\n\t" << error.message << '\n';
         ENGINE_ASSERT(severity != GL_DEBUG_SEVERITY_HIGH, "high severity error in the opengl renderer!");
     }
     
@@ -123,10 +125,28 @@ namespace engine::renderer::detail
         glEnable(GL_DEBUG_OUTPUT);
         glDebugMessageCallback(debugCallback, nullptr);
     }
+
+    void setupPipeline(ecs::registry &reg)
+    {
+        detail::RendererData &data = reg.get<detail::RendererData>(reg.view<detail::RendererData>().at(0));
+        
+        glCreateFramebuffers(1, &data.oitFBO.id);
+        {
+            std::array<GLenum, 2> const drawbuffers = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+            glNamedFramebufferDrawBuffers(data.oitFBO.id, drawbuffers.size(), drawbuffers.data());
+        }
+
+        glCreateFramebuffers(1, &data.mainFBO.id);
+
+        data.plainColorShader = ogl::compileShader("src/engine/renderer/detail/shaders" "plainColor");
+    }
 } // namespace engine::renderer::detail
 
-void engine::renderer::setup(ecs::registry &reg)
+void engine::renderer::detail::setup(ecs::registry &reg)
 {
     ENGINE_PROFILE();
     detail::setupOpengl(reg);
+    reg.create<RendererContext, detail::RendererData>();
+    processData(reg);
+    detail::setupPipeline(reg);
 }
