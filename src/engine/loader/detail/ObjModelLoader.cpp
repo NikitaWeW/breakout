@@ -28,6 +28,7 @@ namespace engine::loader::detail
 
 ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std::string_view path)
 {
+    loader::detail::LoaderData &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
     tinyobj::ObjReaderConfig config;
     config.mtl_search_path = "./";
     tinyobj::ObjReader reader;
@@ -113,6 +114,10 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
             .alpha        = getTexture(reg, material.alpha_texname,        "alpha"),
             .reflection   = getTexture(reg, material.reflection_texname,   "reflection")
         };
+    } else
+    {
+        model.textures = data.defaultTextures;
+        model.material = data.defaultMaterial;
     }
 
     if(unindexed_mesh.positions.empty())

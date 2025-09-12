@@ -20,6 +20,13 @@ namespace engine
         std::vector<std::array<float, MAX_BONES_PER_VERTEX>> weights;
         std::vector<unsigned> indices;
     };
+    struct Texture
+    {
+        Bitmap<float> data;
+        std::string_view type = "unknown";
+        bool grayscale = false;
+        std::string path;
+    };
     struct MaterialTextures
     { // entity with the Texture component
         ecs::entity ambient;
@@ -40,13 +47,6 @@ namespace engine
 
         float shininess;
         float ior;
-    };
-    struct Texture
-    {
-        Bitmap<float> data;
-        std::string_view type = "unknown";
-        bool grayscale = false;
-        std::string path;
     };
     struct Model
     {

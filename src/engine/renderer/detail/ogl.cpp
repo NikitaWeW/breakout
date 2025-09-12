@@ -152,23 +152,38 @@ ogl::Texture ogl::makeTexture(Bitmap<float> data, bool srgb)
 
     glCreateTextures(GL_TEXTURE_2D, 1, &texture.id);
 
+    GLenum internalFormat = 0;
     GLenum format = 0;
-    if(srgb)
+    
+    if(data.getNumComponents() == 3)
     {
-        if(data.getNumComponents() == 3)
-            format = GL_SRGB_ALPHA;
-        else if(data.getNumComponents() == 4)
-            format = GL_SRGB;
-    } else {
-        if(data.getNumComponents() == 3)
-            format = GL_RGBA16F;
-        else if(data.getNumComponents() == 4)
-            format = GL_RGB16F;
+        if(srgb)
+            internalFormat = GL_SRGB_ALPHA;
+        else
+            internalFormat = GL_RGBA16F;
+
+        format = GL_RGB;
+    }
+    else if(data.getNumComponents() == 4)
+    {
+        if(srgb)
+            internalFormat = GL_SRGB;
+        else
+            internalFormat = GL_RGB16F;
+
+        format = GL_RGBA;
+    }
+    else
+    {
+        ENGINE_ASSERT(false, "invalid number of texture channels");
     }
 
+    bool small = data.getWidth() * data.getHeight() < 10000;
+
+    glTextureStorage2D(texture.id, small ? 1 : 2, internalFormat, data.getWidth(), data.getHeight());
     glTextureSubImage2D(texture.id, 0, 0, 0, data.getWidth(), data.getHeight(), format, GL_FLOAT, data.getData());
 
-    if(data.getWidth() * data.getHeight() > 10000) {
+    if(small) {
         glTextureParameteri(texture.id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTextureParameteri(texture.id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     } else {

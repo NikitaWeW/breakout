@@ -40,6 +40,8 @@ int main(int argc, char **argv) {
     float deltatime = 0.1;
     ecs::registry registry;
 
+    registry.create(engine::renderer::Window{window});
+
     engine::loader::setup(registry);
     auto cube = engine::loader::load(registry, "res/models/cube.obj");
     auto cube0 = registry.create(engine::renderer::Draw{cube});

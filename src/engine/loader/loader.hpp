@@ -11,9 +11,4 @@ namespace engine::loader
      * \return The entity containing the object data.
      */
     ecs::entity load(ecs::registry &reg, std::string_view path);
-
-    /**
-     * \brief Do certain operations on the loaded object.
-     */
-    void update(ecs::registry &reg, float);
 } // namespace engine::loader

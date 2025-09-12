@@ -8,31 +8,19 @@
 
 #include "Loaders.hpp"
 
-struct LoaderData {
-    std::vector<std::unique_ptr<engine::loader::detail::ILoader>> loaders;
-    std::unordered_map<std::string_view, engine::loader::detail::ILoader *> loaderMap;
-};
-
 static std::string_view getExtension(std::string_view path)
 {
     if(path.find_last_of(".") != std::string::npos)
         return path.substr(path.find_last_of(".") + 1);
     return "";
 }
-static LoaderData &getLoaderData(ecs::registry &reg)
-{
-    auto loaderMaps = reg.view<LoaderData>();
-    ENGINE_ASSERT(loaderMaps.size() == 1, "Incorrect number of loader maps (has to be one)!");
-
-    return reg.get<LoaderData>(loaderMaps[0]);
-}
 
 ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path) 
 {
-    auto &data = getLoaderData(reg);
+    auto &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
     std::string_view extension = getExtension(path);
 
-    if(data.loaderMap.find(extension) != data.loaderMap.end())
+    if(data.loaderMap.find(extension) == data.loaderMap.end())
     {
         ENGINE_OUT << "Unrecognised extension: \"" << extension << "\"!\n";
         ENGINE_OUT << "Supported extensions: ";
@@ -50,7 +38,7 @@ ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path)
         {
             ENGINE_OUT << "none D:";
         }
-        ENGINE_OUT << '\n';
+        ENGINE_OUT << ".\n";
         ENGINE_ASSERT(false, "Unrecognised extension");
         return 0;
     }
@@ -60,11 +48,84 @@ ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path)
 
 void engine::loader::setup(ecs::registry &reg)
 {
-    auto e = reg.create<LoaderData>();
-    auto &data = reg.get<LoaderData>(e);
+    auto e = reg.create<detail::LoaderData>();
+    auto &data = reg.get<detail::LoaderData>(e);
+
     data.loaders.emplace_back(std::move(std::make_unique<detail::ObjModelLoader>()));
-    data.loaders.emplace_back(std::move(std::make_unique<detail::GLTFModelLoader>()));
-    data.loaderMap.emplace("obj",  data.loaders[0].get());
-    data.loaderMap.emplace("gltf", data.loaders[1].get());
-    data.loaderMap.emplace("glb",  data.loaders[1].get());
+    data.loaders.emplace_back(std::move(std::make_unique<detail::ObjModelLoader>()));
+    data.loaders.emplace_back(std::move(std::make_unique<detail::TextureLoader>()));
+
+    data.loaderMap = {
+        { "obj",  data.loaders[0].get() },
+
+        { "gltf", data.loaders[1].get() },
+        { "glb",  data.loaders[1].get() },
+
+
+        { "png",  data.loaders[2].get() },
+        { "jpg",  data.loaders[2].get() },
+        { "jpeg", data.loaders[2].get() },
+        { "bmp",  data.loaders[2].get() },
+        { "tga",  data.loaders[2].get() },
+        { "psd",  data.loaders[2].get() },
+        { "gif",  data.loaders[2].get() },
+        { "hdr",  data.loaders[2].get() },
+        { "pic",  data.loaders[2].get() },
+        { "pnm",  data.loaders[2].get() } 
+    };
+
+    data.defaultMaterial = {
+        .ambient       = {0.1f, 0.1f, 0.1f},
+        .diffuse       = {0.8f, 0.8f, 0.8f},
+        .specular      = {0.5f, 0.5f, 0.5f},
+        .transmittance = {0.0f, 0.0f, 0.0f},
+        .emission      = {0.0f, 0.0f, 0.0f},
+
+        .shininess = 32.0f,
+        .ior       = 1.5f
+    }; 
+
+    ecs::entity white = reg.create(Texture{
+        .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
+            1, 1, 1
+        }.data()},
+        .type = "",
+        .grayscale = true,
+        .path = ""
+    });
+    ecs::entity blue = reg.create(Texture{
+        .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
+            0, 0, 1
+        }.data()},
+        .type = "",
+        .grayscale = true,
+        .path = ""
+    });
+    ecs::entity black = reg.create(Texture{
+        .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
+            0, 0, 0
+        }.data()},
+        .type = "",
+        .grayscale = true,
+        .path = ""
+    });
+    ecs::entity tile = reg.create(Texture{
+        .data = engine::Bitmap<float>{2, 2, 3, std::array<float, 4*3>{
+            1, 1, 1, 0.5, 0.5, 0.5,
+            0.5, 0.5, 0.5, 1, 1, 1 
+        }.data()},
+        .type = "",
+        .grayscale = true,
+        .path = ""
+    });
+
+    data.defaultTextures = {
+        .ambient = white,
+        .diffuse = tile,
+        .specular = white,
+        .bump = blue,
+        .displacement = black,
+        .alpha = white,
+        .reflection = black
+    };
 }

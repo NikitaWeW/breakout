@@ -22,6 +22,6 @@ void engine::renderer::detail::renderMain(ecs::registry &reg, detail::RendererDa
         glUniform1i(ogl::getUniform(data.plainColorShader, "u_animated"), mesh.animated);
 
         glBindVertexArray(mesh.vao.id);
-        glDrawElements(mesh.mode, 0, mesh.count, nullptr);
+        glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);
     }
 }

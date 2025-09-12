@@ -138,7 +138,7 @@ namespace engine::renderer::detail
 
         glCreateFramebuffers(1, &data.mainFBO.id);
 
-        data.plainColorShader = ogl::compileShader("src/engine/renderer/detail/shaders" "plainColor");
+        data.plainColorShader = ogl::compileShader("src/engine/renderer/detail/shaders/" "plainColor");
     }
 } // namespace engine::renderer::detail
 

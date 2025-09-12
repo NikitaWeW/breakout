@@ -4,11 +4,11 @@
 
 namespace engine::renderer::detail
 {
-    static ogl::Object getTexture(ecs::registry const &reg, ecs::entity e_texture)
+    static ogl::Texture getTexture(ecs::registry const &reg, ecs::entity e_texture)
     {
-        ENGINE_ASSERT(reg.has<renderer::Processed>(e_texture), "unprocessed texture!");
+        ENGINE_ASSERT(reg.has<renderer::ProcessedTexture>(e_texture), "unprocessed texture!");
 
-        return reg.get<ogl::Object>(reg.get<renderer::Processed>(e_texture).data);
+        return reg.get<ogl::Texture>(reg.get<renderer::ProcessedTexture>(e_texture).data);
     }
     static void addVertexBuffer(ogl::VAO vao, ogl::Buffer buff, std::size_t count, GLenum type)
     {
@@ -20,7 +20,7 @@ namespace engine::renderer::detail
     }
     static void processModels(ecs::registry &reg)
     {
-        for(ecs::entity e_model : reg.view<engine::Model>())
+        for(ecs::entity e_model : reg.view<engine::Model>(ecs::exclude_t<engine::renderer::ProcessedModel>{}))
         {
             auto const &model = reg.get<engine::Model>(e_model);
 
@@ -58,17 +58,21 @@ namespace engine::renderer::detail
             
             mesh.ibo = ogl::makeBuffer<ogl::IBO>(model.mesh.indices);
             glVertexArrayElementBuffer(mesh.vao.id, mesh.ibo.id);
+
+            ecs::entity entity = e_model;
+            reg.emplace<detail::Mesh>(entity, std::move(mesh));
+            reg.emplace<engine::renderer::ProcessedModel>(e_model, entity);
         }
     }
     static void processTextures(ecs::registry &reg)
     {
-        for(ecs::entity e_texture : reg.view<engine::Texture>())
+        for(ecs::entity e_texture : reg.view<engine::Texture>(ecs::exclude_t<renderer::ProcessedTexture>{}))
         {
             auto const &texture = reg.get<engine::Texture>(e_texture);
 
             ecs::entity const &entity = e_texture;
 
-            reg.emplace<ogl::Object>(entity, ogl::makeTexture(texture.data, texture.type == "diffuse"));
+            reg.emplace<ogl::Texture>(entity, ogl::makeTexture(texture.data, texture.type == "diffuse"));
             reg.emplace<renderer::ProcessedTexture>(e_texture, entity);
         }
     }
