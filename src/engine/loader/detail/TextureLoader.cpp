@@ -21,7 +21,7 @@ ecs::entity engine::loader::detail::TextureLoader::load(ecs::registry &reg, std:
     }
     ENGINE_ASSERT(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;
-    texture.data = engine::Bitmap{width, height, numChannels, buff};
+    texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);
 
     const int pixelCount = glm::min(width * height, 10);

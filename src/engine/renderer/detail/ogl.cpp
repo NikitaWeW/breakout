@@ -61,7 +61,7 @@ namespace engine::renderer::detail::ogl::detail // D:
     }
     static ogl::Program collectShaders(std::string_view dirpath)
     {
-        ogl::Program program;
+        Program program;
         ENGINE_ASSERT(std::filesystem::exists(dirpath), "");
         program.dirpath = dirpath;
         for(auto const &directoryEntry : std::filesystem::recursive_directory_iterator{dirpath}) {
@@ -102,9 +102,11 @@ ogl::Program ogl::compileShader(std::string_view dirpath)
         ENGINE_OUT << "failed to link program \"" << dirpath << "\"\n";
         return Program{};
     }
+
+    return program;
 }
 
-int ogl::getUniform(ogl::Program &program, std::string_view name)
+int ogl::getUniform(Program const &program, std::string_view name)
 {
     if(program.locationCache.find(name) != program.locationCache.end()) return program.locationCache[name];
     int location = glGetUniformLocation(program.id, name.data());
@@ -115,7 +117,7 @@ int ogl::getUniform(ogl::Program &program, std::string_view name)
     return location;
 }
 
-int ogl::getUniformBlock(ogl::Program &program, std::string_view name)
+int ogl::getUniformBlock(Program const &program, std::string_view name)
 {
     if(program.locationCache.find(name) != program.locationCache.end()) return program.locationCache[name];
     int location = glGetUniformBlockIndex(program.id, name.data());
@@ -126,7 +128,7 @@ int ogl::getUniformBlock(ogl::Program &program, std::string_view name)
     return location;
 }
 
-int ogl::getStorageBlock(ogl::Program &program, std::string_view name)
+int ogl::getStorageBlock(Program const &program, std::string_view name)
 {
     if(program.locationCache.find(name) != program.locationCache.end()) return program.locationCache[name];
     int location = glGetProgramResourceIndex(program.id, GL_SHADER_STORAGE_BLOCK, name.data());
@@ -144,7 +146,7 @@ bool ogl::isComplete(Framebuffer const &fbo)
 
 ogl::Texture ogl::makeTexture(Bitmap<float> data, bool srgb)
 {
-    ogl::Texture texture;
+    Texture texture;
     texture.width = data.getWidth();
     texture.height = data.getHeight();
 

@@ -21,6 +21,8 @@ namespace engine::loader::detail
 
         ecs::entity e = engine::loader::load(reg, path);
         reg.get<engine::Texture>(e).type = type;
+
+        return e;
     };
 } // namespace engine::loader::detail
 

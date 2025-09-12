@@ -30,7 +30,7 @@ static LoaderData &getLoaderData(ecs::registry &reg)
 ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path) 
 {
     auto &data = getLoaderData(reg);
-    std::string_view extension = path.substr(0, path.find_last_of('.'));
+    std::string_view extension = getExtension(path);
 
     if(data.loaderMap.find(extension) != data.loaderMap.end())
     {
