@@ -10,12 +10,29 @@ namespace engine::renderer::detail
 
         return reg.get<ogl::Texture>(reg.get<renderer::ProcessedTexture>(e_texture).data);
     }
-    static void addVertexBuffer(ogl::VAO vao, ogl::Buffer buff, std::size_t count, GLenum type)
+    static void addVertexBuffer(ogl::VAO &vao, ogl::Buffer &buff, std::size_t count, GLenum type)
     {
-        glVertexArrayVertexBuffer(vao.id, vao.numVertexBuffers, buff.id, 0, buff.size);
-        glEnableVertexArrayAttrib(vao.id, vao.numVertexBuffers);
-        glVertexArrayAttribFormat(vao.id, vao.numVertexBuffers, count, type, GL_FALSE, 0);
-        glVertexArrayAttribBinding(vao.id, vao.numVertexBuffers, vao.numVertexBuffers);
+        if(buff.id == 0) 
+        {
+            ++vao.numVertexBuffers;
+            return;
+        }
+        unsigned attrib = vao.numVertexBuffers;
+        glVertexArrayVertexBuffer(vao.id, vao.numVertexBuffers, buff.id, 0, count * ogl::getSizeOfGLType(type));
+        glEnableVertexArrayAttrib(vao.id, attrib);
+        switch(type)
+        {
+        case GL_INT:
+            glVertexArrayAttribIFormat(vao.id, attrib, count, type, 0);
+            break;
+        case GL_UNSIGNED_INT:
+            glVertexArrayAttribIFormat(vao.id, attrib, count, type, 0);
+            break;
+        default:
+            glVertexArrayAttribFormat(vao.id, attrib, count, type, GL_FALSE, 0);
+            break;
+        }
+        glVertexArrayAttribBinding(vao.id, attrib, vao.numVertexBuffers);
         ++vao.numVertexBuffers;
     }
     static void processModels(ecs::registry &reg)
@@ -28,6 +45,7 @@ namespace engine::renderer::detail
             mesh.animated = !model.mesh.weights.empty();
             mesh.mode = GL_TRIANGLES;
             mesh.material = model.material;
+            mesh.count = model.mesh.indices.size();
             mesh.textures = {
                 .ambient      = getTexture(reg, model.textures.ambient),
                 .diffuse      = getTexture(reg, model.textures.diffuse),
@@ -53,7 +71,7 @@ namespace engine::renderer::detail
             addVertexBuffer(mesh.vao, mesh.buffers.texCoords, 2, GL_FLOAT);
             addVertexBuffer(mesh.vao, mesh.buffers.normals,   4, GL_FLOAT);
             addVertexBuffer(mesh.vao, mesh.buffers.tangents,  4, GL_FLOAT);
-            addVertexBuffer(mesh.vao, mesh.buffers.boneIDs,   4, GL_FLOAT);
+            addVertexBuffer(mesh.vao, mesh.buffers.boneIDs,   4, GL_INT);
             addVertexBuffer(mesh.vao, mesh.buffers.weights,   4, GL_FLOAT);
             
             mesh.ibo = ogl::makeBuffer<ogl::IBO>(model.mesh.indices);

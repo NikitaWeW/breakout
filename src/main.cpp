@@ -5,6 +5,9 @@
 #include "GLFW/glfw3.h"
 #include "engine/renderer/renderer.hpp"
 #include "engine/loader/loader.hpp"
+#include "engine/controller/controller.hpp"
+#include "engine/physics/physics.hpp"
+#include "engine/input/input.hpp"
 
 class Deallocator {
 public: 
@@ -37,26 +40,34 @@ int main(int argc, char **argv) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
 
-    float deltatime = 0.1;
     ecs::registry registry;
 
-    registry.create(engine::renderer::Window{window});
+    auto e_window = registry.create(engine::Window{window});
 
     engine::loader::setup(registry);
+    engine::renderer::setup(registry);
+
     auto cube = engine::loader::load(registry, "res/models/cube.obj");
     auto cube0 = registry.create(engine::renderer::Draw{cube});
     
-    engine::renderer::setup(registry);
     engine::renderer::processData(registry);
-
     ecs::entity rendererConfig = registry.view<engine::renderer::RendererContext>().at(0);
 
+    ecs::entity e_camera = engine::controller::createCamera(registry);
+    registry.get<engine::controller::ControllableCamera>(e_camera).window = e_window;
+
     auto &config = registry.get<engine::renderer::RendererContext>(rendererConfig);
-    config.camera.viewMat = glm::lookAt(glm::vec3{0, 2, 5}, glm::vec3{0, 0, 0}, glm::vec3{0,1,0});
+    config.e_camera = e_camera;
+
+    float deltatime = 0.1;
 
     while(!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
+
+        engine::input::update(registry);
+        engine::controller::update(registry);
+        engine::physics::update(registry, deltatime);
         engine::renderer::render(registry);
 
         glfwSwapBuffers(window);

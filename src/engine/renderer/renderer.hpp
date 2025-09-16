@@ -1,28 +1,13 @@
 #pragma once
 #include "engine/config.hpp"
 #include "ecs.hpp"
-#include "glad/gl.h"
-#include "GLFW/glfw3.h"
 #include "engine/data.hpp"
 
 // implementation
 #include "detail/renderer.hpp"
 
-/**
- * \brief The renderer abstraction. 
- * The main motivation behind this kind of structure is that one can switch the renderer entirely just by switching the detail dir.
- */
 namespace engine::renderer
 {
-    /**
-     * \brief The window representation. 
-     * The registry needs to hold at least one of these at the setup.
-     */
-    struct Window
-    {
-        GLFWwindow *glfwWindow;
-    };
-
     /** \brief A tag indicating the model is processed by renderer. */
     struct Processed 
     {
@@ -43,7 +28,8 @@ namespace engine::renderer
     /** \brief The renderer settings. */
     struct RendererContext
     {
-        Camera camera;
+        // contains the engine::Camera component
+        ecs::entity e_camera;
         size_t shadowMapSize = 1024;
         float shadowMapNearPlane = 0.01f;
         float shadowMapFarPlane = 100;

@@ -35,7 +35,7 @@ namespace engine::renderer::detail
             glNamedRenderbufferStorageMultisample(rbo.id, rbo.numSamples, GL_DEPTH24_STENCIL8, size.x, size.y);
 
         ENGINE_ASSERT(fbo.id != 0, "invalid fbo");
-        glNamedFramebufferRenderbuffer(fbo.id, attachment, rbo.id, 0);
+        glNamedFramebufferRenderbuffer(fbo.id, attachment, GL_RENDERBUFFER, rbo.id);
         ENGINE_ASSERT(ogl::isComplete(fbo), "");
     }
 } // namespace engine::renderer::detail
@@ -43,18 +43,20 @@ namespace engine::renderer::detail
 
 void engine::renderer::detail::render(ecs::registry &reg)
 {
+    ENGINE_ASSERT(reg.view<detail::RendererData>().size() == 1 && reg.view<RendererContext>().size() == 1, "forgot to call engine::renderer::setup() / called more than once?");
     detail::RendererData &data = reg.get<detail::RendererData>(reg.view<detail::RendererData>().at(0));
     RendererContext &context = reg.get<RendererContext>(reg.view<RendererContext>().at(0));
+    auto &camera = reg.get<engine::Camera>(context.e_camera);
 
-    if(data.prevCamSize != context.camera.size) { // resize or initialize buffers / textures
-        detail::resizeAttachment(data.oitFBO, data.oitAccumTexture, context.camera.size);
-        detail::resizeAttachment(data.oitFBO, data.oitRevelageTexture, context.camera.size, GL_COLOR_ATTACHMENT1, GL_R8);
+    if(data.prevCamSize != camera.size) { // resize or initialize buffers / textures
+        detail::resizeAttachment(data.oitFBO, data.oitAccumTexture, camera.size);
+        detail::resizeAttachment(data.oitFBO, data.oitRevelageTexture, camera.size, GL_COLOR_ATTACHMENT1, GL_R8);
 
-        detail::resizeAttachment(data.mainFBO, data.mainFBOColor, context.camera.size);
-        detail::resizeAttachment(data.mainFBO, data.mainFBORBO, context.camera.size);
+        detail::resizeAttachment(data.mainFBO, data.mainFBOColor, camera.size);
+        detail::resizeAttachment(data.mainFBO, data.mainFBORBO, camera.size);
     }
 
     detail::renderMain(reg, data, context);
 
-    data.prevCamSize = context.camera.size;
+    data.prevCamSize = camera.size;
 }

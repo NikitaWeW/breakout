@@ -67,6 +67,8 @@ namespace engine::renderer::detail::ogl
 
     bool isComplete(Framebuffer const &fbo);
 
+    std::size_t getSizeOfGLType(GLenum type);
+
     Texture makeTexture(Bitmap<float> data, bool srgb);
     /**
      * Does not create buffer object if size is 0.

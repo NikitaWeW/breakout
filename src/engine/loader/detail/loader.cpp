@@ -17,6 +17,7 @@ static std::string_view getExtension(std::string_view path)
 
 ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path) 
 {
+    ENGINE_ASSERT(reg.view<detail::LoaderData>().size() == 1, "forgot to call engine::loader::setup() / called more than once?");
     auto &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
     std::string_view extension = getExtension(path);
 

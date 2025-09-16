@@ -5,8 +5,10 @@ void engine::renderer::detail::renderMain(ecs::registry &reg, detail::RendererDa
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(data.plainColorShader.id);
 
-    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_viewMat"), 1, false, glm::value_ptr(context.camera.viewMat));
-    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_projMat"), 1, false, glm::value_ptr(context.camera.projMat));
+    auto &camera = reg.get<engine::Camera>(context.e_camera);
+
+    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_viewMat"), 1, false, glm::value_ptr(camera.viewMat));
+    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
     
     for(ecs::entity e_processedModel : reg.view<engine::renderer::ProcessedModel>())
     {

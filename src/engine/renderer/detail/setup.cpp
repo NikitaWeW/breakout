@@ -115,7 +115,7 @@ namespace engine::renderer::detail
     {
         ENGINE_PROFILE()
         using namespace engine;
-        auto windows = reg.view<renderer::Window>();
+        auto windows = reg.view<engine::Window>();
         ENGINE_ASSERT(!windows.empty(), "no windows to render to!");
     
         auto version = gladLoadGL((GLADloadfunc) glfwGetProcAddress);

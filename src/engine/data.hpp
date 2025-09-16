@@ -5,6 +5,9 @@
 #include "engine/config.hpp"
 #include "ecs.hpp"
 #include "bitmap.hpp"
+#include "glm/gtc/quaternion.hpp"
+#define GLFW_INCLUDE_NONE
+#include "GLFW/glfw3.h"
 
 namespace engine
 {
@@ -64,5 +67,18 @@ namespace engine
     struct ModelMatrix 
     {
         glm::mat4 value;
+    };
+
+    struct Position : glm::vec3 {};
+    struct Orientation : glm::quat {};
+    struct Velocity : glm::vec3 {};
+
+    /**
+     * \brief The window representation. 
+     */
+    struct Window
+    {
+        GLFWwindow *glfwWindow;
+        glm::uvec2 size{0};
     };
 } // namespace engine

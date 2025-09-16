@@ -9,7 +9,7 @@ project(breakout C CXX)
 include(cmake/cpm.cmake)
 
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/ecs@1.2.1")
+CPMAddPackage("gh:nikitawew/ecs@1.3.0")
 
 file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
 add_library(dependencies ${DEPENDENCIES_SOURCES})
@@ -24,6 +24,7 @@ target_link_libraries(main PRIVATE ecs glfw dependencies)
 target_include_directories(main PRIVATE src)
 
 target_precompile_headers(main PRIVATE 
+    src/engine/config.hpp # to configure ecs.hpp
     ${ECS_SOURCE_DIR}/ecs.hpp
     dependencies/include/glm/glm.hpp
     dependencies/include/glm/gtc/quaternion.hpp

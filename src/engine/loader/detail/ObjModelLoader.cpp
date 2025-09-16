@@ -28,6 +28,7 @@ namespace engine::loader::detail
 
 ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std::string_view path)
 {
+    ENGINE_ASSERT(reg.view<detail::LoaderData>().size() == 1, "forgot to call engine::loader::setup() / called more than once?");
     loader::detail::LoaderData &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
     tinyobj::ObjReaderConfig config;
     config.mtl_search_path = "./";
@@ -51,6 +52,7 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
 
     engine::Mesh unindexed_mesh;
     engine::Model model;
+    model.path = path;
 
     // unfold the index-per-type structure
     for (size_t shape = 0; shape < shapes.size(); shape++) {
