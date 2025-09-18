@@ -17,11 +17,20 @@ target_include_directories(dependencies PUBLIC dependencies/include)
 
 ######################################################################
 
+file(GLOB_RECURSE ENGINE_SOURCES "src/engine/*.cpp")
+
+add_library(engine ${ENGINE_SOURCES})
+target_link_libraries(engine PUBLIC ecs glfw dependencies)
+target_include_directories(engine PRIVATE src)
+
+######################################################################
+
 file(GLOB_RECURSE SOURCES "src/*.cpp")
+list(REMOVE_ITEM SOURCES ${ENGINE_SOURCES})
 
 add_executable(main ${SOURCES})
-target_link_libraries(main PRIVATE ecs glfw dependencies)
 target_include_directories(main PRIVATE src)
+target_link_libraries(main PRIVATE engine)
 
 target_precompile_headers(main PRIVATE 
     src/engine/config.hpp # to configure ecs.hpp
