@@ -23,22 +23,21 @@ add_library(engine ${ENGINE_SOURCES})
 target_link_libraries(engine PUBLIC ecs glfw dependencies)
 target_include_directories(engine PRIVATE src)
 
-######################################################################
-
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-list(REMOVE_ITEM SOURCES ${ENGINE_SOURCES})
-
-add_executable(main ${SOURCES})
-target_include_directories(main PRIVATE src)
-target_link_libraries(main PRIVATE engine)
-
-target_precompile_headers(main PRIVATE 
+target_precompile_headers(engine PRIVATE 
     src/engine/config.hpp # to configure ecs.hpp
     ${ECS_SOURCE_DIR}/ecs.hpp
     dependencies/include/glm/glm.hpp
     dependencies/include/glm/gtc/quaternion.hpp
     dependencies/include/glm/gtc/matrix_transform.hpp
 )
+
+######################################################################
+
+file(GLOB_RECURSE SOURCES "src/app/*.cpp")
+
+add_executable(main ${SOURCES})
+target_include_directories(main PRIVATE src)
+target_link_libraries(main PRIVATE engine)
 
 install(DIRECTORY res DESTINATION .)
 install(DIRECTORY shaders DESTINATION .)
