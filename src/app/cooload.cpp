@@ -132,5 +132,6 @@ void cooload::clearConsole()
 #else // Assume Unix-based system otherwise
     system("clear");
 #endif
+    std::cout << '\n';
     std::cout.flush();
 }

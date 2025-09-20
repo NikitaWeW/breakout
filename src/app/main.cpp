@@ -23,16 +23,20 @@ public:
     }
 };
 
-void loadingScreen(float const *progress, float const *subProgress, std::string *job)
+void loadingScreen(float const *progress, std::string *job)
 {
     cooload::SpinningCube cube = {};
 
     cooload::Bar progressBar;
-    cooload::Bar subProgressBar;
 
     std::cout << "\x1B[?25l";
-    while (*progress <= 1)
+    while(true)
     {
+        if(*progress >= 1)
+        {
+            std::cout << "\nDone!\n";
+            break;
+        }
         auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() * 0.25e-8;
         
         auto prevSize = cube.imageSize;
@@ -64,10 +68,6 @@ void loadingScreen(float const *progress, float const *subProgress, std::string 
         progressBar.begin = "Loading [ ";
         progressBar.width = glm::max(static_cast<int>(cube.imageSize.x - cubeWidth - 4), 0);
 
-        subProgressBar.percentage = *subProgress;
-        subProgressBar.begin = *job + " [ ";
-        subProgressBar.width = glm::max(static_cast<int>(cube.imageSize.x - cubeWidth - 4), 0);
-
         cooload::gotoxy(cube.viewport.position);
         cooload::animateCube(cube, time);
         cooload::draw(cube);
@@ -75,12 +75,11 @@ void loadingScreen(float const *progress, float const *subProgress, std::string 
         std::cout.flush();
         
         cooload::gotoxy({cubeWidth, cube.imageSize.y * 0.1f + 0});
-        cooload::draw(subProgressBar);
-        std::cout << subProgressBar.buffer.str();
-        
-        cooload::gotoxy({cubeWidth, cube.imageSize.y * 0.1f + 1});
         cooload::draw(progressBar);
         std::cout << progressBar.buffer.str();
+        
+        cooload::gotoxy({cubeWidth, cube.imageSize.y * 0.1f + 1});
+        std::cout << *job;
 
         cooload::gotoxy({0, cube.viewport.position.y + cube.viewport.size.y});
         std::cout.flush();
@@ -88,58 +87,23 @@ void loadingScreen(float const *progress, float const *subProgress, std::string 
     std::cout << "\x1B[?25h";
 }
 
-int randomIndex(int max) {
-    static std::mt19937 rng{std::random_device{}()};
-    std::uniform_int_distribution<int> dist(0, max-1);
-    return dist(rng);
-}
+
+#define LOAD_JOB(name) progress += 1.0f / toLoad; currentJob = name
 
 int main(int argc, char **argv) {
+    unsigned toLoad = 6;
     float progress = 0;
-    float subProgress = 0;
     std::string currentJob = "";
     
-    std::thread loadingScreenThread{loadingScreen, &progress, &subProgress, &currentJob};
-
-    ////////////////////////////////////////
-    const std::array<std::string_view, 24> jobs = {
-        "Initializing GLFW: Creating Window", "Initializing GLFW: Binding Callbacks", "Initializing GLFW: Checking Extensions",
-        "Loading Shaders: Compiling Vertex Shader", "Loading Shaders: Linking Program", "Loading Shaders: Validating Pipeline",
-        "Importing Models: Parsing OBJ", "Importing Models: Allocating Buffers", "Importing Models: Uploading to GPU",
-        "Setting Up: Initializing Bullet", "Setting Up: Creating Colliders", "Setting Up: Tuning Solver",
-        "Configuring Audio: Loading WAV", "Configuring Audio: Uploading to Buffer", "Configuring Audio: Initializing Mixer",
-        "Building NavMesh: Sampling Vertices", "Building NavMesh: Flood-Fill Cells", "Building NavMesh: Stitching Edges",
-        "Optimizing Textures: Generating Mipmaps", "Optimizing Textures: Compressing Textures", "Optimizing Textures: Uploading to GPU",
-        "Generating Terrain: Sampling Noise", "Generating Terrain: Eroding Peaks", "Generating Terrain: Applying Biomes"
-    };
-
-    int jobIdx = randomIndex(jobs.size());
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        subProgress += 0.1;
-        if (subProgress >= 1.0f) {
-            progress += 1.0f / jobs.size();
-            subProgress = 0;
-
-            jobIdx  = randomIndex(jobs.size());
-        }
-        currentJob = jobs[jobIdx];
-
-        if(progress >= 1)
-            progress = 0;
-    }
-    loadingScreenThread.join();
-    return 0;
-
-    ////////////////////////////////////////
+    std::thread loadingScreenThread{loadingScreen, &progress, &currentJob};
 
     std::unique_ptr<Deallocator> cleanup{new Deallocator};
     GLFWwindow* window;
     
+    currentJob = "Initializing GLFW";
     if (!glfwInit())
         return -1;
-
+    LOAD_JOB("Initializing the window");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
@@ -153,19 +117,28 @@ int main(int argc, char **argv) {
         std::cout << "ERROR: failed to init the window!\n";
         return -1;
     }
-
+    LOAD_JOB("Making GLFW context");
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
 
     ecs::registry registry;
+    std::cout << "message\n";
 
     auto e_window = registry.create(engine::Window{window});
 
+    LOAD_JOB("Setting up loader");
+    std::cout << "warning\n";
     engine::loader::setup(registry);
-    engine::renderer::setup(registry);
-    engine::input::setup(registry);
-    engine::physics::setup(registry);
 
+    LOAD_JOB("Setting up renderer");
+    engine::renderer::setup(registry);
+
+    LOAD_JOB("Setting up Input");
+    engine::input::setup(registry);
+    
+    LOAD_JOB("Setting up Input");
+    engine::physics::setup(registry);
+    
     auto cube = engine::loader::load(registry, "res/models/cube.obj");
     auto cube0 = registry.create(engine::renderer::Draw{cube});
     
@@ -185,7 +158,7 @@ int main(int argc, char **argv) {
     while(!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
-        ENGINE_OUT << "\x1b[2J\x1b[H";
+        cooload::clearConsole();
         ENGINE_OUT << deltatime << "s \t" << (1 / deltatime) << "Hz\n";
 
         for(auto e : registry.view<engine::Camera>())
