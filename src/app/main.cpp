@@ -62,7 +62,6 @@ void loadingScreen(float const *progress, std::string *job)
         cube.viewport.size.y *= cube.cellAspect;
 
         auto cubeWidth = cube.viewport.position.x + cube.viewport.size.x + 1;
-        auto subProcessHeight = cube.imageSize.y * 0.9 - (cube.imageSize.y * 0.1 + 1);
 
         progressBar.percentage = *progress;
         progressBar.begin = "Loading [ ";
@@ -141,6 +140,7 @@ int main(int argc, char **argv) {
     
     auto cube = engine::loader::load(registry, "res/models/cube.obj");
     auto cube0 = registry.create(engine::renderer::Draw{cube});
+    (void) cube0;
     
     engine::renderer::processData(registry);
     ecs::entity rendererConfig = registry.view<engine::renderer::RendererContext>().at(0);

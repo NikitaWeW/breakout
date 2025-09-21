@@ -7,7 +7,7 @@
 #define ENGINE_NO_OUTPUT false
 #endif
 
-#define ENGINE_ASSERT(x, msg) assert((x) && msg)
+#define ENGINE_ASSERT(x, msg) (assert((x) && msg))
 #define ENGINE_PROFILE()
 #define ENGINE_OUT if(ENGINE_NO_OUTPUT) {} else std::cout
 

@@ -118,7 +118,7 @@ namespace engine::renderer::detail
         auto windows = reg.view<engine::Window>();
         ENGINE_ASSERT(!windows.empty(), "no windows to render to!");
     
-        auto version = gladLoadGL((GLADloadfunc) glfwGetProcAddress);
+        gladLoadGL((GLADloadfunc) glfwGetProcAddress);
     
         ENGINE_ASSERT(version, "failed to load opengl!");
     
