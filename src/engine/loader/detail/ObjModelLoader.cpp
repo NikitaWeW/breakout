@@ -16,7 +16,7 @@ namespace engine::loader::detail
 
             if(texture.path == path)
             {
-                ENGINE_ASSERT(texture.type == type, "mismatched texture type");
+                ENGINE_ASSERT_MSG(texture.type == type, "mismatched texture type");
                 return e;
             }
         }
@@ -30,23 +30,23 @@ namespace engine::loader::detail
 
 ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std::string_view path)
 {
-    ENGINE_ASSERT(reg.view<detail::LoaderData>().size() == 1, "forgot to call engine::loader::setup() / called more than once?");
+    ENGINE_ASSERT_MSG(reg.view<detail::LoaderData>().size() == 1, "forgot to call engine::loader::setup() / called more than once?");
     loader::detail::LoaderData &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
     tinyobj::ObjReaderConfig config;
     config.mtl_search_path = "./";
     tinyobj::ObjReader reader;
 
     if(!reader.ParseFromFile(std::string{path}, config)) {
-        ENGINE_OUT << "failed to load \"" << path << "\"\n";
+        ENGINE_CORE_ERROR("failed to load \"{}\"", path);
         if(!reader.Error().empty()) {
-            ENGINE_OUT << reader.Error() << '\n';
+            ENGINE_CORE_ERROR(reader.Error());
         }
-        ENGINE_ASSERT(false, "failed to load a model!");
+        ENGINE_ASSERT_MSG(false, "failed to load a model!");
         return 0;
     }
 
     if(!reader.Warning().empty()) {
-        ENGINE_OUT << reader.Warning().c_str();
+        ENGINE_CORE_WARN(reader.Warning().c_str());
     }
 
     auto &attrib = reader.GetAttrib();
@@ -100,6 +100,15 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
     {
         auto const &material = materials[0];
         model.material = {
+            .textures = {
+                .ambient      = getTexture(reg, material.ambient_texname,      "ao"),
+                .diffuse      = getTexture(reg, material.diffuse_texname,      "diffuse"),
+                .specular     = getTexture(reg, material.specular_texname,     "specular"),
+                .bump         = getTexture(reg, material.bump_texname,         "bump"),
+                .displacement = getTexture(reg, material.displacement_texname, "displacement"),
+                .alpha        = getTexture(reg, material.alpha_texname,        "alpha"),
+                .reflection   = getTexture(reg, material.reflection_texname,   "reflection")
+            },
             .ambient = glm::vec3{material.ambient[0], material.ambient[1], material.ambient[2]},
             .diffuse = glm::vec3{material.diffuse[0], material.diffuse[1], material.diffuse[2]},
             .specular = glm::vec3{material.specular[0], material.specular[1], material.specular[2]},
@@ -109,25 +118,15 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
             .ior = material.ior
         };
 
-        model.textures = {
-            .ambient      = getTexture(reg, material.ambient_texname,      "ao"),
-            .diffuse      = getTexture(reg, material.diffuse_texname,      "diffuse"),
-            .specular     = getTexture(reg, material.specular_texname,     "specular"),
-            .bump         = getTexture(reg, material.bump_texname,         "bump"),
-            .displacement = getTexture(reg, material.displacement_texname, "displacement"),
-            .alpha        = getTexture(reg, material.alpha_texname,        "alpha"),
-            .reflection   = getTexture(reg, material.reflection_texname,   "reflection")
-        };
     } else
     {
-        model.textures = data.defaultTextures;
         model.material = data.defaultMaterial;
     }
 
     if(unindexed_mesh.positions.empty())
     {
-        ENGINE_OUT << "failed to load \"" << path << "\": no positions!\n";
-        ENGINE_ASSERT(false, "failed to load a model!");
+        ENGINE_CORE_ERROR("failed to load \"{}\": no positions!", path);
+        ENGINE_ASSERT(false);
         return 0;
     }
 
@@ -189,7 +188,7 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
         }
     }
 
-    ENGINE_ASSERT(
+    ENGINE_ASSERT_MSG(
         unindexed_mesh.positions.size() == unindexed_mesh.normals.size() && 
         unindexed_mesh.positions.size() == unindexed_mesh.texCoords.size() && 
         unindexed_mesh.positions.size() == unindexed_mesh.tangents.size(), 
@@ -211,8 +210,6 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
     model.mesh.texCoords.resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.texCoords.data(), streams[1].data, index_count, streams[1].size, remap.data());
     model.mesh.normals  .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.normals  .data(), streams[2].data, index_count, streams[2].size, remap.data());
     model.mesh.tangents .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.tangents .data(), streams[3].data, index_count, streams[3].size, remap.data());
-
-    ENGINE_OUT << model.mesh.positions[24];
 
     return reg.create(std::move(model));
 }

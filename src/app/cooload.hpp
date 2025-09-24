@@ -122,4 +122,10 @@ namespace cooload
      * \param bar The bar to process.
      */
     void draw(Bar &bar);
+
+    /**
+     * \brief Some cool loading screen / example. 
+     * Run in a separate thread.
+     */
+    void loadingScreen(float const *progress);
 } // namespace cooload

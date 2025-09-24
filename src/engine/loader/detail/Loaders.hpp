@@ -28,7 +28,6 @@ namespace engine::loader::detail
         ecs::entity load(ecs::registry &reg, std::string_view path) override;
     };
     struct LoaderData {
-        engine::MaterialTextures defaultTextures;
         engine::Material defaultMaterial;
         std::vector<std::unique_ptr<engine::loader::detail::ILoader>> loaders;
         std::unordered_map<std::string_view, engine::loader::detail::ILoader *> loaderMap;

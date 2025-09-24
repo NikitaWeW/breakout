@@ -1,19 +1,65 @@
 #pragma once
 
 #include <cassert>
-#include <iostream>
 
-#ifndef ENGINE_NO_OUTPUT
-#define ENGINE_NO_OUTPUT false
-#endif
-
-#define ENGINE_ASSERT(x, msg) (assert((x) && msg))
+#define ENGINE_ASSERT(x) assert(x)
+#define ENGINE_ASSERT_MSG(x, m) ENGINE_ASSERT((x) && m)
 #define ENGINE_PROFILE()
-#define ENGINE_OUT if(ENGINE_NO_OUTPUT) {} else std::cout
 
 #ifndef ECS_ASSERT
-#define ECS_ASSERT ENGINE_ASSERT
+#define ECS_ASSERT ENGINE_ASSERT_MSG
 #define ECS_PROFILE ENGINE_PROFILE
 #else
 #warning ecs.hpp included before the engine/confing.hpp, the engine configuration wont apply to ecs.
+#endif
+
+// ========== logging ==========
+
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/spdlog.h"
+#include <memory>
+
+namespace engine
+{
+    class Logger
+    {
+    private:
+        static std::shared_ptr<spdlog::logger> s_engineLogger;
+        static std::shared_ptr<spdlog::logger> s_appLogger;
+    public:
+        static void init() ;
+        inline static std::shared_ptr<spdlog::logger> &getEngineLogger() { return s_engineLogger; };
+        inline static std::shared_ptr<spdlog::logger> &getAppLogger() { return s_appLogger; };
+    };
+}
+
+
+#ifdef ENGINE_NO_OUTPUT
+
+#define ENGINE_CORE_TRACE(...)
+#define ENGINE_CORE_INFO(...)
+#define ENGINE_CORE_WARN(...)
+#define ENGINE_CORE_ERROR(...)
+#define ENGINE_CORE_CRITICAL(...)
+
+#define ENGINE_TRACE(...)
+#define ENGINE_INFO(...)
+#define ENGINE_WARN(...)
+#define ENGINE_ERROR(...)
+#define ENGINE_CRITICAL(...)
+
+#else
+
+#define ENGINE_CORE_TRACE(...)    ::engine::Logger::getEngineLogger()->trace(__VA_ARGS__)
+#define ENGINE_CORE_INFO(...)     ::engine::Logger::getEngineLogger()->info(__VA_ARGS__)
+#define ENGINE_CORE_WARN(...)     ::engine::Logger::getEngineLogger()->warn(__VA_ARGS__)
+#define ENGINE_CORE_ERROR(...)    ::engine::Logger::getEngineLogger()->error(__VA_ARGS__)
+#define ENGINE_CORE_CRITICAL(...) ::engine::Logger::getEngineLogger()->critical(__VA_ARGS__)
+
+#define ENGINE_TRACE(...)         ::engine::Logger::getAppLogger()->trace(__VA_ARGS__)
+#define ENGINE_INFO(...)          ::engine::Logger::getAppLogger()->info(__VA_ARGS__)
+#define ENGINE_WARN(...)          ::engine::Logger::getAppLogger()->warn(__VA_ARGS__)
+#define ENGINE_ERROR(...)         ::engine::Logger::getAppLogger()->error(__VA_ARGS__)
+#define ENGINE_CRITICAL(...)      ::engine::Logger::getAppLogger()->critical(__VA_ARGS__)
+
 #endif

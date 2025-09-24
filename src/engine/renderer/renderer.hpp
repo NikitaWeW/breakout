@@ -3,21 +3,8 @@
 #include "ecs.hpp"
 #include "engine/data.hpp"
 
-// implementation
-#include "detail/renderer.hpp"
-
-namespace engine::renderer
+namespace engine
 {
-    /** \brief A tag indicating the model is processed by renderer. */
-    struct Processed 
-    {
-        /** \brief The reference to the implementation specific data created from the processed data. */
-        ecs::entity data;
-    };
-
-    struct ProcessedModel : public Processed {};
-    struct ProcessedTexture : public Processed {};
-
     /** \brief A command to draw an object. */
     struct Draw
     {
@@ -25,26 +12,25 @@ namespace engine::renderer
         ecs::entity model;
     };
 
-    /** \brief The renderer settings. */
-    struct RendererContext
-    {
-        // contains the engine::Camera component
-        ecs::entity e_camera;
-        size_t shadowMapSize = 1024;
-        float shadowMapNearPlane = 0.01f;
-        float shadowMapFarPlane = 100;
-    };
-
-    /** \brief Sets up the renderer, pipeline, processes meshes. */
-    inline constexpr void (*setup)(ecs::registry&) = detail::setup;
-
-    /** \brief Draw all the Draw components in the registry (if valid). */
-    inline constexpr void (*render)(ecs::registry&) = detail::render;
-
     /**
-     * \brief Processes external data such as models and textures and creates the data used by renderer.
-     * As an example, the mesh data will be translated into the graphics api buffers.
-     * Adds a Processed component.
+     * \brief The renderer implementation interface.
      */
-    inline constexpr void (*processData)(ecs::registry&) = detail::processData;
-} // namespace engine::renderer
+    class IRenderer
+    {
+    public:
+        IRenderer() = default;
+        virtual ~IRenderer() = default;
+
+        /** \brief Sets up the renderer, pipeline, etc. */
+        virtual inline void setup(ecs::registry &reg) {};
+
+        /**
+         * \brief Processes external data such as models and textures and creates the data used by renderer.
+         * As an example, the mesh data will be translated into the graphics api buffers.
+         */
+        virtual inline void processData(ecs::registry &reg) {};
+        
+        /** \brief Draw all the Draw components in the registry (if valid). */
+        virtual void draw(ecs::registry &reg) = 0;
+    };
+} // namespace engine

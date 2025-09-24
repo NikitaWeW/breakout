@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 
-namespace engine::renderer::detail::ogl
+namespace engine::detail::ogl
 {
     /**
      * \brief An opengl object. Id 0 is invalid.
@@ -94,4 +94,6 @@ namespace engine::renderer::detail::ogl
     {
         return makeBuffer<Buffer_t>(data.size() * sizeof(T), data.data(), usage);
     }
-} // namespace engine::renderer::detail::ogl
+} // namespace engine::detail::ogl
+
+namespace ogl = engine::detail::ogl;

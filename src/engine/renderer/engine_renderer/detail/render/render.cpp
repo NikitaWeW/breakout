@@ -1,6 +1,6 @@
-#include "render.hpp"
+#include "engine/renderer/engine_renderer/engineRenderer.hpp"
 
-namespace engine::renderer::detail
+namespace engine::detail
 {
     static void resizeAttachment(ogl::Framebuffer &fbo, ogl::Texture &texture, glm::uvec2 size, GLenum attachment = GL_COLOR_ATTACHMENT0, GLenum format = GL_RGBA32F)
     {
@@ -16,9 +16,9 @@ namespace engine::renderer::detail
         else
             glTextureStorage2DMultisample(texture.id, texture.numSamples, GL_RGBA32F, size.x, size.y, true);
 
-        ENGINE_ASSERT(fbo.id != 0, "invalid fbo");
+        ENGINE_ASSERT_MSG(fbo.id != 0, "invalid fbo");
         glNamedFramebufferTexture(fbo.id, attachment, texture.id, 0);
-        // ENGINE_ASSERT(ogl::isComplete(fbo), "");
+        ENGINE_ASSERT_MSG(ogl::isComplete(fbo), "");
     }
     static void resizeAttachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm::uvec2 size, GLenum attachment = GL_DEPTH_STENCIL_ATTACHMENT, GLenum format = GL_DEPTH24_STENCIL8)
     {
@@ -34,19 +34,18 @@ namespace engine::renderer::detail
         else
             glNamedRenderbufferStorageMultisample(rbo.id, rbo.numSamples, GL_DEPTH24_STENCIL8, size.x, size.y);
 
-        ENGINE_ASSERT(fbo.id != 0, "invalid fbo");
+        ENGINE_ASSERT_MSG(fbo.id != 0, "invalid fbo");
         glNamedFramebufferRenderbuffer(fbo.id, attachment, GL_RENDERBUFFER, rbo.id);
-        // ENGINE_ASSERT(ogl::isComplete(fbo), "");
+        ENGINE_ASSERT_MSG(ogl::isComplete(fbo), "");
     }
-} // namespace engine::renderer::detail
+} // namespace engine::detail
 
 
-void engine::renderer::detail::render(ecs::registry &reg)
+void engine::EngineRenderer::draw(ecs::registry &reg)
 {
-    ENGINE_ASSERT(reg.view<detail::RendererData>().size() == 1 && reg.view<RendererContext>().size() == 1, "forgot to call engine::renderer::setup() / called more than once?");
+    ENGINE_ASSERT_MSG(reg.view<detail::RendererData>().size() == 1, "forgot to call engine::setup()?");
     detail::RendererData &data = reg.get<detail::RendererData>(reg.view<detail::RendererData>().at(0));
-    RendererContext &context = reg.get<RendererContext>(reg.view<RendererContext>().at(0));
-    auto &camera = reg.get<engine::Camera>(context.e_camera);
+    auto &camera = reg.get<engine::Camera>(m_context.e_camera);
 
     if(data.prevCamSize != camera.size) { // resize or initialize buffers / textures
         detail::resizeAttachment(data.oitFBO, data.oitAccumTexture, camera.size);
@@ -56,7 +55,7 @@ void engine::renderer::detail::render(ecs::registry &reg)
         detail::resizeAttachment(data.mainFBO, data.mainFBORBO, camera.size);
     }
 
-    detail::renderMain(reg, data, context);
+    renderMain(reg, data);
 
     data.prevCamSize = camera.size;
 }

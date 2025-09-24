@@ -4,7 +4,7 @@
 #include "ecs.hpp"
 #include "GLFW/glfw3.h"
 
-namespace engine::controller
+namespace controller
 {
     struct ControllableCamera
     {

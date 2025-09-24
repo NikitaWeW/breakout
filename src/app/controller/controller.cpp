@@ -5,19 +5,19 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/io.hpp"
 
-ecs::entity engine::controller::createCamera(ecs::registry &reg, ecs::entity window)
+ecs::entity controller::createCamera(ecs::registry &reg, ecs::entity window)
 {
-    auto e = reg.create<engine::Camera, engine::controller::ControllableCamera, engine::physics::MoveIntent, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener>();
-    ENGINE_ASSERT(reg.has<engine::Window>(window), "");
+    auto e = reg.create<engine::Camera, controller::ControllableCamera, engine::physics::MoveIntent, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener>();
+    ENGINE_ASSERT(reg.has<engine::Window>(window));
     reg.get<ControllableCamera>(e).window = window;
     return e;
 }
 
-void engine::controller::update(ecs::registry &reg)
+void controller::update(ecs::registry &reg)
 {
-    for(ecs::entity e_camera : reg.view<engine::Camera, engine::controller::ControllableCamera, engine::physics::MoveIntent, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener>())
+    for(ecs::entity e_camera : reg.view<engine::Camera, controller::ControllableCamera, engine::physics::MoveIntent, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener>())
     {
-        auto &controllable = reg.get<engine::controller::ControllableCamera>(e_camera);
+        auto &controllable = reg.get<controller::ControllableCamera>(e_camera);
         auto &camera = reg.get<engine::Camera>(e_camera);
         auto &listener = reg.get<engine::input::InputListener>(e_camera);
         auto &velocity = reg.get<engine::physics::MoveIntent>(e_camera);
@@ -79,7 +79,11 @@ void engine::controller::update(ecs::registry &reg)
         {
             auto const &event = listener.scrollEvents.front();
 
-            controllable.fov += event.scroll;
+            if(controllable.locked)
+            {
+                controllable.fov -= event.scroll * 0.5;
+                controllable.fov = glm::clamp<float>(controllable.fov, 0.05, 45);
+            }
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////

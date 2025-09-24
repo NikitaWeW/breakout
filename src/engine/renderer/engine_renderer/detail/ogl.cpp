@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <fstream>
 
-namespace ogl = engine::renderer::detail::ogl;
+namespace ogl = engine::detail::ogl;
 
 static bool compileProgramShader(ogl::Program::Shader &shader) noexcept {
     shader.id = glCreateShader(shader.type);
@@ -18,7 +18,7 @@ static bool compileProgramShader(ogl::Program::Shader &shader) noexcept {
             std::string log;
             log.resize(log_size);
             glGetShaderInfoLog(shader.id, log_size, nullptr, &log[0]);
-            ENGINE_OUT << log << '\n';
+            ENGINE_CORE_ERROR(log);
         }
         return false;
     }
@@ -41,13 +41,13 @@ static bool linkProgram(ogl::Program &program) noexcept {
             std::string log;
             log.resize(log_size);
             glGetProgramInfoLog(program.id, log_size, nullptr, &log[0]);
-            ENGINE_OUT << log << '\n';
+            ENGINE_CORE_ERROR(log);
         }
         return false;
     }
     return true;
 }
-static std::string_view shaderTypeToString(GLenum type) noexcept {
+static std::string_view getShaderTypeString(GLenum type) noexcept {
     switch (type)
     {
     case GL_VERTEX_SHADER:   return "vertex";
@@ -57,10 +57,24 @@ static std::string_view shaderTypeToString(GLenum type) noexcept {
     default:                 return "unknown type";
     }
 }
+static std::string_view getFramebufferStatusString(GLenum status) {
+    switch (status) {
+        case GL_FRAMEBUFFER_COMPLETE:                       return "GL_FRAMEBUFFER_COMPLETE";
+        case GL_FRAMEBUFFER_UNDEFINED:                      return "GL_FRAMEBUFFER_UNDEFINED";
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:          return "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:  return "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:         return "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:         return "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";
+        case GL_FRAMEBUFFER_UNSUPPORTED:                    return "GL_FRAMEBUFFER_UNSUPPORTED";
+        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:         return "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
+        case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:       return "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
+        default:                                            return "Unknown Framebuffer Status";
+    }
+}
 static ogl::Program collectShaders(std::string_view dirpath)
 {
     ogl::Program program;
-    ENGINE_ASSERT(std::filesystem::exists(dirpath), "");
+    ENGINE_ASSERT_MSG(std::filesystem::exists(dirpath), "");
     program.dirpath = dirpath;
     for(auto const &directoryEntry : std::filesystem::recursive_directory_iterator{dirpath}) {
         if(!std::filesystem::is_regular_file(directoryEntry.path())) continue; 
@@ -96,7 +110,7 @@ std::size_t ogl::getSizeOfGLType(GLenum type)
         case GL_FLOAT:           return sizeof(GLfloat);
         case GL_DOUBLE:          return sizeof(GLdouble);
         default: 
-            ENGINE_ASSERT(false, "unknown opengl type");
+            ENGINE_ASSERT_MSG(false, "unknown opengl type");
             return 0;
     }
 }
@@ -106,13 +120,13 @@ ogl::Program ogl::compileShader(std::string_view dirpath)
 
     for(Program::Shader &shader : program.shaders) {
         if(!compileProgramShader(shader)) {
-            ENGINE_OUT << "failed to compile " << shaderTypeToString(shader.type) << " shader from \"" << dirpath << "\"\n";
+            ENGINE_CORE_ERROR("failed to compile {} shader from \"{}\"!", getShaderTypeString(shader.type), dirpath);
             return Program{};
         }
     }
 
     if(!linkProgram(program)) {
-        ENGINE_OUT << "failed to link program \"" << dirpath << "\"\n";
+        ENGINE_CORE_ERROR("failed to link program from \"{}\"!", dirpath);
         return Program{};
     }
 
@@ -125,7 +139,7 @@ int ogl::getUniform(Program const &program, std::string_view name)
     int location = glGetUniformLocation(program.id, name.data());
     program.locationCache[name] = location;
     if(location == -1) {
-        std::cout << "uniform \"" << name << "\" is not used or does not exist in shaders from \"" << program.dirpath << "\".\n";
+        ENGINE_CORE_WARN("uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
     }
     return location;
 }
@@ -136,7 +150,7 @@ int ogl::getUniformBlock(Program const &program, std::string_view name)
     int location = glGetUniformBlockIndex(program.id, name.data());
     program.locationCache[name] = location;
     if(location == -1) {
-        std::cout << "uniform \"" << name << "\" is not used or does not exist in shaders from \"" << program.dirpath << "\".\n";
+        ENGINE_CORE_WARN("uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
     }
     return location;
 }
@@ -147,7 +161,7 @@ int ogl::getStorageBlock(Program const &program, std::string_view name)
     int location = glGetProgramResourceIndex(program.id, GL_SHADER_STORAGE_BLOCK, name.data());
     program.locationCache[name] = location;
     if(location == -1) {
-        std::cout << "uniform \"" << name << "\" is not used or does not exist in shaders from \"" << program.dirpath << "\".\n";
+        ENGINE_CORE_WARN("uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
     }
     return location;
 }
@@ -155,7 +169,8 @@ int ogl::getStorageBlock(Program const &program, std::string_view name)
 bool ogl::isComplete(Framebuffer const &fbo)
 {
     unsigned status = glCheckNamedFramebufferStatus(fbo.id, GL_FRAMEBUFFER);
-    ENGINE_OUT << status << '\n';
+    if(status != GL_FRAMEBUFFER_COMPLETE)
+        ENGINE_CORE_TRACE("non complete framebuffer checked: {}", getFramebufferStatusString(status));
     return status == GL_FRAMEBUFFER_COMPLETE;
 }
 
@@ -190,7 +205,7 @@ ogl::Texture ogl::makeTexture(Bitmap<float> data, bool srgb)
     }
     else
     {
-        ENGINE_ASSERT(false, "invalid number of texture channels");
+        ENGINE_ASSERT_MSG(false, "invalid number of texture channels");
     }
 
     bool small = data.getWidth() * data.getHeight() < 10000;

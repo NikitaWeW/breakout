@@ -25,7 +25,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "bitmap.hpp"
 #include "config.hpp"
 
-#define EQUIRECT_ASSERT(x, msg) ENGINE_ASSERT(x, msg)
+#define EQUIRECT_ASSERT(x, msg) ENGINE_ASSERT_MSG(x, msg)
 
 namespace engine::eqr
 {

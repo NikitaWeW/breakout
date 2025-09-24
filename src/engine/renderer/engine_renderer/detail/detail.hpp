@@ -1,9 +1,18 @@
 #pragma once
-#include "engine/data.hpp"
+#include "engine/renderer/engine_renderer/engineRenderer.hpp"
 #include "ogl.hpp"
 
-namespace engine::renderer::detail
+namespace engine::detail
 {
+    struct Processed 
+    {
+        ecs::entity data;
+    };
+
+    struct ProcessedModel : public Processed {};
+    struct ProcessedTexture : public Processed {};
+
+    
     struct MaterialTextures
     {
         ogl::Texture ambient;
@@ -35,5 +44,19 @@ namespace engine::renderer::detail
 
         unsigned count = 0;
     };
-} // namespace engine::renderer::detail
 
+    struct RendererData
+    {
+        ogl::Framebuffer oitFBO;
+        ogl::Texture oitAccumTexture;
+        ogl::Texture oitRevelageTexture;
+
+        ogl::Framebuffer mainFBO;
+        ogl::Texture mainFBOColor;
+        ogl::Renderbuffer mainFBORBO;
+
+        ogl::Program plainColorShader;
+
+        glm::uvec2 prevCamSize{0};
+    }; 
+} // namespace engine::detail

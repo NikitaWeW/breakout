@@ -135,3 +135,61 @@ void cooload::clearConsole()
 #endif
     std::cout.flush();
 }
+
+#include <chrono>
+void cooload::loadingScreen(float const *progress)
+{
+    cooload::SpinningCube cube = {};
+
+    cooload::Bar progressBar;
+
+    auto start = std::chrono::steady_clock::now();
+    std::cout << "\x1B[?25l";
+    do
+    {
+        auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(start - std::chrono::steady_clock::now()).count() * 1e-9f;
+        
+        auto prevSize = cube.imageSize;
+        cube.imageSize = cooload::getConsoleSize();
+        if(prevSize != cube.imageSize)
+            cooload::resizeCube(cube);
+
+        cube.rotationAxis = {
+            glm::sin(time * 1.7f),
+            glm::sin(time * 1.5f + 1.0f) * glm::cos(time * 0.3f),
+            glm::cos(time * 1.2f)
+        };
+
+        cube.viewport.position = {0, 0};
+        cube.viewport.size = glm::uvec2{static_cast<unsigned>(0.5 * glm::min(cube.imageSize.x, static_cast<unsigned>(cube.imageSize.y / cube.cellAspect)))};
+        cube.viewport.size.y *= cube.cellAspect;
+
+        auto cubeWidth = cube.viewport.position.x + cube.viewport.size.x + 1;
+
+        progressBar.percentage = *progress;
+        progressBar.begin = "Loading [";
+        progressBar.end = "]";
+        progressBar.width = glm::max(static_cast<int>(cube.imageSize.x - cubeWidth - 4), 0);
+
+        cooload::gotoxy(cube.viewport.position);
+        cooload::animateCube(cube, time);
+        cooload::draw(cube);
+        std::cout << cube.buffer.data();
+        
+        cooload::gotoxy({cubeWidth, cube.imageSize.y * 0.1f + 0});
+        cooload::draw(progressBar);
+        std::cout << (progressBar.percentage >= 1 ? "\e[0;32m" : "") << progressBar.buffer.str();
+        std::cout << "\e[0;37m";
+
+        if(progressBar.percentage >= 1)
+        {
+            cooload::gotoxy({cubeWidth, cube.imageSize.y * 0.1f + 1});
+            std::cout << "Done!";
+        }
+
+        cooload::gotoxy({0, cube.viewport.position.y + cube.viewport.size.y});
+        std::cout.flush();
+    }
+    while(progressBar.percentage < 1);
+    std::cout << "\x1B[?25h";
+}

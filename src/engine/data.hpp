@@ -13,6 +13,13 @@ namespace engine
 {
     constexpr unsigned MAX_BONES_PER_VERTEX = 4;
 
+    enum class DataType
+    {
+        MODEL, MESH, MATERIAL,
+        AUDIO, 
+        DATA
+    };
+
     struct Mesh
     {
         std::vector<glm::vec4> positions;
@@ -30,18 +37,19 @@ namespace engine
         bool grayscale = false;
         std::string path;
     };
-    struct MaterialTextures
-    { // entity with the Texture component
-        ecs::entity ambient;
-        ecs::entity diffuse;
-        ecs::entity specular;
-        ecs::entity bump;
-        ecs::entity displacement;
-        ecs::entity alpha;
-        ecs::entity reflection;
-    };
     struct Material
     {
+        struct Textures
+        {
+            // entity with the Texture component
+            ecs::entity ambient;
+            ecs::entity diffuse;
+            ecs::entity specular;
+            ecs::entity bump;
+            ecs::entity displacement;
+            ecs::entity alpha;
+            ecs::entity reflection;
+        } textures;
         glm::vec3 ambient;
         glm::vec3 diffuse;
         glm::vec3 specular;
@@ -54,7 +62,6 @@ namespace engine
     struct Model
     {
         Mesh mesh;
-        MaterialTextures textures;
         Material material;
         std::string path;
     };

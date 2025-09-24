@@ -16,10 +16,10 @@ ecs::entity engine::loader::detail::TextureLoader::load(ecs::registry &reg, std:
     float *buff = stbi_loadf(path.data(), &width, &height, &numChannels, 0);
     if(!buff)
     {
-        ENGINE_OUT << "failed to load texture: \"" << path << "\"!: " << stbi_failure_reason() << '\n';
-        ENGINE_ASSERT(false, "failed to load a texture");
+        ENGINE_CORE_ERROR("failed to load texture: \"{}\"!: {}", path, stbi_failure_reason());
+        ENGINE_ASSERT(false);
     }
-    ENGINE_ASSERT(width > 0 && height > 0, "failed to load a texture");
+    ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;
     texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);

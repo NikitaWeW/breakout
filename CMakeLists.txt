@@ -21,7 +21,7 @@ target_include_directories(dependencies PUBLIC dependencies/include)
 file(GLOB_RECURSE ENGINE_SOURCES "src/engine/*.cpp")
 
 add_library(engine ${ENGINE_SOURCES})
-target_link_libraries(engine PUBLIC ecs glfw dependencies)
+target_link_libraries(engine PUBLIC ecs spdlog glfw dependencies)
 target_include_directories(engine PRIVATE src)
 
 target_precompile_headers(engine PRIVATE 

@@ -72,7 +72,7 @@ static void scroll_callback(GLFWwindow* window, double, double yoffset)
 
 void engine::input::setup(ecs::registry &reg)
 {
-    ENGINE_ASSERT(!reg.view<engine::Window>().empty(), "forgot to add a window?");
+    ENGINE_ASSERT_MSG(!reg.view<engine::Window>().empty(), "forgot to add a window?");
     for(ecs::entity e_window : reg.view<engine::Window>())
     {
         auto &window = reg.get<engine::Window>(e_window);
@@ -87,7 +87,7 @@ void engine::input::setup(ecs::registry &reg)
 
 void engine::input::update(ecs::registry &reg)
 {
-    ENGINE_ASSERT(!reg.view<engine::Window>().empty(), "forgot to add a window?");
+    ENGINE_ASSERT_MSG(!reg.view<engine::Window>().empty(), "forgot to add a window?");
     for(ecs::entity e_window : reg.view<engine::Window>())
     {
         auto &window = reg.get<engine::Window>(e_window);

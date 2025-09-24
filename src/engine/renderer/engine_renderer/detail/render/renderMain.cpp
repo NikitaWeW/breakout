@@ -1,8 +1,9 @@
-#include "render.hpp"
+#include "engine/renderer/engine_renderer/engineRenderer.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
-void engine::renderer::detail::renderMain(ecs::registry &reg, detail::RendererData &data, renderer::RendererContext &context)
+void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData &data)
 {
-    auto &camera = reg.get<engine::Camera>(context.e_camera);
+    auto &camera = reg.get<engine::Camera>(m_context.e_camera);
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, camera.size.x, camera.size.y);
@@ -16,9 +17,9 @@ void engine::renderer::detail::renderMain(ecs::registry &reg, detail::RendererDa
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
-    for(ecs::entity e_model : reg.view<engine::renderer::Draw>())
+    for(ecs::entity e_model : reg.view<engine::Draw>())
     {
-        ecs::entity e_mesh = reg.get<engine::renderer::ProcessedModel>(reg.get<engine::renderer::Draw>(e_model).model).data;
+        ecs::entity e_mesh = reg.get<detail::ProcessedModel>(reg.get<engine::Draw>(e_model).model).data;
         detail::Mesh const &mesh = reg.get<detail::Mesh>(e_mesh);
         
         glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_model) ? reg.get<engine::ModelMatrix>(e_model).value : glm::mat4{1.0f};

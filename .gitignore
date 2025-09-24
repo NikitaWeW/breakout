@@ -3,7 +3,6 @@ install
 .vscode
 *.ini
 *.log
-log*
 callgrind*
 *perf*
 out

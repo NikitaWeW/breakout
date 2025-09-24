@@ -17,30 +17,29 @@ static std::string_view getExtension(std::string_view path)
 
 ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path) 
 {
-    ENGINE_ASSERT(reg.view<detail::LoaderData>().size() == 1, "forgot to call engine::loader::setup() / called more than once?");
+    ENGINE_ASSERT_MSG(reg.view<detail::LoaderData>().size() == 1, "forgot to call engine::loader::setup() / called more than once?");
     auto &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
     std::string_view extension = getExtension(path);
 
     if(data.loaderMap.find(extension) == data.loaderMap.end())
     {
-        ENGINE_OUT << "Unrecognised extension: \"" << extension << "\"!\n";
-        ENGINE_OUT << "Supported extensions: ";
+        ENGINE_CORE_ERROR("Unrecognised extension: \"{}\"!", extension);
+        ENGINE_CORE_ERROR("Supported extensions: ");
         bool first = true;
         for(auto const &[extension, loader] : data.loaderMap)
         {
             if(!first)
             {
-                ENGINE_OUT << ", ";
+                ENGINE_CORE_ERROR(", ");
             }
-            ENGINE_OUT << extension;
+            ENGINE_CORE_ERROR(extension);
             first = false;
         }
         if(first)
         {
-            ENGINE_OUT << "none D:";
+            ENGINE_CORE_ERROR("none D:");
         }
-        ENGINE_OUT << ".\n";
-        ENGINE_ASSERT(false, "Unrecognised extension");
+        ENGINE_ASSERT(false);
         return 0;
     }
 
@@ -74,17 +73,6 @@ void engine::loader::setup(ecs::registry &reg)
         { "pic",  data.loaders[2].get() },
         { "pnm",  data.loaders[2].get() } 
     };
-
-    data.defaultMaterial = {
-        .ambient       = {0.1f, 0.1f, 0.1f},
-        .diffuse       = {0.8f, 0.8f, 0.8f},
-        .specular      = {0.5f, 0.5f, 0.5f},
-        .transmittance = {0.0f, 0.0f, 0.0f},
-        .emission      = {0.0f, 0.0f, 0.0f},
-
-        .shininess = 32.0f,
-        .ior       = 1.5f
-    }; 
 
     ecs::entity white = reg.create(Texture{
         .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
@@ -120,13 +108,23 @@ void engine::loader::setup(ecs::registry &reg)
         .path = ""
     });
 
-    data.defaultTextures = {
-        .ambient = white,
-        .diffuse = tile,
-        .specular = white,
-        .bump = blue,
-        .displacement = black,
-        .alpha = white,
-        .reflection = black
-    };
+    data.defaultMaterial = {
+        .textures = {
+            .ambient = white,
+            .diffuse = tile,
+            .specular = white,
+            .bump = blue,
+            .displacement = black,
+            .alpha = white,
+            .reflection = black
+        },
+        .ambient       = {0.1f, 0.1f, 0.1f},
+        .diffuse       = {0.8f, 0.8f, 0.8f},
+        .specular      = {0.5f, 0.5f, 0.5f},
+        .transmittance = {0.0f, 0.0f, 0.0f},
+        .emission      = {0.0f, 0.0f, 0.0f},
+
+        .shininess = 32.0f,
+        .ior       = 1.5f
+    }; 
 }
