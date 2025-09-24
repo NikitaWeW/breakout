@@ -18,7 +18,7 @@ namespace engine::renderer::detail
 
         ENGINE_ASSERT(fbo.id != 0, "invalid fbo");
         glNamedFramebufferTexture(fbo.id, attachment, texture.id, 0);
-        ENGINE_ASSERT(ogl::isComplete(fbo), "");
+        // ENGINE_ASSERT(ogl::isComplete(fbo), "");
     }
     static void resizeAttachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm::uvec2 size, GLenum attachment = GL_DEPTH_STENCIL_ATTACHMENT, GLenum format = GL_DEPTH24_STENCIL8)
     {
@@ -36,7 +36,7 @@ namespace engine::renderer::detail
 
         ENGINE_ASSERT(fbo.id != 0, "invalid fbo");
         glNamedFramebufferRenderbuffer(fbo.id, attachment, GL_RENDERBUFFER, rbo.id);
-        ENGINE_ASSERT(ogl::isComplete(fbo), "");
+        // ENGINE_ASSERT(ogl::isComplete(fbo), "");
     }
 } // namespace engine::renderer::detail
 

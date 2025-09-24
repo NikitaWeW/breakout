@@ -11,5 +11,5 @@ uniform vec4 u_color = vec4(1);
 
 void main() 
 {
-    o_color = u_color;
+    o_color = vec4(abs(fs_in.TBN[2]), 1);
 }

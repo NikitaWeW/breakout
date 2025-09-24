@@ -4,7 +4,7 @@
 
 namespace engine::renderer::detail
 {
-    static ogl::Texture getTexture(ecs::registry const &reg, ecs::entity e_texture)
+    static ogl::Texture const &getTexture(ecs::registry const &reg, ecs::entity e_texture)
     {
         ENGINE_ASSERT(reg.has<renderer::ProcessedTexture>(e_texture), "unprocessed texture!");
 

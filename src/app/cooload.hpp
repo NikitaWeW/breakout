@@ -67,9 +67,9 @@ namespace cooload
         /** \brief The buffer containing the drawn bar. */
         std::stringstream buffer;
         /** \brief The head of the bar. */
-        std::string begin = "[ ";
+        std::string begin = "[";
         /** \brief The tail of the bar. */
-        std::string end   = " ]";
+        std::string end   = "]";
         /** \brief The filled progress character. */
         char ch = '#';
         /** \brief The unfilled progress character. */

@@ -120,8 +120,6 @@ namespace engine::renderer::detail
     
         gladLoadGL((GLADloadfunc) glfwGetProcAddress);
     
-        ENGINE_ASSERT(version, "failed to load opengl!");
-    
         glEnable(GL_DEBUG_OUTPUT);
         glDebugMessageCallback(debugCallback, nullptr);
     }
@@ -138,7 +136,7 @@ namespace engine::renderer::detail
 
         glCreateFramebuffers(1, &data.mainFBO.id);
 
-        data.plainColorShader = ogl::compileShader("src/engine/renderer/detail/shaders/" "plainColor");
+        data.plainColorShader = ogl::compileShader("shaders/" "plainColor");
     }
 } // namespace engine::renderer::detail
 

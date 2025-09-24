@@ -10,6 +10,7 @@ include(cmake/cpm.cmake)
 
 CPMAddPackage("gh:glfw/glfw#3.4")
 CPMAddPackage("gh:nikitawew/ecs@1.3.0")
+CPMAddPackage("gh:gabime/spdlog@1.15.3")
 
 file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
 add_library(dependencies ${DEPENDENCIES_SOURCES})

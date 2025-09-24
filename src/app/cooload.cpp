@@ -102,8 +102,9 @@ void cooload::draw(Bar &bar)
 {
     bar.buffer.str("");
 
+    float percentage = glm::clamp<float>(bar.percentage, 0, 1);
     unsigned totalWidth = glm::max(static_cast<int>(bar.width) - static_cast<int>(bar.begin.size()) - static_cast<int>(bar.end.size()) - 5, 0);
-    unsigned filledWidth = static_cast<unsigned>(static_cast<float>(totalWidth) * bar.percentage);
+    unsigned filledWidth = static_cast<unsigned>(static_cast<float>(totalWidth) * percentage);
 
     bar.buffer << bar.begin;
 
@@ -122,7 +123,7 @@ void cooload::draw(Bar &bar)
     bar.buffer << bar.end;
     if(bar.printPercentage)
     {
-        bar.buffer << ' ' << glm::round(bar.percentage * 100) << '%';
+        bar.buffer << ' ' << glm::round(percentage * 100) << '%';
     }
 }
 void cooload::clearConsole()
@@ -132,6 +133,5 @@ void cooload::clearConsole()
 #else // Assume Unix-based system otherwise
     system("clear");
 #endif
-    std::cout << '\n';
     std::cout.flush();
 }

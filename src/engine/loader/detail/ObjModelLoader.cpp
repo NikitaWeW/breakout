@@ -3,6 +3,8 @@
 #include "tiny_obj_loader.h"
 #include "engine/loader/loader.hpp"
 #include "meshoptimizer.h"
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/io.hpp"
 
 namespace engine::loader::detail
 {
@@ -205,10 +207,12 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
     std::vector<unsigned int> remap(index_count);
     size_t vertex_count = meshopt_generateVertexRemapMulti(remap.data(), nullptr, index_count, index_count, streams.data(), streams.size());
     model.mesh.indices.resize(index_count); meshopt_remapIndexBuffer(model.mesh.indices.data(), nullptr, index_count, remap.data());
-    model.mesh.positions.resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.positions.data(), &unindexed_mesh.positions[0], vertex_count, sizeof(glm::vec4), remap.data());
-    model.mesh.texCoords.resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.texCoords.data(), &unindexed_mesh.texCoords[0], vertex_count, sizeof(glm::vec2), remap.data());
-    model.mesh.normals  .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.normals  .data(), &unindexed_mesh.normals  [0], vertex_count, sizeof(glm::vec4), remap.data());
-    model.mesh.tangents .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.tangents .data(), &unindexed_mesh.tangents [0], vertex_count, sizeof(glm::vec4), remap.data());
+    model.mesh.positions.resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.positions.data(), streams[0].data, index_count, streams[0].size, remap.data());
+    model.mesh.texCoords.resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.texCoords.data(), streams[1].data, index_count, streams[1].size, remap.data());
+    model.mesh.normals  .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.normals  .data(), streams[2].data, index_count, streams[2].size, remap.data());
+    model.mesh.tangents .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.tangents .data(), streams[3].data, index_count, streams[3].size, remap.data());
+
+    ENGINE_OUT << model.mesh.positions[24];
 
     return reg.create(std::move(model));
 }

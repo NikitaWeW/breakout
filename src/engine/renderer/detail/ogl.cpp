@@ -4,87 +4,84 @@
 
 namespace ogl = engine::renderer::detail::ogl;
 
-namespace engine::renderer::detail::ogl::detail // D:
-{
-    static bool compileShader(ogl::Program::Shader &shader) noexcept {
-        shader.id = glCreateShader(shader.type);
-        char *source = &*shader.source.begin();
-        glShaderSource(shader.id, 1, &source, nullptr);
-        glCompileShader(shader.id);
-        int success;
-        glGetShaderiv(shader.id, GL_COMPILE_STATUS, &success);
-        if(!success) {
-            GLint log_size;
-            glGetShaderiv(shader.id, GL_INFO_LOG_LENGTH, &log_size);
-            if(log_size > 0) {
-                std::string log;
-                log.resize(log_size);
-                glGetShaderInfoLog(shader.id, log_size, nullptr, &log[0]);
-                ENGINE_OUT << log << '\n';
-            }
-            return false;
+static bool compileProgramShader(ogl::Program::Shader &shader) noexcept {
+    shader.id = glCreateShader(shader.type);
+    char *source = &*shader.source.begin();
+    glShaderSource(shader.id, 1, &source, nullptr);
+    glCompileShader(shader.id);
+    int success;
+    glGetShaderiv(shader.id, GL_COMPILE_STATUS, &success);
+    if(!success) {
+        GLint log_size;
+        glGetShaderiv(shader.id, GL_INFO_LOG_LENGTH, &log_size);
+        if(log_size > 0) {
+            std::string log;
+            log.resize(log_size);
+            glGetShaderInfoLog(shader.id, log_size, nullptr, &log[0]);
+            ENGINE_OUT << log << '\n';
         }
-        return true;
+        return false;
     }
+    return true;
+}
 
-    static bool linkProgram(ogl::Program &program) noexcept {
-        program.id = glCreateProgram();
-        for(auto const &shader : program.shaders) {
-            glAttachShader(program.id, shader.id);
-        }
-        glLinkProgram(program.id);
+static bool linkProgram(ogl::Program &program) noexcept {
+    program.id = glCreateProgram();
+    for(auto const &shader : program.shaders) {
+        glAttachShader(program.id, shader.id);
+    }
+    glLinkProgram(program.id);
 
-        int success;
-        glGetProgramiv(program.id, GL_LINK_STATUS, &success);
-        if(!success) {
-            GLint log_size;
-            glGetProgramiv(program.id, GL_INFO_LOG_LENGTH, &log_size);
-            if(log_size > 0) {
-                std::string log;
-                log.resize(log_size);
-                glGetProgramInfoLog(program.id, log_size, nullptr, &log[0]);
-                ENGINE_OUT << log << '\n';
-            }
-            return false;
+    int success;
+    glGetProgramiv(program.id, GL_LINK_STATUS, &success);
+    if(!success) {
+        GLint log_size;
+        glGetProgramiv(program.id, GL_INFO_LOG_LENGTH, &log_size);
+        if(log_size > 0) {
+            std::string log;
+            log.resize(log_size);
+            glGetProgramInfoLog(program.id, log_size, nullptr, &log[0]);
+            ENGINE_OUT << log << '\n';
         }
-        return true;
+        return false;
     }
-    static std::string_view shaderTypeToString(GLenum type) noexcept {
-        switch (type)
-        {
-        case GL_VERTEX_SHADER:   return "vertex";
-        case GL_GEOMETRY_SHADER: return "geometry";
-        case GL_FRAGMENT_SHADER: return "fragment";
-        case GL_COMPUTE_SHADER:  return "compute";
-        default:                 return "unknown type";
-        }
-    }
-    static ogl::Program collectShaders(std::string_view dirpath)
+    return true;
+}
+static std::string_view shaderTypeToString(GLenum type) noexcept {
+    switch (type)
     {
-        Program program;
-        ENGINE_ASSERT(std::filesystem::exists(dirpath), "");
-        program.dirpath = dirpath;
-        for(auto const &directoryEntry : std::filesystem::recursive_directory_iterator{dirpath}) {
-            if(!std::filesystem::is_regular_file(directoryEntry.path())) continue; 
-            Program::Shader shader;
+    case GL_VERTEX_SHADER:   return "vertex";
+    case GL_GEOMETRY_SHADER: return "geometry";
+    case GL_FRAGMENT_SHADER: return "fragment";
+    case GL_COMPUTE_SHADER:  return "compute";
+    default:                 return "unknown type";
+    }
+}
+static ogl::Program collectShaders(std::string_view dirpath)
+{
+    ogl::Program program;
+    ENGINE_ASSERT(std::filesystem::exists(dirpath), "");
+    program.dirpath = dirpath;
+    for(auto const &directoryEntry : std::filesystem::recursive_directory_iterator{dirpath}) {
+        if(!std::filesystem::is_regular_file(directoryEntry.path())) continue; 
+        ogl::Program::Shader shader;
 
-            std::string extension = directoryEntry.path().string().substr(directoryEntry.path().string().find_last_of('.'), directoryEntry.path().string().size());
-            if(extension == ".vert") shader.type = GL_VERTEX_SHADER;
-            else if(extension == ".geom") shader.type = GL_GEOMETRY_SHADER;
-            else if(extension == ".frag") shader.type = GL_FRAGMENT_SHADER;
-            else if(extension == ".comp") shader.type = GL_COMPUTE_SHADER;
-            else {
-                continue;
-            }
-
-            std::ifstream filestream{directoryEntry.path()};
-            shader.source = std::string{std::istreambuf_iterator<char>{filestream}, std::istreambuf_iterator<char>{}};
-            program.shaders.emplace_back(std::move(shader));
+        std::string extension = directoryEntry.path().string().substr(directoryEntry.path().string().find_last_of('.'), directoryEntry.path().string().size());
+        if(extension == ".vert") shader.type = GL_VERTEX_SHADER;
+        else if(extension == ".geom") shader.type = GL_GEOMETRY_SHADER;
+        else if(extension == ".frag") shader.type = GL_FRAGMENT_SHADER;
+        else if(extension == ".comp") shader.type = GL_COMPUTE_SHADER;
+        else {
+            continue;
         }
 
-        return program;
+        std::ifstream filestream{directoryEntry.path()};
+        shader.source = std::string{std::istreambuf_iterator<char>{filestream}, std::istreambuf_iterator<char>{}};
+        program.shaders.emplace_back(std::move(shader));
     }
-} // namespace engine::renderer::detail::ogl::detail
+
+    return program;
+}
 
 
 std::size_t ogl::getSizeOfGLType(GLenum type)
@@ -105,16 +102,16 @@ std::size_t ogl::getSizeOfGLType(GLenum type)
 }
 ogl::Program ogl::compileShader(std::string_view dirpath)
 {
-    Program program = detail::collectShaders(dirpath);
+    Program program = collectShaders(dirpath);
 
     for(Program::Shader &shader : program.shaders) {
-        if(!detail::compileShader(shader)) {
-            ENGINE_OUT << "failed to compile " << detail::shaderTypeToString(shader.type) << " shader from \"" << dirpath << "\"\n";
+        if(!compileProgramShader(shader)) {
+            ENGINE_OUT << "failed to compile " << shaderTypeToString(shader.type) << " shader from \"" << dirpath << "\"\n";
             return Program{};
         }
     }
 
-    if(!detail::linkProgram(program)) {
+    if(!linkProgram(program)) {
         ENGINE_OUT << "failed to link program \"" << dirpath << "\"\n";
         return Program{};
     }
@@ -157,7 +154,9 @@ int ogl::getStorageBlock(Program const &program, std::string_view name)
 
 bool ogl::isComplete(Framebuffer const &fbo)
 {
-    return glCheckNamedFramebufferStatus(fbo.id, GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+    unsigned status = glCheckNamedFramebufferStatus(fbo.id, GL_FRAMEBUFFER);
+    ENGINE_OUT << status << '\n';
+    return status == GL_FRAMEBUFFER_COMPLETE;
 }
 
 ogl::Texture ogl::makeTexture(Bitmap<float> data, bool srgb)
