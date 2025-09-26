@@ -20,21 +20,11 @@ namespace engine
         DATA
     };
 
-    struct Mesh
-    {
-        std::vector<glm::vec4> positions;
-        std::vector<glm::vec2> texCoords;
-        std::vector<glm::vec4> normals;
-        std::vector<glm::vec4> tangents;
-        std::vector<std::array<int,   MAX_BONES_PER_VERTEX>> boneIDs;
-        std::vector<std::array<float, MAX_BONES_PER_VERTEX>> weights;
-        std::vector<unsigned> indices;
-    };
     struct Texture
     {
         Bitmap<float> data;
-        std::string_view type = "unknown";
         bool grayscale = false;
+        bool srgb = false;
         std::string path;
     };
     struct Material
@@ -50,19 +40,32 @@ namespace engine
             ecs::entity alpha;
             ecs::entity reflection;
         } textures;
-        glm::vec3 ambient;
-        glm::vec3 diffuse;
-        glm::vec3 specular;
-        glm::vec3 transmittance;
-        glm::vec3 emission;
-
-        float shininess;
-        float ior;
+        struct Properties
+        {
+            glm::vec3 ambient;
+            glm::vec3 diffuse;
+            glm::vec3 specular;
+            glm::vec3 transmittance;
+            glm::vec3 emission;
+    
+            float shininess;
+            float ior;
+        } properties;
+    };
+    struct Mesh
+    {
+        std::vector<glm::vec4> positions;
+        std::vector<glm::vec2> texCoords;
+        std::vector<glm::vec4> normals;
+        std::vector<glm::vec4> tangents;
+        std::vector<glm::vec<MAX_BONES_PER_VERTEX, int>> boneIDs;
+        std::vector<glm::vec<MAX_BONES_PER_VERTEX, float>> weights;
+        std::vector<unsigned> indices;
+        Material material;
     };
     struct Model
     {
         Mesh mesh;
-        Material material;
         std::string path;
     };
     struct Camera
@@ -80,6 +83,7 @@ namespace engine
     struct Orientation : glm::quat {};
     struct Velocity : glm::vec3 {};
 
+    // TODO: move it somewhere or do it better.
     /**
      * \brief The window representation. 
      */

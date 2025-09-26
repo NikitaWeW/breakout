@@ -6,6 +6,8 @@
 #include "ecs.hpp"
 #include <queue>
 
+// TODO: better event system
+
 namespace engine::input
 {
     struct KeyEvent

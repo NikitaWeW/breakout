@@ -43,7 +43,10 @@ ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path)
         return 0;
     }
 
-    return data.loaderMap.at(extension)->load(reg, path);
+    auto result = data.loaderMap.at(extension)->load(reg, path);
+    if(result == 0)
+        ENGINE_CORE_ERROR("Failed to load \"{}\"", path);
+    return result;
 }
 
 void engine::loader::setup(ecs::registry &reg)
@@ -52,7 +55,7 @@ void engine::loader::setup(ecs::registry &reg)
     auto &data = reg.get<detail::LoaderData>(e);
 
     data.loaders.emplace_back(std::move(std::make_unique<detail::ObjModelLoader>()));
-    data.loaders.emplace_back(std::move(std::make_unique<detail::ObjModelLoader>()));
+    data.loaders.emplace_back(std::move(std::make_unique<detail::GLTFModelLoader>()));
     data.loaders.emplace_back(std::move(std::make_unique<detail::TextureLoader>()));
 
     data.loaderMap = {
@@ -78,7 +81,6 @@ void engine::loader::setup(ecs::registry &reg)
         .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
             1, 1, 1
         }.data()},
-        .type = "",
         .grayscale = true,
         .path = ""
     });
@@ -86,7 +88,6 @@ void engine::loader::setup(ecs::registry &reg)
         .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
             0, 0, 1
         }.data()},
-        .type = "",
         .grayscale = true,
         .path = ""
     });
@@ -94,7 +95,6 @@ void engine::loader::setup(ecs::registry &reg)
         .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
             0, 0, 0
         }.data()},
-        .type = "",
         .grayscale = true,
         .path = ""
     });
@@ -103,7 +103,6 @@ void engine::loader::setup(ecs::registry &reg)
             1, 1, 1, 0.5, 0.5, 0.5,
             0.5, 0.5, 0.5, 1, 1, 1 
         }.data()},
-        .type = "",
         .grayscale = true,
         .path = ""
     });
@@ -118,13 +117,15 @@ void engine::loader::setup(ecs::registry &reg)
             .alpha = white,
             .reflection = black
         },
-        .ambient       = {0.1f, 0.1f, 0.1f},
-        .diffuse       = {0.8f, 0.8f, 0.8f},
-        .specular      = {0.5f, 0.5f, 0.5f},
-        .transmittance = {0.0f, 0.0f, 0.0f},
-        .emission      = {0.0f, 0.0f, 0.0f},
-
-        .shininess = 32.0f,
-        .ior       = 1.5f
+        .properties = {
+            .ambient       = {0.1f, 0.1f, 0.1f},
+            .diffuse       = {0.8f, 0.8f, 0.8f},
+            .specular      = {0.5f, 0.5f, 0.5f},
+            .transmittance = {0.0f, 0.0f, 0.0f},
+            .emission      = {0.0f, 0.0f, 0.0f},
+    
+            .shininess = 32.0f,
+            .ior       = 1.5f
+        }
     }; 
 }

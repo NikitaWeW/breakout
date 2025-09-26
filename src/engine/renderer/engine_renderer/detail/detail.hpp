@@ -34,7 +34,7 @@ namespace engine::detail
     };
     struct Mesh
     {
-        engine::Material material;
+        engine::Material::Properties material;
         detail::MaterialTextures textures;
         VertexBuffers buffers;
         ogl::VAO vao;

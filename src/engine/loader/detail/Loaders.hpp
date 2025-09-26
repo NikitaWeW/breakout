@@ -32,4 +32,6 @@ namespace engine::loader::detail
         std::vector<std::unique_ptr<engine::loader::detail::ILoader>> loaders;
         std::unordered_map<std::string_view, engine::loader::detail::ILoader *> loaderMap;
     };
+
+    void calculateMissingPrimitives(engine::Mesh &mesh);
 } // namespace engine::loader::detail

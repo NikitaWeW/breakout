@@ -5,6 +5,8 @@
 static ogl::Texture const &getTexture(ecs::registry const &reg, ecs::entity e_texture)
 {
     using namespace engine;
+    if(e_texture == 0)
+        return ogl::Texture{};
     ENGINE_ASSERT(reg.has<detail::ProcessedTexture>(e_texture));
 
     return reg.get<ogl::Texture>(reg.get<detail::ProcessedTexture>(e_texture).data);
@@ -45,16 +47,16 @@ static void processModels(ecs::registry &reg)
         detail::Mesh mesh;
         mesh.animated = !model.mesh.weights.empty();
         mesh.mode = GL_TRIANGLES;
-        mesh.material = model.material;
+        mesh.material = model.mesh.material.properties;
         mesh.count = model.mesh.indices.size();
         mesh.textures = {
-            .ambient      = getTexture(reg, model.material.textures.ambient),
-            .diffuse      = getTexture(reg, model.material.textures.diffuse),
-            .specular     = getTexture(reg, model.material.textures.specular),
-            .bump         = getTexture(reg, model.material.textures.bump),
-            .displacement = getTexture(reg, model.material.textures.displacement),
-            .alpha        = getTexture(reg, model.material.textures.alpha),
-            .reflection   = getTexture(reg, model.material.textures.reflection) 
+            .ambient      = getTexture(reg, model.mesh.material.textures.ambient),
+            .diffuse      = getTexture(reg, model.mesh.material.textures.diffuse),
+            .specular     = getTexture(reg, model.mesh.material.textures.specular),
+            .bump         = getTexture(reg, model.mesh.material.textures.bump),
+            .displacement = getTexture(reg, model.mesh.material.textures.displacement),
+            .alpha        = getTexture(reg, model.mesh.material.textures.alpha),
+            .reflection   = getTexture(reg, model.mesh.material.textures.reflection) 
         };
 
         mesh.buffers = {
@@ -92,7 +94,7 @@ static void processTextures(ecs::registry &reg)
 
         ecs::entity const &entity = e_texture;
 
-        reg.emplace<ogl::Texture>(entity, ogl::makeTexture(texture.data, texture.type == "diffuse"));
+        reg.emplace<ogl::Texture>(entity, ogl::makeTexture(texture.data, texture.srgb));
         reg.emplace<detail::ProcessedTexture>(e_texture, entity);
     }
 }

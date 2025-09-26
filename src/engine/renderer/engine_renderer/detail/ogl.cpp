@@ -188,18 +188,18 @@ ogl::Texture ogl::makeTexture(Bitmap<float> data, bool srgb)
     if(data.getNumComponents() == 3)
     {
         if(srgb)
-            internalFormat = GL_SRGB_ALPHA;
+            internalFormat = GL_SRGB;
         else
-            internalFormat = GL_RGBA16F;
+            internalFormat = GL_RGB16F;
 
         format = GL_RGB;
     }
     else if(data.getNumComponents() == 4)
     {
         if(srgb)
-            internalFormat = GL_SRGB;
+            internalFormat = GL_SRGB_ALPHA;
         else
-            internalFormat = GL_RGB16F;
+            internalFormat = GL_RGBA16F;
 
         format = GL_RGBA;
     }

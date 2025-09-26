@@ -53,8 +53,11 @@ int main(int argc, char **argv) {
     engine::physics::setup(registry);
     engine::Logger::init();
     
+    // TODO: move engine::loader into a class
     auto cube = engine::loader::load(registry, "res/models/cube.obj");
-    auto suzanne = engine::loader::load(registry, "res/models/suzanne.obj");
+    auto suzanne = engine::loader::load(registry, "res/models/suzanne.glb");
+    ENGINE_ASSERT(cube);
+    ENGINE_ASSERT(suzanne);
 
     registry.create(engine::Draw{cube}, engine::ModelMatrix{
         glm::rotate(

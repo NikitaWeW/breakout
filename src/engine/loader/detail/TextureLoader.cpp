@@ -21,6 +21,7 @@ ecs::entity engine::loader::detail::TextureLoader::load(ecs::registry &reg, std:
     }
     ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;
+    texture.path = path;
     texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);
 
@@ -36,8 +37,6 @@ ecs::entity engine::loader::detail::TextureLoader::load(ecs::registry &reg, std:
             break;
         }
     }
-
-    texture.type = "unknown";
 
     return reg.create(std::move(texture));
 }
