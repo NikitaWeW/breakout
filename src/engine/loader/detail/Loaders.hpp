@@ -34,4 +34,5 @@ namespace engine::loader::detail
     };
 
     void calculateMissingPrimitives(engine::Mesh &mesh);
+    void optimizeMesh(engine::Mesh &mesh);
 } // namespace engine::loader::detail

@@ -45,7 +45,8 @@ static void processModels(ecs::registry &reg)
         auto const &model = reg.get<engine::Model>(e_model);
 
         detail::Mesh mesh;
-        mesh.animated = !model.mesh.weights.empty();
+        mesh.animated = false;
+        // mesh.animated = !model.mesh.weights.empty();
         mesh.mode = GL_TRIANGLES;
         mesh.material = model.mesh.material.properties;
         mesh.count = model.mesh.indices.size();

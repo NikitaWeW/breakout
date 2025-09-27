@@ -21,6 +21,8 @@ ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path)
     auto &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
     std::string_view extension = getExtension(path);
 
+    ENGINE_CORE_TRACE("loading \"{}\"", path);
+
     if(data.loaderMap.find(extension) == data.loaderMap.end())
     {
         ENGINE_CORE_ERROR("Unrecognised extension: \"{}\"!", extension);

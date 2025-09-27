@@ -11,8 +11,6 @@
 
 namespace engine
 {
-    constexpr unsigned MAX_BONES_PER_VERTEX = 4;
-
     enum class DataType
     {
         MODEL, MESH, MATERIAL,
@@ -58,8 +56,8 @@ namespace engine
         std::vector<glm::vec2> texCoords;
         std::vector<glm::vec4> normals;
         std::vector<glm::vec4> tangents;
-        std::vector<glm::vec<MAX_BONES_PER_VERTEX, int>> boneIDs;
-        std::vector<glm::vec<MAX_BONES_PER_VERTEX, float>> weights;
+        std::vector<glm::vec4> boneIDs;
+        std::vector<glm::vec4> weights;
         std::vector<unsigned> indices;
         Material material;
     };

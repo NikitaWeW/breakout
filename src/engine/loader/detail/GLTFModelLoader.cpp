@@ -65,12 +65,11 @@ static void addToMesh(engine::Mesh &mesh, tinygltf::Model const &model, tinygltf
     
     {
         tinygltf::Accessor const &accessor = model.accessors.at(primitive.attributes.at("POSITION"));
-        ENGINE_ASSERT(accessor.count);
         tinygltf::BufferView const &view = model.bufferViews.at(accessor.bufferView);
         tinygltf::Buffer const &buffer = model.buffers.at(view.buffer);
         float const *data = reinterpret_cast<float const *>(buffer.data.data() + view.byteOffset + accessor.byteOffset);
         size_t stride = view.byteStride ? view.byteStride / getComponentSize(accessor.componentType) : getNumComponentsInType(accessor.type);
-        for(size_t i = 0; i < accessor.count - (accessor.count % 3); ++i)
+        for(size_t i = 0; i < accessor.count; ++i)
         {
             mesh.positions.emplace_back(
                 data[i * stride + 0],
@@ -82,12 +81,11 @@ static void addToMesh(engine::Mesh &mesh, tinygltf::Model const &model, tinygltf
     }
     if(primitive.attributes.find("NORMAL") != primitive.attributes.end()) {
         tinygltf::Accessor const &accessor = model.accessors.at(primitive.attributes.at("NORMAL"));
-        ENGINE_ASSERT(accessor.count);
         tinygltf::BufferView const &view = model.bufferViews.at(accessor.bufferView);
         tinygltf::Buffer const &buffer = model.buffers.at(view.buffer);
         float const *data = reinterpret_cast<float const *>(buffer.data.data() + view.byteOffset + accessor.byteOffset);
         size_t stride = view.byteStride ? view.byteStride / getComponentSize(accessor.componentType) : getNumComponentsInType(accessor.type);
-        for(size_t i = 0; i < accessor.count - (accessor.count % 3); ++i)
+        for(size_t i = 0; i < accessor.count; ++i)
         {
             mesh.normals.emplace_back(
                 data[i * stride + 0],
@@ -99,12 +97,11 @@ static void addToMesh(engine::Mesh &mesh, tinygltf::Model const &model, tinygltf
     }
     if(primitive.attributes.find("TANGENT") != primitive.attributes.end()) {
         tinygltf::Accessor const &accessor = model.accessors.at(primitive.attributes.at("TANGENT"));
-        ENGINE_ASSERT(accessor.count);
         tinygltf::BufferView const &view = model.bufferViews.at(accessor.bufferView);
         tinygltf::Buffer const &buffer = model.buffers.at(view.buffer);
         float const *data = reinterpret_cast<float const *>(buffer.data.data() + view.byteOffset + accessor.byteOffset);
         size_t stride = view.byteStride ? view.byteStride / getComponentSize(accessor.componentType) : getNumComponentsInType(accessor.type);
-        for(size_t i = 0; i < accessor.count - (accessor.count % 3); ++i)
+        for(size_t i = 0; i < accessor.count; ++i)
         {
             mesh.tangents.emplace_back(
                 data[i * stride + 0],
@@ -116,12 +113,11 @@ static void addToMesh(engine::Mesh &mesh, tinygltf::Model const &model, tinygltf
     }
     if(primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
         tinygltf::Accessor const &accessor = model.accessors.at(primitive.attributes.at("TEXCOORD_0"));
-        ENGINE_ASSERT(accessor.count);
         tinygltf::BufferView const &view = model.bufferViews.at(accessor.bufferView);
         tinygltf::Buffer const &buffer = model.buffers.at(view.buffer);
         float const *data = reinterpret_cast<float const *>(buffer.data.data() + view.byteOffset + accessor.byteOffset);
         size_t stride = view.byteStride ? view.byteStride / getComponentSize(accessor.componentType) : getNumComponentsInType(accessor.type);
-        for(size_t i = 0; i < accessor.count - (accessor.count % 3); ++i)
+        for(size_t i = 0; i < accessor.count; ++i)
         {
             mesh.texCoords.emplace_back(
                 data[i * stride + 0],
@@ -137,14 +133,14 @@ static void addToMesh(engine::Mesh &mesh, tinygltf::Model const &model, tinygltf
         tinygltf::BufferView const &wView = model.bufferViews.at(wAccessor.bufferView);
         tinygltf::Buffer const &wBuffer = model.buffers.at(wView.buffer);
         float const *wData = reinterpret_cast<float const *>(wBuffer.data.data() + wView.byteOffset + wAccessor.byteOffset);
-        size_t wStride = wView.byteStride ? wView.byteStride / getComponentSize(wAccessor.type) : getNumComponentsInType(wAccessor.type);
+        size_t wStride = wView.byteStride ? wView.byteStride / getComponentSize(wAccessor.componentType) : getNumComponentsInType(wAccessor.type);
 
         tinygltf::Accessor const &jAccessor = model.accessors.at(primitive.attributes.at("JOINTS_0"));
         ENGINE_ASSERT(jAccessor.count);
         tinygltf::BufferView const &jView = model.bufferViews.at(jAccessor.bufferView);
         tinygltf::Buffer const &jBuffer = model.buffers.at(jView.buffer);
         float const *jData = reinterpret_cast<float const *>(jBuffer.data.data() + jView.byteOffset + jAccessor.byteOffset);
-        size_t jStride = jView.byteStride ? jView.byteStride / getComponentSize(jAccessor.type) : getNumComponentsInType(jAccessor.type);
+        size_t jStride = jView.byteStride ? jView.byteStride / getComponentSize(jAccessor.componentType) : getNumComponentsInType(jAccessor.type);
 
         for(size_t i = 0; i < glm::min((size_t)jAccessor.count - (jAccessor.count % 3), (size_t)wAccessor.count - (wAccessor.count % 3)); ++i)
         {
@@ -164,12 +160,11 @@ static void addToMesh(engine::Mesh &mesh, tinygltf::Model const &model, tinygltf
     }
     if (primitive.indices >= 0) {
         tinygltf::Accessor const &accessor = model.accessors.at(primitive.indices);
-        ENGINE_ASSERT(accessor.count);
         tinygltf::BufferView const &view = model.bufferViews.at(accessor.bufferView);
         tinygltf::Buffer const &buffer = model.buffers.at(view.buffer);
         unsigned const *data = reinterpret_cast<unsigned const *>(buffer.data.data() + view.byteOffset + accessor.byteOffset);
         size_t stride = view.byteStride ? view.byteStride / getComponentSize(accessor.componentType) : getNumComponentsInType(accessor.type);
-        for(size_t i = 0; i < accessor.count - (accessor.count % 3); ++i)
+        for(size_t i = 0; i < accessor.count; ++i)
         {
             mesh.indices.emplace_back(
                 data[i * stride]
@@ -221,7 +216,7 @@ ecs::entity engine::loader::detail::GLTFModelLoader::load(ecs::registry &reg, st
     }
 
     calculateMissingPrimitives(model.mesh);
-
+    optimizeMesh(model.mesh);
 
     if(!gltfModel.materials.empty())
     { 

@@ -2,7 +2,6 @@
 #include "engine/data.hpp"
 #include "tiny_obj_loader.h"
 #include "engine/loader/loader.hpp"
-#include "meshoptimizer.h"
 #include <filesystem>
 
 static ecs::entity getTexture(ecs::registry &reg, std::string_view path, ecs::entity defaultTexture, bool srgb)
@@ -49,7 +48,6 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
     auto &attrib = reader.GetAttrib();
     auto &shapes = reader.GetShapes();
 
-    engine::Mesh unindexed_mesh;
     engine::Model model;
     model.path = path;
 
@@ -62,7 +60,7 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
             for (size_t v = 0; v < fv; v++) {
                 tinyobj::index_t idx = shapes[shape].mesh.indices[index_offset + v];
 
-                unindexed_mesh.positions.emplace_back(
+                model.mesh.positions.emplace_back(
                     attrib.vertices[3*size_t(idx.vertex_index)+0],
                     attrib.vertices[3*size_t(idx.vertex_index)+1],
                     attrib.vertices[3*size_t(idx.vertex_index)+2],
@@ -70,7 +68,7 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
                 );
 
                 if (idx.normal_index >= 0) {
-                    unindexed_mesh.normals.emplace_back(
+                    model.mesh.normals.emplace_back(
                         attrib.normals[3*size_t(idx.normal_index)+0],
                         attrib.normals[3*size_t(idx.normal_index)+1],
                         attrib.normals[3*size_t(idx.normal_index)+2],
@@ -79,7 +77,7 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
                 }
 
                 if (idx.texcoord_index >= 0) {
-                    unindexed_mesh.texCoords.emplace_back(
+                    model.mesh.texCoords.emplace_back(
                         attrib.texcoords[2*size_t(idx.texcoord_index)+0],
                         attrib.texcoords[2*size_t(idx.texcoord_index)+1] 
                     );
@@ -122,30 +120,15 @@ ecs::entity engine::loader::detail::ObjModelLoader::load(ecs::registry &reg, std
         model.mesh.material = data.defaultMaterial;
     }
 
-    if(unindexed_mesh.positions.empty())
+    if(model.mesh.positions.empty())
     {
         ENGINE_CORE_ERROR("failed to load \"{}\": no positions!", path);
         ENGINE_ASSERT(false);
         return 0;
     }
 
-    detail::calculateMissingPrimitives(unindexed_mesh);
-
-    // remap using meshoptimizer
-    size_t index_count = unindexed_mesh.positions.size();
-    std::array<meshopt_Stream, 4> streams = {
-        meshopt_Stream{&unindexed_mesh.positions[0], sizeof(glm::vec4), sizeof(glm::vec4)},
-        meshopt_Stream{&unindexed_mesh.texCoords[0], sizeof(glm::vec2), sizeof(glm::vec2)},
-        meshopt_Stream{&unindexed_mesh.normals  [0], sizeof(glm::vec4), sizeof(glm::vec4)},
-        meshopt_Stream{&unindexed_mesh.tangents [0], sizeof(glm::vec4), sizeof(glm::vec4)} 
-    };
-    std::vector<unsigned int> remap(index_count);
-    size_t vertex_count = meshopt_generateVertexRemapMulti(remap.data(), nullptr, index_count, index_count, streams.data(), streams.size());
-    model.mesh.indices.resize(index_count); meshopt_remapIndexBuffer(model.mesh.indices.data(), nullptr, index_count, remap.data());
-    model.mesh.positions.resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.positions.data(), streams[0].data, index_count, streams[0].size, remap.data());
-    model.mesh.texCoords.resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.texCoords.data(), streams[1].data, index_count, streams[1].size, remap.data());
-    model.mesh.normals  .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.normals  .data(), streams[2].data, index_count, streams[2].size, remap.data());
-    model.mesh.tangents .resize(vertex_count); meshopt_remapVertexBuffer(model.mesh.tangents .data(), streams[3].data, index_count, streams[3].size, remap.data());
+    calculateMissingPrimitives(model.mesh);
+    optimizeMesh(model.mesh);
 
     return reg.create(std::move(model));
 }
