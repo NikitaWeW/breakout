@@ -2,7 +2,7 @@
 #include "detail.hpp"
 #include "ogl.hpp"
 
-static ogl::Texture const &getTexture(ecs::registry const &reg, ecs::entity e_texture)
+static ogl::Texture getTexture(ecs::registry const &reg, ecs::entity e_texture)
 {
     using namespace engine;
     if(e_texture == 0)
@@ -43,46 +43,53 @@ static void processModels(ecs::registry &reg)
     for(ecs::entity e_model : reg.view<engine::Model>(ecs::exclude_t<detail::ProcessedModel>{}))
     {
         auto const &model = reg.get<engine::Model>(e_model);
+        detail::Model newModel;
 
-        detail::Mesh mesh;
-        mesh.animated = false;
-        // mesh.animated = !model.mesh.weights.empty();
-        mesh.mode = GL_TRIANGLES;
-        mesh.material = model.mesh.material.properties;
-        mesh.count = model.mesh.indices.size();
-        mesh.textures = {
-            .ambient      = getTexture(reg, model.mesh.material.textures.ambient),
-            .diffuse      = getTexture(reg, model.mesh.material.textures.diffuse),
-            .specular     = getTexture(reg, model.mesh.material.textures.specular),
-            .bump         = getTexture(reg, model.mesh.material.textures.bump),
-            .displacement = getTexture(reg, model.mesh.material.textures.displacement),
-            .alpha        = getTexture(reg, model.mesh.material.textures.alpha),
-            .reflection   = getTexture(reg, model.mesh.material.textures.reflection) 
-        };
+        for(auto const &mesh : model.meshes)
+        {
+            detail::Mesh newMesh;
+            newMesh.animated = !mesh.skeleton.weights.empty();
+            newMesh.mode = GL_TRIANGLES;
+            newMesh.material = mesh.material.properties;
+            newMesh.skeleton = mesh.skeleton;
+            newMesh.count = mesh.indices.size();
+            newMesh.textures = {
+                .ambient      = getTexture(reg, mesh.material.textures.ambient),
+                .albedo       = getTexture(reg, mesh.material.textures.albedo),
+                .specular     = getTexture(reg, mesh.material.textures.specular),
+                .normal       = getTexture(reg, mesh.material.textures.normal),
+                .displacement = getTexture(reg, mesh.material.textures.displacement),
+                .alpha        = getTexture(reg, mesh.material.textures.alpha),
+                .reflection   = getTexture(reg, mesh.material.textures.reflection),
+                .metallic     = getTexture(reg, mesh.material.textures.metallic) 
+            };
+    
+            newMesh.buffers = {
+                .positions = ogl::makeBuffer<ogl::VBO>(mesh.positions),
+                .texCoords = ogl::makeBuffer<ogl::VBO>(mesh.texCoords),
+                .normals   = ogl::makeBuffer<ogl::VBO>(mesh.normals),
+                .tangents  = ogl::makeBuffer<ogl::VBO>(mesh.tangents),
+                .boneIDs   = ogl::makeBuffer<ogl::VBO>(mesh.skeleton.boneIDs),
+                .weights   = ogl::makeBuffer<ogl::VBO>(mesh.skeleton.weights) 
+            };
+    
+            glCreateVertexArrays(1, &newMesh.vao.id);
+            
+            addVertexBuffer(newMesh.vao, newMesh.buffers.positions, 4, GL_FLOAT);
+            addVertexBuffer(newMesh.vao, newMesh.buffers.texCoords, 2, GL_FLOAT);
+            addVertexBuffer(newMesh.vao, newMesh.buffers.normals,   4, GL_FLOAT);
+            addVertexBuffer(newMesh.vao, newMesh.buffers.tangents,  4, GL_FLOAT);
+            addVertexBuffer(newMesh.vao, newMesh.buffers.boneIDs,   4, GL_INT);
+            addVertexBuffer(newMesh.vao, newMesh.buffers.weights,   4, GL_FLOAT);
+            
+            newMesh.ibo = ogl::makeBuffer<ogl::IBO>(mesh.indices);
+            glVertexArrayElementBuffer(newMesh.vao.id, newMesh.ibo.id);
 
-        mesh.buffers = {
-            .positions = ogl::makeBuffer<ogl::VBO>(model.mesh.positions),
-            .texCoords = ogl::makeBuffer<ogl::VBO>(model.mesh.texCoords),
-            .normals   = ogl::makeBuffer<ogl::VBO>(model.mesh.normals),
-            .tangents  = ogl::makeBuffer<ogl::VBO>(model.mesh.tangents),
-            .boneIDs   = ogl::makeBuffer<ogl::VBO>(model.mesh.boneIDs),
-            .weights   = ogl::makeBuffer<ogl::VBO>(model.mesh.weights) 
-        };
-
-        glCreateVertexArrays(1, &mesh.vao.id);
-        
-        addVertexBuffer(mesh.vao, mesh.buffers.positions, 4, GL_FLOAT);
-        addVertexBuffer(mesh.vao, mesh.buffers.texCoords, 2, GL_FLOAT);
-        addVertexBuffer(mesh.vao, mesh.buffers.normals,   4, GL_FLOAT);
-        addVertexBuffer(mesh.vao, mesh.buffers.tangents,  4, GL_FLOAT);
-        addVertexBuffer(mesh.vao, mesh.buffers.boneIDs,   4, GL_INT);
-        addVertexBuffer(mesh.vao, mesh.buffers.weights,   4, GL_FLOAT);
-        
-        mesh.ibo = ogl::makeBuffer<ogl::IBO>(model.mesh.indices);
-        glVertexArrayElementBuffer(mesh.vao.id, mesh.ibo.id);
+            newModel.meshes.emplace_back(std::move(newMesh));
+        }
 
         ecs::entity entity = e_model;
-        reg.emplace<detail::Mesh>(entity, std::move(mesh));
+        reg.emplace<detail::Model>(entity, std::move(newModel));
         reg.emplace<detail::ProcessedModel>(e_model, entity);
     }
 }

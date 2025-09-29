@@ -10,14 +10,14 @@ static float randZeroOne(unsigned &state) {
     return float(rand(state)) * (1.0 / float(0xffffffffu));
 }
 
-ecs::entity engine::loader::detail::TextureLoader::load(ecs::registry &reg, std::string_view path)
+ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_view path)
 {
     int width = 0, height = 0, numChannels = 0;
     float *buff = stbi_loadf(path.data(), &width, &height, &numChannels, 0);
     if(!buff)
     {
         ENGINE_CORE_ERROR("failed to load texture: \"{}\"!: {}", path, stbi_failure_reason());
-        ENGINE_ASSERT(false);
+        return 0;
     }
     ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;

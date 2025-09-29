@@ -17,20 +17,23 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
-    for(ecs::entity e_model : reg.view<engine::Draw>())
+    for(ecs::entity e_draw : reg.view<engine::Draw>())
     {
-        ecs::entity e_mesh = reg.get<detail::ProcessedModel>(reg.get<engine::Draw>(e_model).model).data;
-        detail::Mesh const &mesh = reg.get<detail::Mesh>(e_mesh);
-        
-        glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_model) ? reg.get<engine::ModelMatrix>(e_model).value : glm::mat4{1.0f};
-        glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
-        
-        glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
-        glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_modelMat"), 1, false, glm::value_ptr(modelMat));
-        // glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), 100, false, glm::value_ptr());
-        glUniform1i(ogl::getUniform(data.plainColorShader, "u_animated"), mesh.animated);
-
-        glBindVertexArray(mesh.vao.id);
-        glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);
+        ecs::entity e_model = reg.get<detail::ProcessedModel>(reg.get<engine::Draw>(e_draw).model).data;
+        detail::Model const &model = reg.get<detail::Model>(e_model);
+        for(auto const &mesh : model.meshes)
+        {
+            glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_model) ? reg.get<engine::ModelMatrix>(e_model).value : glm::mat4{1.0f};
+            glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
+            
+            glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
+            glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_modelMat"), 1, false, glm::value_ptr(modelMat));
+            if(mesh.animated)
+                glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), mesh.skeleton.tposeTransform.size(), false, glm::value_ptr(mesh.skeleton.tposeTransform.at(0)));
+            glUniform1i(ogl::getUniform(data.plainColorShader, "u_animated"), mesh.animated);
+    
+            glBindVertexArray(mesh.vao.id);
+            glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);
+        }
     }
 }

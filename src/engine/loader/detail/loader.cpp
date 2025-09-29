@@ -1,43 +1,34 @@
-#include "engine/loader/loader.hpp"
-#include "engine/data.hpp"
-#include "engine/config.hpp"
-#include "../loader.hpp"
-
 #include <fstream>
 #include <unordered_map>
-
 #include "Loaders.hpp"
 
-static std::string_view getExtension(std::string_view path)
+static std::string_view getDatatypeString(engine::DataType type)
 {
-    if(path.find_last_of(".") != std::string::npos)
-        return path.substr(path.find_last_of(".") + 1);
-    return "";
+    switch (type)
+    {
+    case engine::DataType::MODEL:     return "MODEL";
+    case engine::DataType::TEXTURE2D: return "TEXTURE2D";
+    case engine::DataType::MESH:      return "MESH";
+    case engine::DataType::MATERIAL:  return "MATERIAL";
+    case engine::DataType::DATA:      return "DATA";
+    case engine::DataType::AUDIO:     return "AUDIO";
+    default:                          return "UNKNOWN";
+    }
 }
 
-ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path) 
+ecs::entity engine::Loader::load(DataType type, std::string_view path) 
 {
-    ENGINE_ASSERT_MSG(reg.view<detail::LoaderData>().size() == 1, "forgot to call engine::loader::setup() / called more than once?");
-    auto &data = reg.get<detail::LoaderData>(reg.view<detail::LoaderData>().at(0));
-    std::string_view extension = getExtension(path);
-
     ENGINE_CORE_TRACE("loading \"{}\"", path);
 
-    if(data.loaderMap.find(extension) == data.loaderMap.end())
+    if(m_loaderMap.find(type) == m_loaderMap.end())
     {
-        ENGINE_CORE_ERROR("Unrecognised extension: \"{}\"!", extension);
-        ENGINE_CORE_ERROR("Supported extensions: ");
-        bool first = true;
-        for(auto const &[extension, loader] : data.loaderMap)
+        ENGINE_CORE_ERROR("Unsupported type: \"{}\"!", getDatatypeString(type));
+        ENGINE_CORE_ERROR("Supported types: ");
+        for(auto const &[supported_type, loader] : m_loaderMap)
         {
-            if(!first)
-            {
-                ENGINE_CORE_ERROR(", ");
-            }
-            ENGINE_CORE_ERROR(extension);
-            first = false;
+            ENGINE_CORE_ERROR(getDatatypeString(supported_type));
         }
-        if(first)
+        if(m_loaderMap.empty())
         {
             ENGINE_CORE_ERROR("none D:");
         }
@@ -45,89 +36,20 @@ ecs::entity engine::loader::load(ecs::registry &reg, std::string_view path)
         return 0;
     }
 
-    auto result = data.loaderMap.at(extension)->load(reg, path);
+    auto result = m_loaderMap.at(type)->load(*m_registry, path);
     if(result == 0)
         ENGINE_CORE_ERROR("Failed to load \"{}\"", path);
     return result;
 }
 
-void engine::loader::setup(ecs::registry &reg)
+engine::Loader::Loader(ecs::registry &registry)
 {
-    auto e = reg.create<detail::LoaderData>();
-    auto &data = reg.get<detail::LoaderData>(e);
+    m_registry = &registry;
+    m_loaders.emplace_back(std::move(std::make_unique<detail::ModelLoader>()));
+    m_loaders.emplace_back(std::move(std::make_unique<detail::TextureLoader>()));
 
-    data.loaders.emplace_back(std::move(std::make_unique<detail::ObjModelLoader>()));
-    data.loaders.emplace_back(std::move(std::make_unique<detail::GLTFModelLoader>()));
-    data.loaders.emplace_back(std::move(std::make_unique<detail::TextureLoader>()));
-
-    data.loaderMap = {
-        { "obj",  data.loaders[0].get() },
-
-        { "gltf", data.loaders[1].get() },
-        { "glb",  data.loaders[1].get() },
-
-
-        { "png",  data.loaders[2].get() },
-        { "jpg",  data.loaders[2].get() },
-        { "jpeg", data.loaders[2].get() },
-        { "bmp",  data.loaders[2].get() },
-        { "tga",  data.loaders[2].get() },
-        { "psd",  data.loaders[2].get() },
-        { "gif",  data.loaders[2].get() },
-        { "hdr",  data.loaders[2].get() },
-        { "pic",  data.loaders[2].get() },
-        { "pnm",  data.loaders[2].get() } 
+    m_loaderMap = {
+        { DataType::MODEL,      m_loaders[0].get() },
+        { DataType::TEXTURE2D,  m_loaders[1].get() } 
     };
-
-    ecs::entity white = reg.create(Texture{
-        .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-            1, 1, 1
-        }.data()},
-        .grayscale = true,
-        .path = ""
-    });
-    ecs::entity blue = reg.create(Texture{
-        .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-            0, 0, 1
-        }.data()},
-        .grayscale = true,
-        .path = ""
-    });
-    ecs::entity black = reg.create(Texture{
-        .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-            0, 0, 0
-        }.data()},
-        .grayscale = true,
-        .path = ""
-    });
-    ecs::entity tile = reg.create(Texture{
-        .data = engine::Bitmap<float>{2, 2, 3, std::array<float, 4*3>{
-            1, 1, 1, 0.5, 0.5, 0.5,
-            0.5, 0.5, 0.5, 1, 1, 1 
-        }.data()},
-        .grayscale = true,
-        .path = ""
-    });
-
-    data.defaultMaterial = {
-        .textures = {
-            .ambient = white,
-            .diffuse = tile,
-            .specular = white,
-            .bump = blue,
-            .displacement = black,
-            .alpha = white,
-            .reflection = black
-        },
-        .properties = {
-            .ambient       = {0.1f, 0.1f, 0.1f},
-            .diffuse       = {0.8f, 0.8f, 0.8f},
-            .specular      = {0.5f, 0.5f, 0.5f},
-            .transmittance = {0.0f, 0.0f, 0.0f},
-            .emission      = {0.0f, 0.0f, 0.0f},
-    
-            .shininess = 32.0f,
-            .ior       = 1.5f
-        }
-    }; 
 }

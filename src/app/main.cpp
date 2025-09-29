@@ -48,18 +48,14 @@ int main(int argc, char **argv) {
 
     auto e_window = registry.create(engine::Window{window});
 
-    engine::loader::setup(registry);
     engine::input::setup(registry);
     engine::physics::setup(registry);
     engine::Logger::init();
     
-    // TODO: move engine::loader into a class
-    auto cube = engine::loader::load(registry, "res/models/cube.obj");
-    progress += 1.0f / toLoad;
-    auto suzanne = engine::loader::load(registry, "res/models/suzanne.glb");
-    progress += 1.0f / toLoad;
-    auto fox = engine::loader::load(registry, "res/models/fox.glb");
-    progress += 1.0f / toLoad;
+    engine::Loader loader{registry};
+    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");    progress += 1.0f / toLoad;
+    auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.glb"); progress += 1.0f / toLoad;
+    auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb");     progress += 1.0f / toLoad;
     ENGINE_ASSERT(cube);
     ENGINE_ASSERT(suzanne);
     ENGINE_ASSERT(fox);

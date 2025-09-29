@@ -3,7 +3,7 @@ install
 .vscode
 *.ini
 *.log
-callgrind*
-*perf*
 out
 CMakeUserPresets.json
+.clangd
+compile_commands.json
