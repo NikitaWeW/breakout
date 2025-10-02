@@ -10,16 +10,77 @@
 #include "engine/input/input.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/io.hpp"
-#include "glm/gtc/noise.hpp"
+#include "fmt/ostream.h"
 #include "cooload.hpp"
 #include <thread>
 #include <random>
 #include <stack>
 
+static std::string printTexture(ecs::entity e_texture, ecs::registry const &reg)
+{
+    std::stringstream ss;
+    auto const &texture = reg.get<engine::Texture>(e_texture);
+    ss 
+        << 'e' << e_texture << ", \"" 
+        << texture.path << "\", \t" 
+        << texture.data.getDimensions() << ", \t" 
+        << (texture.srgb ? "srgb" : "not srgb");
+    return ss.str();
+}
+static void printModelData(ecs::entity e_model, ecs::registry const &registry)
+{
+    ENGINE_ASSERT(registry.has<engine::Model>(e_model));
+    engine::Model const &model = registry.get<engine::Model>(e_model);
+    ENGINE_TRACE("");
+    ENGINE_TRACE("Model: \"{}\"", model.path);
+    ENGINE_TRACE("Animations: {}", model.animations.size());
+    for(auto const &animation : model.animations)
+    {
+        ENGINE_TRACE("-----------------");
+        ENGINE_TRACE("Animation: \"{}\"", animation.name);
+        ENGINE_TRACE("  Duration: {} ticks, tps: {}", animation.durationTicks, animation.ticksPerSecond);
+        ENGINE_TRACE("  Bones size: {}", animation.bones.size());
+    }
+    ENGINE_TRACE("Meshes: {}", model.meshes.size());
+    for(auto const &mesh : model.meshes)
+    {
+        ENGINE_TRACE("-----------------");
+
+        ENGINE_TRACE("Geometry:");
+        ENGINE_TRACE("  Indices:   {}", mesh.primitives.indices.size());
+        ENGINE_TRACE("  Positions: {}", mesh.primitives.positions.size());
+        ENGINE_TRACE("  TexCoords: {}", mesh.primitives.texCoords.size());
+        ENGINE_TRACE("  Normals:   {}", mesh.primitives.normals.size());
+        ENGINE_TRACE("  Tangents:  {}", mesh.primitives.tangents.size());
+        ENGINE_TRACE("  BoneIDs:   {}", mesh.primitives.boneIDs.size());
+        ENGINE_TRACE("  Weights:   {}", mesh.primitives.weights.size());
+        
+        ENGINE_TRACE("Material:");
+        ENGINE_TRACE("Textures:");
+        ENGINE_TRACE("  Albedo:       {}", printTexture(mesh.material.textures.albedo, registry));
+        ENGINE_TRACE("  Metallic:     {}", printTexture(mesh.material.textures.metallic, registry));
+        ENGINE_TRACE("  Roughness:    {}", printTexture(mesh.material.textures.roughness, registry));
+        ENGINE_TRACE("  Ambient:      {}", printTexture(mesh.material.textures.ambient, registry));
+        ENGINE_TRACE("  Normal:       {}", printTexture(mesh.material.textures.normal, registry));
+        ENGINE_TRACE("  Displacement: {}", printTexture(mesh.material.textures.displacement, registry));
+        ENGINE_TRACE("  Alpha:        {}", printTexture(mesh.material.textures.alpha, registry));
+        ENGINE_TRACE("Properties:");
+        ENGINE_TRACE("  Ambient:       {}", fmt::streamed(mesh.material.properties.ambient));
+        ENGINE_TRACE("  Albedo:        {}", fmt::streamed(mesh.material.properties.albedo));
+        ENGINE_TRACE("  Specular:      {}", fmt::streamed(mesh.material.properties.specular));
+        ENGINE_TRACE("  Transmittance: {}", fmt::streamed(mesh.material.properties.transmittance));
+        ENGINE_TRACE("  Emission:      {}", fmt::streamed(mesh.material.properties.emission));
+        ENGINE_TRACE("  Shininess:     {}", mesh.material.properties.shininess);
+        ENGINE_TRACE("  Metallic:      {}", mesh.material.properties.metallic);
+        ENGINE_TRACE("  IOR:           {}", mesh.material.properties.ior);
+    }
+}
+
 int main(int argc, char **argv) {
     constexpr unsigned toLoad = 6;
     float progress = 0;
     
+    // std::thread loadingScreenThread{cooload::loadingScreen, nullptr}; // disable loading screen
     std::thread loadingScreenThread{cooload::loadingScreen, &progress};
 
     GLFWwindow* window;
@@ -60,6 +121,9 @@ int main(int argc, char **argv) {
     ENGINE_ASSERT(suzanne);
     ENGINE_ASSERT(fox);
 
+    printModelData(fox, registry);
+    printModelData(cube, registry);
+    printModelData(suzanne, registry);
     registry.create(engine::Draw{cube}, engine::ModelMatrix{
         glm::rotate(
             glm::translate(
@@ -74,17 +138,20 @@ int main(int argc, char **argv) {
         glm::rotate(
             glm::translate(
                 glm::mat4{1.0f},
-                {-4, -1, 2}
+                {-3, -5, 1}
             ),
             -26.0f,
             {1.0f, 2, -4}
         )
     });
     registry.create(engine::Draw{fox}, engine::ModelMatrix{
-        glm::translate(
-            glm::mat4{1.0f},
-            {0, -0.5, -6}
-        ),
+        glm::scale(
+            glm::translate(
+                glm::mat4{1.0f},
+                {0, -0.5, -6}
+            ),
+            glm::vec3{0.05}
+        )
     });
     
     ecs::entity e_camera = controller::createCamera(registry, e_window);
@@ -124,6 +191,8 @@ int main(int argc, char **argv) {
 
         deltatime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1e-9f;
     }
+
+    ENGINE_INFO("Exiting...");
 
     glfwTerminate();
 }

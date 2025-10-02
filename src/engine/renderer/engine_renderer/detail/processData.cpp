@@ -44,33 +44,29 @@ static void processModels(ecs::registry &reg)
     {
         auto const &model = reg.get<engine::Model>(e_model);
         detail::Model newModel;
+        newModel.skeleton = model.skeleton;
+        newModel.animated = model.skeleton.numBones != 0;
 
         for(auto const &mesh : model.meshes)
         {
             detail::Mesh newMesh;
-            newMesh.animated = !mesh.skeleton.weights.empty();
             newMesh.mode = GL_TRIANGLES;
             newMesh.material = mesh.material.properties;
-            newMesh.skeleton = mesh.skeleton;
-            newMesh.count = mesh.indices.size();
+            newMesh.count = mesh.primitives.indices.size();
             newMesh.textures = {
-                .ambient      = getTexture(reg, mesh.material.textures.ambient),
                 .albedo       = getTexture(reg, mesh.material.textures.albedo),
-                .specular     = getTexture(reg, mesh.material.textures.specular),
                 .normal       = getTexture(reg, mesh.material.textures.normal),
-                .displacement = getTexture(reg, mesh.material.textures.displacement),
-                .alpha        = getTexture(reg, mesh.material.textures.alpha),
-                .reflection   = getTexture(reg, mesh.material.textures.reflection),
-                .metallic     = getTexture(reg, mesh.material.textures.metallic) 
+                .metallic     = getTexture(reg, mesh.material.textures.metallic),
+                .roughness     = getTexture(reg, mesh.material.textures.roughness) 
             };
     
             newMesh.buffers = {
-                .positions = ogl::makeBuffer<ogl::VBO>(mesh.positions),
-                .texCoords = ogl::makeBuffer<ogl::VBO>(mesh.texCoords),
-                .normals   = ogl::makeBuffer<ogl::VBO>(mesh.normals),
-                .tangents  = ogl::makeBuffer<ogl::VBO>(mesh.tangents),
-                .boneIDs   = ogl::makeBuffer<ogl::VBO>(mesh.skeleton.boneIDs),
-                .weights   = ogl::makeBuffer<ogl::VBO>(mesh.skeleton.weights) 
+                .positions = ogl::makeBuffer<ogl::VBO>(mesh.primitives.positions),
+                .texCoords = ogl::makeBuffer<ogl::VBO>(mesh.primitives.texCoords),
+                .normals   = ogl::makeBuffer<ogl::VBO>(mesh.primitives.normals),
+                .tangents  = ogl::makeBuffer<ogl::VBO>(mesh.primitives.tangents),
+                .boneIDs   = ogl::makeBuffer<ogl::VBO>(mesh.primitives.boneIDs),
+                .weights   = ogl::makeBuffer<ogl::VBO>(mesh.primitives.weights) 
             };
     
             glCreateVertexArrays(1, &newMesh.vao.id);
@@ -82,7 +78,7 @@ static void processModels(ecs::registry &reg)
             addVertexBuffer(newMesh.vao, newMesh.buffers.boneIDs,   4, GL_INT);
             addVertexBuffer(newMesh.vao, newMesh.buffers.weights,   4, GL_FLOAT);
             
-            newMesh.ibo = ogl::makeBuffer<ogl::IBO>(mesh.indices);
+            newMesh.ibo = ogl::makeBuffer<ogl::IBO>(mesh.primitives.indices);
             glVertexArrayElementBuffer(newMesh.vao.id, newMesh.ibo.id);
 
             newModel.meshes.emplace_back(std::move(newMesh));

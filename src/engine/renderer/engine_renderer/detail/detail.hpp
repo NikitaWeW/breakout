@@ -15,14 +15,10 @@ namespace engine::detail
     
     struct MaterialTextures
     {
-        ogl::Texture ambient;
         ogl::Texture albedo;
-        ogl::Texture specular;
         ogl::Texture normal;
-        ogl::Texture displacement;
-        ogl::Texture alpha;
-        ogl::Texture reflection;
         ogl::Texture metallic;
+        ogl::Texture roughness;
     };
     struct VertexBuffers
     {
@@ -35,20 +31,20 @@ namespace engine::detail
     };
     struct Mesh
     {
-        engine::Mesh::Skeleton skeleton;
         engine::Material::Properties material;
         detail::MaterialTextures textures;
         VertexBuffers buffers;
         ogl::VAO vao;
         ogl::IBO ibo;
         GLenum mode = GL_TRIANGLES;
-        bool animated = false;
 
         unsigned count = 0;
     };
     struct Model
     {
+        engine::Model::Skeleton skeleton;
         std::vector<detail::Mesh> meshes;
+        bool animated = false;
     };
 
     struct RendererData

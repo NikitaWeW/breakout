@@ -10,7 +10,7 @@ namespace engine
      * \tparam Format_t The underlying type.
      * \tparam components The number of glm::vec components used in the setPixel and getPixel operations.
      */
-    template <typename Format_t = float, std::size_t components = 4>
+    template <typename Format_t = float>
     class Bitmap
     {
     private:
@@ -37,14 +37,14 @@ namespace engine
          * \param y The y coordinate in range of [0; height).
          * \param value The 4-component value. Only first numComponents will be set.
          */
-        void setPixel(unsigned x, unsigned y, glm::vec<components, Format_t> const &value);
+        void setPixel(unsigned x, unsigned y, glm::vec<4, Format_t> const &value);
         /**
          * \brief Gets the pixel at (x, y).
          * \param x The x coordinate in range of [0; width).
          * \param y The y coordinate in range of [0; height).
          * \return The value at the (x; y) absolute coordinates. Only first numComponents will be filled, the rest will be filled with 0.
          */
-        glm::vec<components, Format_t> getPixel(unsigned x, unsigned y) const;
+        glm::vec<4, Format_t> getPixel(unsigned x, unsigned y) const;
 
         /**
          * \return The width of the bitmap.
@@ -71,21 +71,20 @@ namespace engine
          */
         Format_t *getData();
     };
-
 } // namespace engine
 
 /*! \cond Doxygen_Suppress */
-template <typename Format_t, size_t components>
-inline engine::Bitmap<Format_t, components>::Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *src) : m_width(width), m_height(height), m_numComponents(numComponents)
+template <typename Format_t>
+inline engine::Bitmap<Format_t>::Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *src) : m_width(width), m_height(height), m_numComponents(numComponents)
 {
-    ENGINE_ASSERT_MSG(m_numComponents <= 4, "Components > 4 is yet not supported!");
+    assert(m_numComponents <= 4 && "Components > 4 is yet not supported!");
     m_data.resize(width * height * numComponents);
     if(src) {
         std::copy(src, src + m_data.size(), m_data.begin());
     }
 }
-template <typename Format_t, size_t components>
-inline void engine::Bitmap<Format_t, components>::setPixel(unsigned x, unsigned y, glm::vec<components, Format_t> const &value)
+template <typename Format_t>
+inline void engine::Bitmap<Format_t>::setPixel(unsigned x, unsigned y, glm::vec<4, Format_t> const &value)
 {
     ENGINE_ASSERT_MSG(x < m_width && y < m_height, "x or y is out of range!");
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
@@ -96,8 +95,8 @@ inline void engine::Bitmap<Format_t, components>::setPixel(unsigned x, unsigned 
     if (m_numComponents > 2) data[offset + 2] = value.z;
     if (m_numComponents > 3) data[offset + 3] = value.w;
 }
-template <typename Format_t, size_t components>
-inline glm::vec<components, Format_t> engine::Bitmap<Format_t, components>::getPixel(unsigned x, unsigned y) const
+template <typename Format_t>
+inline glm::vec<4, Format_t> engine::Bitmap<Format_t>::getPixel(unsigned x, unsigned y) const
 {
     ENGINE_ASSERT_MSG(x < m_width && y < m_height, "x or y is out of range!");
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
@@ -110,38 +109,38 @@ inline glm::vec<components, Format_t> engine::Bitmap<Format_t, components>::getP
         m_numComponents > 3 ? data[offset + 3] : 0.0f
     );
 }
-template <typename Format_t, size_t components> 
-inline unsigned engine::Bitmap<Format_t, components>::getWidth() const 
+template <typename Format_t> 
+inline unsigned engine::Bitmap<Format_t>::getWidth() const 
 { 
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_width; 
 }
-template <typename Format_t, size_t components> 
-inline unsigned engine::Bitmap<Format_t, components>::getHeight() const 
+template <typename Format_t> 
+inline unsigned engine::Bitmap<Format_t>::getHeight() const 
 { 
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_height; 
 }
-template <typename Format_t, size_t components> 
-inline unsigned engine::Bitmap<Format_t, components>::getNumComponents() const 
+template <typename Format_t> 
+inline unsigned engine::Bitmap<Format_t>::getNumComponents() const 
 { 
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_numComponents; 
 }
-template <typename Format_t, size_t components> 
-inline glm::vec2 engine::Bitmap<Format_t, components>::getDimensions() const 
+template <typename Format_t> 
+inline glm::vec2 engine::Bitmap<Format_t>::getDimensions() const 
 { 
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return glm::vec2{getWidth(), getHeight()}; 
 }
-template <typename Format_t, size_t components> 
-inline Format_t const *engine::Bitmap<Format_t, components>::getData() const 
+template <typename Format_t> 
+inline Format_t const *engine::Bitmap<Format_t>::getData() const 
 { 
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_data.data(); 
 }
-template <typename Format_t, size_t components> 
-inline Format_t *engine::Bitmap<Format_t, components>::getData() 
+template <typename Format_t> 
+inline Format_t *engine::Bitmap<Format_t>::getData() 
 { 
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_data.data(); 

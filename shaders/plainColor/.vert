@@ -13,7 +13,6 @@ out VS_OUT {
 } vs_out;
 
 const int MAX_BONES = 100;
-const int MAX_BONE_INFLUENCE = 4;
 
 uniform mat4 u_modelMat;
 uniform mat4 u_normalMat;
@@ -26,7 +25,7 @@ uniform bool u_animated;
 void main() {
     vec4 position = vec4(0);
     if(u_animated) {
-        for(int i = 0; i < MAX_BONE_INFLUENCE; ++i) {
+        for(int i = 0; i < 4; ++i) {
             if(a_boneIDs[i] == -1) continue;
             if(a_boneIDs[i] >= MAX_BONES) {
                 position = a_position;
@@ -39,8 +38,8 @@ void main() {
         position = a_position;
     }
 
-    gl_Position = u_projMat * u_viewMat * u_modelMat * position;
-    vs_out.fragPos = vec3(u_modelMat * a_position);
+    vs_out.fragPos = vec3(u_modelMat * position);
+    gl_Position = u_projMat * u_viewMat * vec4(vs_out.fragPos, 1);
     vs_out.texCoords = a_texCoord;
     
     vec3 normal = normalize(vec3(u_normalMat * a_normal));

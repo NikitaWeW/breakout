@@ -2,6 +2,7 @@
 #include "glm/glm.hpp"
 #include <vector>
 #include <string>
+#include <list>
 #include <unordered_map>
 #include "engine/config.hpp"
 #include "ecs.hpp"
@@ -25,7 +26,6 @@ namespace engine
     struct Texture
     {
         Bitmap<float> data;
-        bool grayscale = false;
         bool srgb = false;
         std::string path;
     };
@@ -36,15 +36,13 @@ namespace engine
          */
         struct Textures
         {
-            ecs::entity ambient = 0;
             ecs::entity albedo = 0;
-            ecs::entity specular = 0;
+            ecs::entity metallic = 0;
+            ecs::entity roughness = 0;
+            ecs::entity ambient = 0;
             ecs::entity normal = 0;
             ecs::entity displacement = 0;
             ecs::entity alpha = 0;
-            ecs::entity reflection = 0;
-            ecs::entity metallic = 0;
-            ecs::entity rough = 0;
         } textures;
         struct Properties
         {
@@ -59,27 +57,51 @@ namespace engine
             float ior;
         } properties;
     };
+    struct Animation
+    {
+        struct KeyFrame
+        {
+            // absolutes
+            glm::vec3 position;
+            glm::quat orientation;
+            glm::vec3 scale;
+            float timeTicks;
+        };
+
+        std::vector<std::list<KeyFrame>> bones; // indexed by Mesh::Primitives::boneIDs
+        std::string name = "";
+        float durationTicks = 0;
+        float ticksPerSecond = 0;
+    };
     struct Mesh
     {
-        std::vector<glm::vec4> positions;
-        std::vector<glm::vec2> texCoords;
-        std::vector<glm::vec4> normals;
-        std::vector<glm::vec4> tangents;
-        std::vector<unsigned> indices;
-        Material material;
-        struct Skeleton
+        struct Primitives // TODO: rename to Geometry
         {
-            // lets hope 4 bones per vertex would be enough
+            // guaranteed
+            std::vector<glm::vec4> positions;
+            std::vector<glm::vec2> texCoords;
+            std::vector<glm::vec4> normals;
+            std::vector<glm::vec4> tangents;
+            std::vector<unsigned> indices;
+
+            // optional
+            // hope 4 bones per vertex would be enough
             std::vector<glm::vec4> boneIDs;
             std::vector<glm::vec4> weights;
-            std::vector<glm::mat4> tposeTransform;
-            std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
-        } skeleton;
+        } primitives;
+        Material material;
     };
     struct Model
     {
         std::vector<Mesh> meshes;
+        std::vector<Animation> animations;
         std::string path;
+        struct Skeleton
+        {
+            std::vector<glm::mat4> tposeTransform;
+            std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
+            unsigned numBones = 0;
+        } skeleton;
     };
     struct Camera
     {

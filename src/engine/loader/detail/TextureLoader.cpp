@@ -25,18 +25,18 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_
     texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);
 
-    const int pixelCount = glm::min(width * height, 10);
-    unsigned seed = width * height;
-    texture.grayscale = true;
-    for (int i = 0; i < pixelCount; ++i) {
-        unsigned x = randZeroOne(seed) * width;
-        unsigned y = randZeroOne(seed) * height;
-        glm::vec4 pixel = texture.data.getPixel(x, y);
-        if (pixel.r != pixel.g || pixel.r != pixel.b) {
-            texture.grayscale = false;
-            break;
-        }
-    }
+    // const int pixelCount = glm::min(width * height, 10);
+    // unsigned seed = width * height;
+    // texture.grayscale = true;
+    // for (int i = 0; i < pixelCount; ++i) {
+    //     unsigned x = randZeroOne(seed) * width;
+    //     unsigned y = randZeroOne(seed) * height;
+    //     glm::vec4 pixel = texture.data.getPixel(x, y);
+    //     if (pixel.r != pixel.g || pixel.r != pixel.b) {
+    //         texture.grayscale = false;
+    //         break;
+    //     }
+    // }
 
     return reg.create(std::move(texture));
 }

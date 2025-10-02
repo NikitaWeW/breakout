@@ -139,6 +139,7 @@ void cooload::clearConsole()
 #include <chrono>
 void cooload::loadingScreen(float const *progress)
 {
+    if(!progress) return;
     cooload::SpinningCube cube = {};
 
     cooload::Bar progressBar;
