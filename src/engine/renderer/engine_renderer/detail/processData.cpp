@@ -45,7 +45,7 @@ static void processModels(ecs::registry &reg)
         auto const &model = reg.get<engine::Model>(e_model);
         detail::Model newModel;
         newModel.skeleton = model.skeleton;
-        newModel.animated = model.skeleton.numBones != 0;
+        newModel.animated = model.skeleton.boneMap.size() != 0;
 
         for(auto const &mesh : model.meshes)
         {
@@ -102,7 +102,6 @@ static void processTextures(ecs::registry &reg)
         reg.emplace<detail::ProcessedTexture>(e_texture, entity);
     }
 }
-
 
 void engine::EngineRenderer::processData(ecs::registry &reg)
 {

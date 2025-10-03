@@ -1,14 +1,14 @@
 #include "Loaders.hpp"
 #include "stb_image.h"
 
-static unsigned rand(unsigned &state) {
-	state = state * 747796405u + 2891336453u;
-	unsigned word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-	return (word >> 22u) ^ word;
-}
-static float randZeroOne(unsigned &state) {
-    return float(rand(state)) * (1.0 / float(0xffffffffu));
-}
+// static unsigned rand(unsigned &state) {
+// 	state = state * 747796405u + 2891336453u;
+// 	unsigned word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+// 	return (word >> 22u) ^ word;
+// }
+// static float randZeroOne(unsigned &state) {
+//     return float(rand(state)) * (1.0 / float(0xffffffffu));
+// }
 
 ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_view path)
 {

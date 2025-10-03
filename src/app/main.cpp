@@ -33,6 +33,12 @@ static void printModelData(ecs::entity e_model, ecs::registry const &registry)
     engine::Model const &model = registry.get<engine::Model>(e_model);
     ENGINE_TRACE("");
     ENGINE_TRACE("Model: \"{}\"", model.path);
+    ENGINE_TRACE("Skeleton: ");
+    ENGINE_TRACE("  Bone map size (number of bones): {}", model.skeleton.boneMap.size());
+    if(model.skeleton.boneMap.size() <= 30)
+        for(auto const &[name, id] : model.skeleton.boneMap)
+            ENGINE_TRACE("    [\"{}\": {}]", name, id);
+
     ENGINE_TRACE("Animations: {}", model.animations.size());
     for(auto const &animation : model.animations)
     {
@@ -40,7 +46,19 @@ static void printModelData(ecs::entity e_model, ecs::registry const &registry)
         ENGINE_TRACE("Animation: \"{}\"", animation.name);
         ENGINE_TRACE("  Duration: {} ticks, tps: {}", animation.durationTicks, animation.ticksPerSecond);
         ENGINE_TRACE("  Bones size: {}", animation.bones.size());
+        if(animation.bones.size())
+        {
+            size_t minKfSize = ~0ull;
+            size_t maxKfSize = 0;
+            for(auto const &bone : animation.bones)
+            {
+                minKfSize = glm::min(minKfSize, bone.size());
+                maxKfSize = glm::max(maxKfSize, bone.size());
+            }
+            ENGINE_TRACE("  Number of keyframes: [ min: {}, max: {} ]", minKfSize, maxKfSize);
+        }
     }
+
     ENGINE_TRACE("Meshes: {}", model.meshes.size());
     for(auto const &mesh : model.meshes)
     {
@@ -114,7 +132,7 @@ int main(int argc, char **argv) {
     engine::Logger::init();
     
     engine::Loader loader{registry};
-    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");    progress += 1.0f / toLoad;
+    auto cube =    loader.load(engine::DataType::MODEL, "res/models/animated_cube/AnimatedCube.gltf"); progress += 1.0f / toLoad;
     auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.glb"); progress += 1.0f / toLoad;
     auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb");     progress += 1.0f / toLoad;
     ENGINE_ASSERT(cube);
@@ -122,8 +140,9 @@ int main(int argc, char **argv) {
     ENGINE_ASSERT(fox);
 
     printModelData(fox, registry);
-    printModelData(cube, registry);
-    printModelData(suzanne, registry);
+    progress = 1;
+    loadingScreenThread.join();
+    return 0;
     registry.create(engine::Draw{cube}, engine::ModelMatrix{
         glm::rotate(
             glm::translate(

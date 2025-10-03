@@ -40,11 +40,16 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
         mesh.primitives.normals.resize(mesh.primitives.positions.size());
         for(size_t i = 0; i < (indexed ? mesh.primitives.indices.size() : mesh.primitives.positions.size()); i+=3)
         {
-            glm::vec3 e1 = mesh.primitives.positions[indexed ? mesh.primitives.indices[i+1] : i+1] - mesh.primitives.positions[indexed ? mesh.primitives.indices[i+0] : i+0];
-            glm::vec3 e2 = mesh.primitives.positions[indexed ? mesh.primitives.indices[i+2] : i+2] - mesh.primitives.positions[indexed ? mesh.primitives.indices[i+0] : i+0];
+            size_t i0 = indexed ? mesh.primitives.indices[i+0] : i+0;
+            size_t i1 = indexed ? mesh.primitives.indices[i+1] : i+1;
+            size_t i2 = indexed ? mesh.primitives.indices[i+2] : i+2;
+
+            glm::vec3 e1 = mesh.primitives.positions[i1] - mesh.primitives.positions[i0];
+            glm::vec3 e2 = mesh.primitives.positions[i2] - mesh.primitives.positions[i0];
             glm::vec3 normal = glm::normalize(glm::cross(e1, e2));
-            for(unsigned j = 0; j < 3; ++j)
-                mesh.primitives.normals[indexed ? mesh.primitives.indices[i+0] : i+0] = { normal, 0 };
+            mesh.primitives.normals[i0] = { normal, 0 };
+            mesh.primitives.normals[i1] = { normal, 0 };
+            mesh.primitives.normals[i2] = { normal, 0 };
         }
     }
 
@@ -54,11 +59,14 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
         mesh.primitives.tangents.resize(mesh.primitives.positions.size());
         for(size_t i = 0; i < (indexed ? mesh.primitives.indices.size() : mesh.primitives.positions.size()); i+=3)
         {
-            unsigned index = indexed ? mesh.primitives.indices[i] : i;
-            glm::vec3 edge1 = mesh.primitives.positions[indexed ? mesh.primitives.indices[i+1] : i+1] - mesh.primitives.positions[index];
-            glm::vec3 edge2 = mesh.primitives.positions[indexed ? mesh.primitives.indices[i+2] : i+2] - mesh.primitives.positions[index];
-            glm::vec2 deltaUV1 = mesh.primitives.texCoords[indexed ? mesh.primitives.indices[i+1] : i+1] - mesh.primitives.texCoords[index];
-            glm::vec2 deltaUV2 = mesh.primitives.texCoords[indexed ? mesh.primitives.indices[i+2] : i+2] - mesh.primitives.texCoords[index]; 
+            size_t i0 = indexed ? mesh.primitives.indices[i+0] : i+0;
+            size_t i1 = indexed ? mesh.primitives.indices[i+1] : i+1;
+            size_t i2 = indexed ? mesh.primitives.indices[i+2] : i+2;
+
+            glm::vec3 edge1 = mesh.primitives.positions[i1] - mesh.primitives.positions[i0];
+            glm::vec3 edge2 = mesh.primitives.positions[i2] - mesh.primitives.positions[i0];
+            glm::vec2 deltaUV1 = mesh.primitives.texCoords[i1] - mesh.primitives.texCoords[i0];
+            glm::vec2 deltaUV2 = mesh.primitives.texCoords[i2] - mesh.primitives.texCoords[i0]; 
 
             float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
             glm::vec3 tangent = {
@@ -66,18 +74,18 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
                 f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y),
                 f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z),
             };
-            glm::vec3 normal = mesh.primitives.normals[index];
+            glm::vec3 normal = mesh.primitives.normals[i0];
             tangent = glm::normalize(tangent - normal * glm::dot(normal, tangent));
-            for(unsigned j = 0; j < 3; ++j)
-                mesh.primitives.tangents[index] = { tangent, 0 };
+            
+            mesh.primitives.tangents[i0] = { normal, 0 };
+            mesh.primitives.tangents[i1] = { normal, 0 };
+            mesh.primitives.tangents[i2] = { normal, 0 };
         }
     }
 }
 static void optimizeMesh(engine::Mesh &mesh)
 {
     engine::Mesh oldMesh = mesh;
-    ENGINE_CORE_TRACE("Optimizing mesh with {} indices and {} vertices", oldMesh.primitives.indices.size(), oldMesh.primitives.positions.size());
-
     bool indexed = !oldMesh.primitives.indices.empty();
 
     size_t index_count = indexed ? oldMesh.primitives.indices.size() : oldMesh.primitives.positions.size();
@@ -108,7 +116,7 @@ static void optimizeMesh(engine::Mesh &mesh)
         mesh.primitives.weights  .resize(new_vertex_count); meshopt_remapVertexBuffer(mesh.primitives.weights  .data(), streams[5].data, vertex_count, streams[5].size, remap.data());
     }
 
-    ENGINE_CORE_TRACE("Optimized mesh has {} indices and {} vertices", mesh.primitives.indices.size(), mesh.primitives.positions.size());
+    ENGINE_CORE_TRACE("Optimized mesh. Had {} indices and {} vertices. Has {} indices and {} vertices", oldMesh.primitives.indices.size(), oldMesh.primitives.positions.size(), mesh.primitives.indices.size(), mesh.primitives.positions.size());
 }
 
 constexpr static glm::mat4 toMat4(aiMatrix4x4 const &from)
@@ -211,7 +219,7 @@ static engine::Material getDefaultMaterial()
 static float u8ToFloat(unsigned char v) { return v / 255.0f; }
 static engine::Bitmap<float> fromRawAssimpTexture(aiTexture const *texture)
 {
-    ENGINE_CORE_TRACE("loading embedded raw texture \"{}\"", texture->mFilename.C_Str());
+    ENGINE_CORE_TRACE("Loading embedded raw texture \"{}\"", texture->mFilename.C_Str());
     unsigned const width = static_cast<unsigned>(texture->mWidth);
     unsigned const height = static_cast<unsigned>(texture->mHeight);
 
@@ -226,7 +234,7 @@ static engine::Bitmap<float> fromRawAssimpTexture(aiTexture const *texture)
     for (size_t i = 0; i < width * height; ++i) 
     {
         aiTexel const &texel = texture->pcData[i];
-        result.setPixel(static_cast<unsigned>(i % width), static_cast<unsigned>(i / height), {
+        result.setPixel(static_cast<unsigned>(i % width), static_cast<unsigned>(i / width), {
             u8ToFloat(texel.r),
             u8ToFloat(texel.g),
             u8ToFloat(texel.b),
@@ -238,7 +246,7 @@ static engine::Bitmap<float> fromRawAssimpTexture(aiTexture const *texture)
 }
 static engine::Bitmap<float> fromCompressedAssimpTexture(aiTexture const *texture)
 {
-    ENGINE_CORE_TRACE("loading embedded compressed texture \"{}\"", texture->mFilename.C_Str());
+    ENGINE_CORE_TRACE("Loading embedded compressed texture \"{}\"", texture->mFilename.C_Str());
 
     int width = 0, height = 0, channels = 0;
     float *data = stbi_loadf_from_memory(
@@ -247,14 +255,16 @@ static engine::Bitmap<float> fromCompressedAssimpTexture(aiTexture const *textur
         &width, &height, &channels, 0
     );
     
-    return engine::Bitmap<float>(static_cast<unsigned>(width), static_cast<unsigned>(height), static_cast<unsigned>(channels), data);
+    auto result = engine::Bitmap<float>(static_cast<unsigned>(width), static_cast<unsigned>(height), static_cast<unsigned>(channels), data);
+    stbi_image_free(data);
+    return result;
 }
 static engine::Texture toEngineTexture(aiTexture const *texture)
 {
     engine::Texture result;
     result.path = texture->mFilename.C_Str();
 
-    result.data = texture->mHeight == 0 ? fromCompressedAssimpTexture(texture) : fromRawAssimpTexture(texture);
+    result.data = (texture->mHeight == 0) ? fromCompressedAssimpTexture(texture) : fromRawAssimpTexture(texture);
 
     return result;
 }
@@ -281,7 +291,6 @@ static void loadMaterialTexture(aiMaterial const *material, aiTextureType const 
     }
 
     std::string filepath = directory + '/' + str.C_Str();
-    ENGINE_CORE_TRACE("loading file texture \"{}\"", filepath);
 
     for(auto e_texture : currentRegistry->view<engine::Texture>()) {
         auto const &texture = currentRegistry->get<engine::Texture>(e_texture);
@@ -291,6 +300,7 @@ static void loadMaterialTexture(aiMaterial const *material, aiTextureType const 
         }
     }
 
+    ENGINE_CORE_TRACE("Loading file texture \"{}\"", filepath);
     out = loader.load(*currentRegistry, filepath);
     currentRegistry->get<engine::Texture>(out).srgb = srgb;
 }
@@ -376,7 +386,6 @@ static void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh)
     static unsigned boneCounter = 0;
     glm::ivec4 boneIDs{-1}; mesh.primitives.boneIDs.resize(mesh.primitives.positions.size(), boneIDs); 
     glm::vec4 weights{-1}; mesh.primitives.weights.resize(mesh.primitives.positions.size(), weights);
-    currentModel->skeleton.numBones += aimesh->mNumBones;
     for(unsigned boneIndex = 0; boneIndex < aimesh->mNumBones; ++boneIndex) {
         int boneID = -1;
         aiBone const *bone = aimesh->mBones[boneIndex];
@@ -465,7 +474,7 @@ static unsigned findPosition(float animationTimeTicks, aiNodeAnim const *nodeAni
             return i;
         }
     }
-    return 0;
+    return glm::max(0, (int) nodeAnim->mNumPositionKeys - 1);
 }
 static unsigned findRotation(float animationTimeTicks, aiNodeAnim const *nodeAnim)
 {
@@ -476,7 +485,7 @@ static unsigned findRotation(float animationTimeTicks, aiNodeAnim const *nodeAni
             return i;
         }
     }
-    return 0;
+    return glm::max(0, (int) nodeAnim->mNumRotationKeys - 1);
 }
 static unsigned findScaling(float animationTimeTicks, aiNodeAnim const *nodeAnim)
 {
@@ -487,7 +496,7 @@ static unsigned findScaling(float animationTimeTicks, aiNodeAnim const *nodeAnim
             return i;
         }
     }
-    return 0;
+    return glm::max(0, (int) nodeAnim->mNumScalingKeys - 1);
 }
 static void processAnimationNode(engine::Animation &result, aiAnimation const *animation, float timeTicks, aiNode const *node, engine::Animation::KeyFrame const &parentKeyFrame)
 {
@@ -505,18 +514,7 @@ static void processAnimationNode(engine::Animation &result, aiAnimation const *a
     if(currentModel->skeleton.boneMap.find(nodeName) != currentModel->skeleton.boneMap.end())
     {
         auto &keyframes = result.bones.at(currentModel->skeleton.boneMap.at(nodeName));
-
-        if(keyframes.size() == 0)
-            keyframes.push_back(keyframe);
-        for(auto it = keyframes.begin(); it != keyframes.end(); ++it) {
-            float time = (float) it->timeTicks;
-            if(timeTicks < time) {
-                auto insert_it = it;
-                ++insert_it;
-                keyframes.insert(insert_it, keyframe);
-                break;
-            }
-        }
+        keyframes.emplace_back(keyframe);
     }
 
     for(unsigned i = 0; i < node->mNumChildren; ++i) {
@@ -525,21 +523,28 @@ static void processAnimationNode(engine::Animation &result, aiAnimation const *a
 }
 static engine::Animation processAnimation(aiAnimation const *animation)
 {
+    ENGINE_CORE_TRACE("Processing animation \"{}\"", animation->mName.C_Str());
+
     engine::Animation result;
     result.durationTicks = (float) animation->mDuration;
-    result.ticksPerSecond = (float) animation->mTicksPerSecond;
+    result.ticksPerSecond = (animation->mTicksPerSecond > 0) ? (float) animation->mTicksPerSecond : 24.0f;
     result.name = animation->mName.C_Str();
-    result.bones.resize(currentModel->skeleton.numBones);
+    result.bones.resize(currentModel->skeleton.boneMap.size());
 
     engine::Animation::KeyFrame rootKeyframe = {
         .position = {0, 0, 0},
         .orientation = {1, 0, 0, 0},
         .scale = {1, 1, 1}
     };
-    
-    for(float timeTicks = 0; timeTicks < result.durationTicks; timeTicks += result.ticksPerSecond)
+
+    for(float timeTicks = 0; timeTicks < result.durationTicks; timeTicks += 1)
     {
         processAnimationNode(result, animation, timeTicks, currentScene->mRootNode, rootKeyframe);
+    }
+
+    for(auto &bone : result.bones)
+    {
+        std::sort(bone.begin(), bone.end(), [](engine::Animation::KeyFrame const &first, engine::Animation::KeyFrame const &second){ return first.timeTicks < second.timeTicks; });
     }
 
     return result;
@@ -586,6 +591,8 @@ ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_vi
     {
         model.animations.emplace_back(std::move(processAnimation(currentScene->mAnimations[i])));
     }
+
+    // TODO: morph targets
 
     for(auto &mesh : currentModel->meshes)
     {

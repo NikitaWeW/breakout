@@ -2,7 +2,6 @@
 #include "glm/glm.hpp"
 #include <vector>
 #include <string>
-#include <list>
 #include <unordered_map>
 #include "engine/config.hpp"
 #include "ecs.hpp"
@@ -68,7 +67,7 @@ namespace engine
             float timeTicks;
         };
 
-        std::vector<std::list<KeyFrame>> bones; // indexed by Mesh::Primitives::boneIDs
+        std::vector<std::vector<KeyFrame>> bones; // indexed by Mesh::Primitives::boneIDs
         std::string name = "";
         float durationTicks = 0;
         float ticksPerSecond = 0;
@@ -100,7 +99,6 @@ namespace engine
         {
             std::vector<glm::mat4> tposeTransform;
             std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
-            unsigned numBones = 0;
         } skeleton;
     };
     struct Camera
