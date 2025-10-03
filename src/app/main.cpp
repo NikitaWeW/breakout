@@ -95,7 +95,7 @@ static void printModelData(ecs::entity e_model, ecs::registry const &registry)
 }
 
 int main(int argc, char **argv) {
-    constexpr unsigned toLoad = 6;
+    constexpr unsigned toLoad = 6 + 1;
     float progress = 0;
     
     // std::thread loadingScreenThread{cooload::loadingScreen, nullptr}; // disable loading screen
@@ -132,22 +132,20 @@ int main(int argc, char **argv) {
     engine::Logger::init();
     
     engine::Loader loader{registry};
-    auto cube =    loader.load(engine::DataType::MODEL, "res/models/animated_cube/AnimatedCube.gltf"); progress += 1.0f / toLoad;
+    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");    progress += 1.0f / toLoad;
     auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.glb"); progress += 1.0f / toLoad;
     auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb");     progress += 1.0f / toLoad;
+    auto sponza =  loader.load(engine::DataType::MODEL, "res/models/sponza.glb");  progress += 1.0f / toLoad;
     ENGINE_ASSERT(cube);
     ENGINE_ASSERT(suzanne);
     ENGINE_ASSERT(fox);
 
-    printModelData(fox, registry);
-    progress = 1;
-    loadingScreenThread.join();
-    return 0;
+    printModelData(cube, registry);
     registry.create(engine::Draw{cube}, engine::ModelMatrix{
         glm::rotate(
             glm::translate(
                 glm::mat4{1.0f},
-                {4, 1, -2}
+                {1, 1, 2}
             ),
             45.0f,
             {1.0f, 2, -4}
@@ -157,19 +155,22 @@ int main(int argc, char **argv) {
         glm::rotate(
             glm::translate(
                 glm::mat4{1.0f},
-                {-3, -5, 1}
+                {-1, 1, -5}
             ),
             -26.0f,
             {1.0f, 2, -4}
         )
     });
     registry.create(engine::Draw{fox}, engine::ModelMatrix{
-        glm::scale(
-            glm::translate(
-                glm::mat4{1.0f},
-                {0, -0.5, -6}
-            ),
-            glm::vec3{0.05}
+        glm::translate(
+            glm::mat4{1.0f},
+            {0, 0, 6}
+        )
+    });
+    registry.create(engine::Draw{sponza}, engine::ModelMatrix{
+        glm::translate(
+            glm::mat4{1.0f},
+            {0, 0, 0}
         )
     });
     
@@ -186,10 +187,10 @@ int main(int argc, char **argv) {
     renderer.setup(registry);
     renderer.processData(registry);
 
-    float deltatime = 0.1;
-
-    progress += 1.0f / toLoad;
+    progress = 1;
     loadingScreenThread.join();
+
+    float deltatime = 0.1;
 
     while(!glfwWindowShouldClose(window))
     {
