@@ -182,6 +182,9 @@ ogl::Texture ogl::makeTexture(Bitmap<float> data, bool srgb)
 
     glCreateTextures(GL_TEXTURE_2D, 1, &texture.id);
 
+    // texture.handle = glGetTextureHandleARB(texture.id);
+    // glMakeTextureHandleResidentARB(texture.handle);
+
     GLenum internalFormat = 0;
     GLenum format = 0;
     
@@ -214,12 +217,12 @@ ogl::Texture ogl::makeTexture(Bitmap<float> data, bool srgb)
     glTextureSubImage2D(texture.id, 0, 0, 0, data.getWidth(), data.getHeight(), format, GL_FLOAT, data.getData());
 
     if(small) {
-        glTextureParameteri(texture.id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(texture.id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(texture.id, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTextureParameteri(texture.id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     } else {
         glGenerateTextureMipmap(texture.id);
-        glTextureParameteri(texture.id, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-        glTextureParameteri(texture.id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(texture.id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+        glTextureParameteri(texture.id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
     glTextureParameteri(texture.id, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTextureParameteri(texture.id, GL_TEXTURE_WRAP_T, GL_REPEAT);

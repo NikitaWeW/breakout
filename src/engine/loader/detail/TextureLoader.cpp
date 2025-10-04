@@ -10,9 +10,10 @@
 //     return float(rand(state)) * (1.0 / float(0xffffffffu));
 // }
 
-ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_view path)
+ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
 {
     int width = 0, height = 0, numChannels = 0;
+    stbi_set_flip_vertically_on_load(flags & LoadingFlags::MODEL_FLIP_TEXTURES);
     float *buff = stbi_loadf(path.data(), &width, &height, &numChannels, 0);
     if(!buff)
     {
@@ -22,6 +23,38 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_
     ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;
     texture.path = path;
+    texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
+    stbi_image_free(buff);
+
+    // const int pixelCount = glm::min(width * height, 10);
+    // unsigned seed = width * height;
+    // texture.grayscale = true;
+    // for (int i = 0; i < pixelCount; ++i) {
+    //     unsigned x = randZeroOne(seed) * width;
+    //     unsigned y = randZeroOne(seed) * height;
+    //     glm::vec4 pixel = texture.data.getPixel(x, y);
+    //     if (pixel.r != pixel.g || pixel.r != pixel.b) {
+    //         texture.grayscale = false;
+    //         break;
+    //     }
+    // }
+
+    return reg.create(std::move(texture));
+}
+
+ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
+{
+    int width = 0, height = 0, numChannels = 0;
+    stbi_set_flip_vertically_on_load(flags & LoadingFlags::MODEL_FLIP_TEXTURES);
+    float *buff = stbi_loadf_from_memory(static_cast<unsigned char const *>(data), size, &width, &height, &numChannels, 0);
+    if(!buff)
+    {
+        ENGINE_CORE_ERROR("failed to load texture from memory: {}", stbi_failure_reason());
+        return 0;
+    }
+    ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
+    engine::Texture texture;
+    texture.path = "from memory";
     texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);
 

@@ -11,15 +11,20 @@
 static aiScene const *currentScene;
 static engine::Model *currentModel;
 static ecs::registry *currentRegistry;
+static engine::LoadingFlags currentFlags;
+
+#define MODEL_LOADER_TRACE(...)
+#define MODEL_LOADER_TRACE(...) ENGINE_CORE_TRACE(__VA_ARGS__)
 
 static void calculateMissingPrimitives(engine::Mesh &mesh)
 {
+    MODEL_LOADER_TRACE("Calculating missing primitives");
     ENGINE_ASSERT(!mesh.primitives.positions.empty());
 
     bool indexed = !mesh.primitives.indices.empty();
     if(mesh.primitives.texCoords.empty())
     {
-        ENGINE_CORE_TRACE("calculating missing texcoords");
+        MODEL_LOADER_TRACE("Calculating missing texcoords");
         mesh.primitives.texCoords.resize(mesh.primitives.positions.size());
         for(size_t i = 0; i < (indexed ? mesh.primitives.indices.size() : mesh.primitives.positions.size()); i+=3)
         {
@@ -36,7 +41,7 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
 
     if(mesh.primitives.normals.empty())
     {
-        ENGINE_CORE_TRACE("calculating missing normals");
+        MODEL_LOADER_TRACE("Calculating missing normals");
         mesh.primitives.normals.resize(mesh.primitives.positions.size());
         for(size_t i = 0; i < (indexed ? mesh.primitives.indices.size() : mesh.primitives.positions.size()); i+=3)
         {
@@ -55,7 +60,7 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
 
     if(mesh.primitives.tangents.empty())
     {
-        ENGINE_CORE_TRACE("calculating missing tangents");
+        MODEL_LOADER_TRACE("Calculating missing tangents");
         mesh.primitives.tangents.resize(mesh.primitives.positions.size());
         for(size_t i = 0; i < (indexed ? mesh.primitives.indices.size() : mesh.primitives.positions.size()); i+=3)
         {
@@ -99,8 +104,8 @@ static void optimizeMesh(engine::Mesh &mesh)
 
     if(!oldMesh.primitives.boneIDs.empty())
     {
-        streams.emplace_back(meshopt_Stream{oldMesh.primitives.boneIDs  .data(), sizeof(glm::ivec4), sizeof(glm::ivec4)});
-        streams.emplace_back(meshopt_Stream{oldMesh.primitives.weights  .data(), sizeof(glm::vec4),  sizeof(glm::vec4)});
+        streams.emplace_back(meshopt_Stream{oldMesh.primitives.boneIDs.data(), sizeof(glm::ivec4), sizeof(glm::ivec4)});
+        streams.emplace_back(meshopt_Stream{oldMesh.primitives.weights.data(), sizeof(glm::vec4),  sizeof(glm::vec4)});
     }
 
     std::vector<unsigned int> remap(vertex_count);
@@ -116,7 +121,10 @@ static void optimizeMesh(engine::Mesh &mesh)
         mesh.primitives.weights  .resize(new_vertex_count); meshopt_remapVertexBuffer(mesh.primitives.weights  .data(), streams[5].data, vertex_count, streams[5].size, remap.data());
     }
 
-    ENGINE_CORE_TRACE("Optimized mesh. Had {} indices and {} vertices. Has {} indices and {} vertices", oldMesh.primitives.indices.size(), oldMesh.primitives.positions.size(), mesh.primitives.indices.size(), mesh.primitives.positions.size());
+    if(oldMesh.primitives.indices.size() == mesh.primitives.indices.size() && oldMesh.primitives.positions.size() == mesh.primitives.positions.size())
+        MODEL_LOADER_TRACE("Optimized mesh. Nothing changed.");
+    else
+        MODEL_LOADER_TRACE("Optimized mesh. Had {} indices and {} vertices. Has {} indices and {} vertices", oldMesh.primitives.indices.size(), oldMesh.primitives.positions.size(), mesh.primitives.indices.size(), mesh.primitives.positions.size());
 }
 
 constexpr static glm::mat4 toMat4(aiMatrix4x4 const &from)
@@ -186,9 +194,15 @@ static engine::Material getDefaultMaterial()
         });
     if(!tile)
         tile = currentRegistry->create(engine::Texture{
-            .data = engine::Bitmap<float>{2, 2, 3, std::array<float, 4*3>{
-                1, 1, 1, 0.5, 0.5, 0.5,
-                0.5, 0.5, 0.5, 1, 1, 1 
+            .data = engine::Bitmap<float>{8, 8, 3, std::array<float, 8*8*3>{
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
             }.data()},
             // .grayscale = true,
             .path = "default/tile"
@@ -217,24 +231,25 @@ static engine::Material getDefaultMaterial()
     };
 }
 static float u8ToFloat(unsigned char v) { return v / 255.0f; }
-static engine::Bitmap<float> fromRawAssimpTexture(aiTexture const *texture)
+static ecs::entity fromRawAssimpTexture(aiTexture const *texture)
 {
-    ENGINE_CORE_TRACE("Loading embedded raw texture \"{}\"", texture->mFilename.C_Str());
+    ENGINE_ASSERT(texture->mHeight == 0);
     unsigned const width = static_cast<unsigned>(texture->mWidth);
     unsigned const height = static_cast<unsigned>(texture->mHeight);
 
     if(!texture->pcData)
     {
         ENGINE_CORE_ERROR("aiTexture has no texel data");
-        return engine::Bitmap<float>{};   
+        return 0;
     }
 
-    engine::Bitmap<float> result{width, height, 4};
+    engine::Texture result;
+    result.data = engine::Bitmap<float>{width, height, 4};
 
     for (size_t i = 0; i < width * height; ++i) 
     {
         aiTexel const &texel = texture->pcData[i];
-        result.setPixel(static_cast<unsigned>(i % width), static_cast<unsigned>(i / width), {
+        result.data.setPixel(static_cast<unsigned>(i % width), static_cast<unsigned>(i / width), {
             u8ToFloat(texel.r),
             u8ToFloat(texel.g),
             u8ToFloat(texel.b),
@@ -242,31 +257,8 @@ static engine::Bitmap<float> fromRawAssimpTexture(aiTexture const *texture)
         });
     }
 
-    return result;
-}
-static engine::Bitmap<float> fromCompressedAssimpTexture(aiTexture const *texture)
-{
-    ENGINE_CORE_TRACE("Loading embedded compressed texture \"{}\"", texture->mFilename.C_Str());
 
-    int width = 0, height = 0, channels = 0;
-    float *data = stbi_loadf_from_memory(
-        reinterpret_cast<unsigned char const *>(texture->pcData),
-        static_cast<int>(texture->mWidth),
-        &width, &height, &channels, 0
-    );
-    
-    auto result = engine::Bitmap<float>(static_cast<unsigned>(width), static_cast<unsigned>(height), static_cast<unsigned>(channels), data);
-    stbi_image_free(data);
-    return result;
-}
-static engine::Texture toEngineTexture(aiTexture const *texture)
-{
-    engine::Texture result;
-    result.path = texture->mFilename.C_Str();
-
-    result.data = (texture->mHeight == 0) ? fromCompressedAssimpTexture(texture) : fromRawAssimpTexture(texture);
-
-    return result;
+    return currentRegistry->create(std::move(result));
 }
 static void loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out)
 {
@@ -285,8 +277,21 @@ static void loadMaterialTexture(aiMaterial const *material, aiTextureType const 
     aiTexture const *embedded = currentScene->GetEmbeddedTexture(str.C_Str());
     if(embedded)
     {
-        out = currentRegistry->create(toEngineTexture(embedded));
-        currentRegistry->get<engine::Texture>(out).srgb = srgb;
+        if(embedded->mHeight == 0)
+        {
+            MODEL_LOADER_TRACE("Loading embedded compressed texture \"{}\"", embedded->mFilename.C_Str());
+            out = loader.load(*currentRegistry, embedded->mWidth, embedded->pcData, currentFlags);
+        } else
+        {
+            MODEL_LOADER_TRACE("Loading embedded raw texture \"{}\"", embedded->mFilename.C_Str());
+            out = fromRawAssimpTexture(embedded);
+        }
+
+        if(out)
+        {
+            currentRegistry->get<engine::Texture>(out).path = embedded->mFilename.C_Str();
+            currentRegistry->get<engine::Texture>(out).srgb = srgb;
+        }
         return;
     }
 
@@ -300,9 +305,13 @@ static void loadMaterialTexture(aiMaterial const *material, aiTextureType const 
         }
     }
 
-    ENGINE_CORE_TRACE("Loading file texture \"{}\"", filepath);
-    out = loader.load(*currentRegistry, filepath);
-    currentRegistry->get<engine::Texture>(out).srgb = srgb;
+    MODEL_LOADER_TRACE("Loading file texture \"{}\"", filepath);
+    out = loader.load(*currentRegistry, filepath, currentFlags);
+
+    if(out)
+    {
+        currentRegistry->get<engine::Texture>(out).srgb = srgb;
+    }
 }
 static glm::vec3 getColor(aiMaterial const *material, glm::vec3 defaultColor, const char* key, unsigned int type, unsigned int idx)
 {
@@ -523,7 +532,7 @@ static void processAnimationNode(engine::Animation &result, aiAnimation const *a
 }
 static engine::Animation processAnimation(aiAnimation const *animation)
 {
-    ENGINE_CORE_TRACE("Processing animation \"{}\"", animation->mName.C_Str());
+    MODEL_LOADER_TRACE("Processing animation \"{}\"", animation->mName.C_Str());
 
     engine::Animation result;
     result.durationTicks = (float) animation->mDuration;
@@ -550,9 +559,9 @@ static engine::Animation processAnimation(aiAnimation const *animation)
     return result;
 }
 
-ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_view path)
+ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
 {
-    ENGINE_CORE_TRACE("Loading model \"{}\"", path);
+    MODEL_LOADER_TRACE("Loading model \"{}\"", path);
     Assimp::Importer importer;
     aiScene const *scene = importer.ReadFile(std::string{path}, 
         aiProcess_SplitLargeMeshes      |
@@ -579,11 +588,12 @@ ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_vi
     currentModel = &model;
     currentScene = scene;
     currentRegistry = &reg;
+    currentFlags = flags;
 
     if(currentScene->HasMeshes())
-        ENGINE_CORE_TRACE("Loading {} meshes", currentScene->mNumMeshes);
+        MODEL_LOADER_TRACE("Loading {} meshes", currentScene->mNumMeshes);
     if(currentScene->HasAnimations())
-        ENGINE_CORE_TRACE("Loading {} animations", currentScene->mNumAnimations);
+        MODEL_LOADER_TRACE("Loading {} animations", currentScene->mNumAnimations);
 
     processNode(currentScene->mRootNode);
 

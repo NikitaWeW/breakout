@@ -16,10 +16,33 @@ static std::string_view getDatatypeString(engine::DataType type)
     }
 }
 
-ecs::entity engine::Loader::load(DataType type, std::string_view path) 
+ecs::entity engine::Loader::load(DataType type, std::string_view path, LoadingFlags flags) 
 {
-    ENGINE_CORE_TRACE("loading \"{}\"", path);
+    ENGINE_CORE_TRACE("Loading \"{}\"", path);
 
+    if(!checkType(type)) 
+        return 0;
+
+    auto result = m_loaderMap.at(type)->load(*m_registry, path, flags);
+    if(result == 0)
+        ENGINE_CORE_ERROR("Failed to load \"{}\"", path);
+    return result;
+}
+
+ecs::entity engine::Loader::load(DataType type, std::size_t size, void const *data, LoadingFlags flags)
+{
+    ENGINE_CORE_TRACE("Loading {} from memory", getDatatypeString(type));
+
+    if(!checkType(type)) 
+        return 0;
+
+    auto result = m_loaderMap.at(type)->load(*m_registry, size, data, flags);
+    if(result == 0)
+        ENGINE_CORE_ERROR("Failed to load {} from memory", getDatatypeString(type));
+    return result;
+}
+bool engine::Loader::checkType(DataType type)
+{
     if(m_loaderMap.find(type) == m_loaderMap.end())
     {
         ENGINE_CORE_ERROR("Unsupported type: \"{}\"!", getDatatypeString(type));
@@ -33,23 +56,13 @@ ecs::entity engine::Loader::load(DataType type, std::string_view path)
             ENGINE_CORE_ERROR("none D:");
         }
         ENGINE_ASSERT(false);
-        return 0;
+        return false;
     }
-
-    auto result = m_loaderMap.at(type)->load(*m_registry, path);
-    if(result == 0)
-        ENGINE_CORE_ERROR("Failed to load \"{}\"", path);
-    return result;
+    return true;
 }
-
 engine::Loader::Loader(ecs::registry &registry)
 {
     m_registry = &registry;
-    m_loaders.emplace_back(std::move(std::make_unique<detail::ModelLoader>()));
-    m_loaders.emplace_back(std::move(std::make_unique<detail::TextureLoader>()));
-
-    m_loaderMap = {
-        { DataType::MODEL,      m_loaders[0].get() },
-        { DataType::TEXTURE2D,  m_loaders[1].get() } 
-    };
+    registerLoader(DataType::MODEL,     std::make_unique<detail::ModelLoader>());
+    registerLoader(DataType::TEXTURE2D, std::make_unique<detail::TextureLoader>());
 }

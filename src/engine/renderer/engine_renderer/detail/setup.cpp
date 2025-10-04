@@ -103,7 +103,6 @@ static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity
     ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.severity, error.type, error.source, error.message);
     ENGINE_ASSERT_MSG(severity != GL_DEBUG_SEVERITY_HIGH, "high severity error in the opengl renderer!");
 }
-
 static void setupOpengl(ecs::registry &reg)
 {
     ENGINE_PROFILE();
@@ -111,10 +110,21 @@ static void setupOpengl(ecs::registry &reg)
 
     gladLoadGL((GLADloadfunc) glfwGetProcAddress); // hope it works
 
+    int numExtensions = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+
+    /*
+    ENGINE_CORE_TRACE("Opengl extensions: {}", numExtensions);
+    std::vector<std::string_view> extensions{numExtensions};
+    for(int i = 0; i < numExtensions; ++i)
+    {
+        extensions[i] = reinterpret_cast<char const *>(glGetStringi(GL_EXTENSIONS, i));
+    }
+    */
+
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(debugCallback, nullptr);
 }
-
 void setupPipeline(ecs::registry &reg)
 {
     ENGINE_PROFILE();
@@ -129,14 +139,17 @@ void setupPipeline(ecs::registry &reg)
 
     glCreateFramebuffers(1, &data.mainFBO.id);
 
-    data.plainColorShader = ogl::compileShader("shaders/" "plainColor");
+    data.plainColorShader = ogl::compileShader("shaders/" "temporary_test");
+
+    data.defaultTexture = ogl::makeTexture(engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
+        1, 1, 1
+    }.data()}, false);
 }
 
 engine::EngineRenderer::EngineRenderer(Context const &context)
 {
     m_context = context;
 }
-
 void engine::EngineRenderer::setup(ecs::registry &reg)
 {
     ENGINE_PROFILE();

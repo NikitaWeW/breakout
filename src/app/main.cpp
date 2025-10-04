@@ -132,15 +132,11 @@ int main(int argc, char **argv) {
     engine::Logger::init();
     
     engine::Loader loader{registry};
-    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");    progress += 1.0f / toLoad;
-    auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.glb"); progress += 1.0f / toLoad;
-    auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb");     progress += 1.0f / toLoad;
-    auto sponza =  loader.load(engine::DataType::MODEL, "res/models/sponza.glb");  progress += 1.0f / toLoad;
-    ENGINE_ASSERT(cube);
-    ENGINE_ASSERT(suzanne);
-    ENGINE_ASSERT(fox);
+    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj", engine::LoadingFlags::MODEL_FLIP_TEXTURES);    progress += 1.0f / toLoad;
+    auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.obj", engine::LoadingFlags::MODEL_FLIP_TEXTURES); progress += 1.0f / toLoad;
+    auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb", engine::LoadingFlags::MODEL_FLIP_TEXTURES);     progress += 1.0f / toLoad;
+    auto sponza =  loader.load(engine::DataType::MODEL, "res/models/sponza.glb", engine::LoadingFlags::MODEL_FLIP_TEXTURES);  progress += 1.0f / toLoad;
 
-    printModelData(cube, registry);
     registry.create(engine::Draw{cube}, engine::ModelMatrix{
         glm::rotate(
             glm::translate(
@@ -186,6 +182,8 @@ int main(int argc, char **argv) {
     }};
     renderer.setup(registry);
     renderer.processData(registry);
+
+    printModelData(sponza, registry);
 
     progress = 1;
     loadingScreenThread.join();

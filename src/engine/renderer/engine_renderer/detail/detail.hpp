@@ -60,5 +60,7 @@ namespace engine::detail
         ogl::Program plainColorShader;
 
         glm::uvec2 prevCamSize{0};
+
+        ogl::Texture defaultTexture;
     }; 
 } // namespace engine::detail

@@ -1,6 +1,35 @@
 #include "engine/renderer/engine_renderer/engineRenderer.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
+void bindTexture(int location, ogl::Texture texture, ogl::Texture defaultTexture, unsigned &slot)
+{
+    if(location == -1 || (texture.id == 0 && defaultTexture.id == 0))
+        return;
+
+    if(texture.id)
+    {
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_2D, texture.id);
+        glUniform1i(location, slot);
+    }
+    else
+    {
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_2D, defaultTexture.id);
+        glUniform1i(location, slot);
+    }
+
+    ++slot;
+}
+void bindTextures(ogl::Program const &program, engine::detail::MaterialTextures const &textures, ogl::Texture defaultTexture)
+{
+    unsigned slot = 0;
+    bindTexture(ogl::getUniform(program, "u_material.albedo"), textures.albedo, defaultTexture, slot);
+    bindTexture(ogl::getUniform(program, "u_material.metallic"), textures.metallic, defaultTexture, slot);
+    bindTexture(ogl::getUniform(program, "u_material.roughness"), textures.roughness, defaultTexture, slot);
+    bindTexture(ogl::getUniform(program, "u_material.normal"), textures.normal, defaultTexture, slot);
+}
+
 void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData &data)
 {
     auto &camera = reg.get<engine::Camera>(m_context.e_camera);
@@ -16,6 +45,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    glEnable(GL_FRAMEBUFFER_SRGB);
     
     for(ecs::entity e_draw : reg.view<engine::Draw>())
     {
@@ -24,6 +54,8 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
         {
             glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_draw) ? reg.get<engine::ModelMatrix>(e_draw).value : glm::mat4{1.0f};
             glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
+
+            bindTextures(data.plainColorShader, mesh.textures, data.defaultTexture);
             
             glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
             glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
