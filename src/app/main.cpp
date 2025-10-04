@@ -132,10 +132,10 @@ int main(int argc, char **argv) {
     engine::Logger::init();
     
     engine::Loader loader{registry};
-    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj", engine::LoadingFlags::MODEL_FLIP_TEXTURES);    progress += 1.0f / toLoad;
-    auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.obj", engine::LoadingFlags::MODEL_FLIP_TEXTURES); progress += 1.0f / toLoad;
-    auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb", engine::LoadingFlags::MODEL_FLIP_TEXTURES);     progress += 1.0f / toLoad;
-    auto sponza =  loader.load(engine::DataType::MODEL, "res/models/sponza.glb", engine::LoadingFlags::MODEL_FLIP_TEXTURES);  progress += 1.0f / toLoad;
+    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");    progress += 1.0f / toLoad;
+    auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.obj"); progress += 1.0f / toLoad;
+    auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb");     progress += 1.0f / toLoad;
+    auto sponza =  loader.load(engine::DataType::MODEL, "res/models/sponza.glb");  progress += 1.0f / toLoad;
 
     registry.create(engine::Draw{cube}, engine::ModelMatrix{
         glm::rotate(

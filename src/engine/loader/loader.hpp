@@ -5,12 +5,14 @@
 
 namespace engine
 {
-    enum LoadingFlags : int
+    enum class LoadingFlags : int
     {
         NONE = 0,
         MODEL_FLIP_TEXTURES = 1 << 0,
         MODEL_FLIP_WINDING_ORDER = 1 << 1,
     };
+
+    constexpr LoadingFlags DEFAULT_LOADING_FLAGS = LoadingFlags::MODEL_FLIP_TEXTURES;
     
     namespace detail
     {
@@ -54,8 +56,8 @@ namespace engine
         Loader(Loader const &) = delete;
         Loader &operator=(Loader const &) = delete;
 
-        ecs::entity load(DataType type, std::string_view path, LoadingFlags flats = LoadingFlags::NONE);
-        ecs::entity load(DataType type, std::size_t size, void const *data, LoadingFlags flags = LoadingFlags::NONE);
+        ecs::entity load(DataType type, std::string_view path, LoadingFlags flats = DEFAULT_LOADING_FLAGS);
+        ecs::entity load(DataType type, std::size_t size, void const *data, LoadingFlags flags = DEFAULT_LOADING_FLAGS);
 
         void registerLoader(DataType type, std::unique_ptr<detail::ILoader> &&loader);
     };
@@ -65,4 +67,23 @@ inline void ::engine::Loader::registerLoader(DataType type, std::unique_ptr<deta
 {
     m_loaders.emplace_back(std::move(loader));
     m_loaderMap[type] = m_loaders.back().get();
+}
+
+// For some reason one cant access bitwise operators in the scoped enums. Annoying.
+inline constexpr engine::LoadingFlags operator|(engine::LoadingFlags lhs, engine::LoadingFlags rhs) {
+    return static_cast<engine::LoadingFlags>(
+        static_cast<std::underlying_type_t<engine::LoadingFlags>>(lhs) |
+        static_cast<std::underlying_type_t<engine::LoadingFlags>>(rhs)
+    );
+}
+inline constexpr engine::LoadingFlags operator&(engine::LoadingFlags lhs, engine::LoadingFlags rhs) {
+    return static_cast<engine::LoadingFlags>(
+        static_cast<std::underlying_type_t<engine::LoadingFlags>>(lhs) &
+        static_cast<std::underlying_type_t<engine::LoadingFlags>>(rhs)
+    );
+}
+inline constexpr engine::LoadingFlags operator~(engine::LoadingFlags p) {
+    return static_cast<engine::LoadingFlags>(
+        ~static_cast<std::underlying_type_t<engine::LoadingFlags>>(p)
+    );
 }
