@@ -8,6 +8,7 @@
 #include "controller/controller.hpp"
 #include "engine/physics/physics.hpp"
 #include "engine/input/input.hpp"
+#include "engine/animation/animation.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/io.hpp"
 #include "fmt/ostream.h"
@@ -98,8 +99,8 @@ int main(int argc, char **argv) {
     constexpr unsigned toLoad = 6 + 1;
     float progress = 0;
     
-    // std::thread loadingScreenThread{cooload::loadingScreen, nullptr}; // disable loading screen
-    std::thread loadingScreenThread{cooload::loadingScreen, &progress};
+    std::thread loadingScreenThread{cooload::loadingScreen, nullptr}; // disable loading screen
+    // std::thread loadingScreenThread{cooload::loadingScreen, &progress};
 
     GLFWwindow* window;
     
@@ -135,9 +136,11 @@ int main(int argc, char **argv) {
     auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");    progress += 1.0f / toLoad;
     auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.obj"); progress += 1.0f / toLoad;
     auto fox =     loader.load(engine::DataType::MODEL, "res/models/fox.glb");     progress += 1.0f / toLoad;
-    auto sponza =  loader.load(engine::DataType::MODEL, "res/models/sponza.glb");  progress += 1.0f / toLoad;
+    printModelData(fox, registry);
+    // auto sponza =  loader.load(engine::DataType::MODEL, "res/models/sponza.glb");  progress += 1.0f / toLoad;
 
-    registry.create(engine::Draw{cube}, engine::ModelMatrix{
+
+    registry.create(engine::Instance{cube}, engine::ModelMatrix{
         glm::rotate(
             glm::translate(
                 glm::mat4{1.0f},
@@ -147,7 +150,7 @@ int main(int argc, char **argv) {
             {1.0f, 2, -4}
         )
     });
-    registry.create(engine::Draw{suzanne}, engine::ModelMatrix{
+    registry.create(engine::Instance{suzanne}, engine::ModelMatrix{
         glm::rotate(
             glm::translate(
                 glm::mat4{1.0f},
@@ -157,13 +160,19 @@ int main(int argc, char **argv) {
             {1.0f, 2, -4}
         )
     });
-    registry.create(engine::Draw{fox}, engine::ModelMatrix{
-        glm::translate(
-            glm::mat4{1.0f},
-            {0, 0, 6}
-        )
-    });
-    registry.create(engine::Draw{sponza}, engine::ModelMatrix{
+    registry.create(
+        engine::Instance{fox}, 
+        engine::ModelMatrix{
+            glm::translate(
+                glm::mat4{1.0f},
+                {0, 0, 6}
+            )
+        },
+        engine::CurrentAnimation{
+            .name = "Survey"
+        }
+    );
+    registry.create(engine::Instance{cube}, engine::ModelMatrix{
         glm::translate(
             glm::mat4{1.0f},
             {0, 0, 0}
@@ -175,7 +184,7 @@ int main(int argc, char **argv) {
     camera.speed = 4;
     camera.sensitivity = 0.125;
 
-    engine::EngineRenderer renderer1{};
+    engine::EngineRenderer renderer1{}; // check if everything initializes without conflicts..
 
     engine::EngineRenderer renderer{{
         .e_camera = e_camera
@@ -183,7 +192,7 @@ int main(int argc, char **argv) {
     renderer.setup(registry);
     renderer.processData(registry);
 
-    printModelData(sponza, registry);
+    engine::Animator animator;
 
     progress = 1;
     loadingScreenThread.join();
@@ -194,15 +203,18 @@ int main(int argc, char **argv) {
     {
         auto start = std::chrono::high_resolution_clock::now();
 
-        // for(auto e : registry.view<engine::Orientation>())
-        // {
-        //     auto &c = registry.get<engine::Orientation>(e);
-        // }
-
         engine::input::update(registry);
         controller::update(registry);
+        animator.update(registry, deltatime);
         engine::physics::update(registry, deltatime);
         renderer.draw(registry);
+
+        for(auto e : registry.view<engine::CurrentAnimation>())
+        {
+            auto &c = registry.get<engine::CurrentAnimation>(e);
+
+            // ENGINE_TRACE(fmt::streamed(c.boneMatrices.at(12)));
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();

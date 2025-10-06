@@ -14,7 +14,7 @@ static ecs::registry *currentRegistry;
 static engine::LoadingFlags currentFlags;
 
 #define MODEL_LOADER_TRACE(...)
-#define MODEL_LOADER_TRACE(...) ENGINE_CORE_TRACE(__VA_ARGS__)
+// #define MODEL_LOADER_TRACE(...) ENGINE_CORE_TRACE(__VA_ARGS__)
 
 static void calculateMissingPrimitives(engine::Mesh &mesh)
 {
@@ -507,11 +507,11 @@ static unsigned findScaling(float animationTimeTicks, aiNodeAnim const *nodeAnim
     }
     return glm::max(0, (int) nodeAnim->mNumScalingKeys - 1);
 }
-static void processAnimationNode(engine::Animation &result, aiAnimation const *animation, float timeTicks, aiNode const *node, engine::Animation::KeyFrame const &parentKeyFrame)
+static void processAnimationNode(engine::Animation &result, aiAnimation const *animation, float timeTicks, aiNode const *node, engine::Animation::Keyframe const &parentKeyFrame)
 {
     std::string nodeName = node->mName.C_Str();
     aiNodeAnim const *nodeAnim = findNodeAnim(animation, nodeName);
-    engine::Animation::KeyFrame keyframe = parentKeyFrame;
+    engine::Animation::Keyframe keyframe = parentKeyFrame;
     keyframe.timeTicks = timeTicks;
     
     if(nodeAnim) {
@@ -540,7 +540,7 @@ static engine::Animation processAnimation(aiAnimation const *animation)
     result.name = animation->mName.C_Str();
     result.bones.resize(currentModel->skeleton.boneMap.size());
 
-    engine::Animation::KeyFrame rootKeyframe = {
+    engine::Animation::Keyframe rootKeyframe = {
         .position = {0, 0, 0},
         .orientation = {1, 0, 0, 0},
         .scale = {1, 1, 1}
@@ -553,7 +553,7 @@ static engine::Animation processAnimation(aiAnimation const *animation)
 
     for(auto &bone : result.bones)
     {
-        std::sort(bone.begin(), bone.end(), [](engine::Animation::KeyFrame const &first, engine::Animation::KeyFrame const &second){ return first.timeTicks < second.timeTicks; });
+        std::sort(bone.begin(), bone.end(), [](engine::Animation::Keyframe const &first, engine::Animation::Keyframe const &second){ return first.timeTicks < second.timeTicks; });
     }
 
     return result;

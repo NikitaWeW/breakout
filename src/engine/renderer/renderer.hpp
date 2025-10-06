@@ -5,13 +5,6 @@
 
 namespace engine
 {
-    /** \brief A command to draw an object. */
-    struct Draw
-    {
-        /** \brief A reference to the Processed engine::Model. */
-        ecs::entity model;
-    };
-
     /**
      * \brief The renderer implementation interface.
      */

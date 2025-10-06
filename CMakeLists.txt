@@ -6,6 +6,7 @@ project(breakout C CXX)
 
 ######################################################################
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(cmake/cpm.cmake)
 
 CPMAddPackage("gh:glfw/glfw#3.4")
@@ -40,6 +41,12 @@ file(GLOB_RECURSE SOURCES "src/app/*.cpp")
 add_executable(main ${SOURCES})
 target_include_directories(main PRIVATE src)
 target_link_libraries(main PRIVATE engine)
+
+find_package(Gperftools)
+if(GPERFTOOLS_FOUND)
+    target_link_libraries(main PRIVATE ${GPERFTOOLS_LIBRARIES})
+endif()
+set_property(TARGET main APPEND_STRING PROPERTY LINK_OPTIONS "-lprofiler")
 
 install(DIRECTORY res DESTINATION .)
 install(DIRECTORY shaders DESTINATION .)

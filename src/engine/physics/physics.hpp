@@ -4,6 +4,8 @@
 #include "ecs.hpp"
 #include "glm/glm.hpp"
 
+// TODO: refactor
+
 namespace engine::physics
 {
     struct MoveIntent : glm::vec3 {};

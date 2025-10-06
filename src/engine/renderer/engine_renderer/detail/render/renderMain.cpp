@@ -42,17 +42,21 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
     glUseProgram(data.plainColorShader.id);
     glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_viewMat"), 1, false, glm::value_ptr(camera.viewMat));
     glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
+
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
     glEnable(GL_FRAMEBUFFER_SRGB);
+    glCullFace(GL_BACK);
     
-    for(ecs::entity e_draw : reg.view<engine::Draw>())
+    for(ecs::entity e_instance : reg.view<engine::Instance>())
     {
-        detail::Model const &model = reg.get<detail::Model>(reg.get<detail::ProcessedModel>(reg.get<engine::Draw>(e_draw).model).data);
+        detail::Model const &model = reg.get<detail::Model>(reg.get<detail::ProcessedModel>(reg.get<engine::Instance>(e_instance).e_model).data);
+        std::vector<glm::mat4> const *boneMatrices = reg.has<CurrentAnimation>(e_instance) ? &reg.get<CurrentAnimation>(e_instance).boneMatrices : &model.skeleton.tposeTransform;
+        ENGINE_ASSERT(boneMatrices->size() == model.skeleton.boneMap.size());
+
         for(auto const &mesh : model.meshes)
         {
-            glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_draw) ? reg.get<engine::ModelMatrix>(e_draw).value : glm::mat4{1.0f};
+            glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance).value : glm::mat4{1.0f};
             glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
 
             bindTextures(data.plainColorShader, mesh.textures, data.defaultTexture);
@@ -60,7 +64,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
             glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
             glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
             if(model.animated)
-                glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), model.skeleton.tposeTransform.size(), false, glm::value_ptr(model.skeleton.tposeTransform.at(0)));
+                glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), boneMatrices->size(), false, glm::value_ptr(boneMatrices->front()));
             glUniform1i(ogl::getUniform(data.plainColorShader, "u_animated"), model.animated);
     
             glBindVertexArray(mesh.vao.id);

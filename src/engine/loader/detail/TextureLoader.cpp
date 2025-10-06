@@ -1,16 +1,23 @@
 #include "Loaders.hpp"
 #include "stb_image.h"
 
-// static unsigned rand(unsigned &state) {
-// 	state = state * 747796405u + 2891336453u;
-// 	unsigned word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-// 	return (word >> 22u) ^ word;
-// }
-// static float randZeroOne(unsigned &state) {
-//     return float(rand(state)) * (1.0 / float(0xffffffffu));
-// }
-
 ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
+{
+    auto texture = loadTexture(path, flags);
+    if(!texture.has_value())
+        return 0;
+    return reg.create(std::move(texture.value()));
+}
+
+ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
+{
+    auto texture = loadTexture(size, data, flags);
+    if(!texture.has_value())
+        return 0;
+    return reg.create(std::move(texture.value()));
+}
+
+std::optional<engine::Texture> engine::detail::loadTexture(std::string_view path, LoadingFlags flags)
 {
     int width = 0, height = 0, numChannels = 0;
     stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::MODEL_FLIP_TEXTURES));
@@ -18,7 +25,7 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_
     if(!buff)
     {
         ENGINE_CORE_ERROR("failed to load texture: \"{}\"!: {}", path, stbi_failure_reason());
-        return 0;
+        return {};
     }
     ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;
@@ -26,23 +33,9 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_
     texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);
 
-    // const int pixelCount = glm::min(width * height, 10);
-    // unsigned seed = width * height;
-    // texture.grayscale = true;
-    // for (int i = 0; i < pixelCount; ++i) {
-    //     unsigned x = randZeroOne(seed) * width;
-    //     unsigned y = randZeroOne(seed) * height;
-    //     glm::vec4 pixel = texture.data.getPixel(x, y);
-    //     if (pixel.r != pixel.g || pixel.r != pixel.b) {
-    //         texture.grayscale = false;
-    //         break;
-    //     }
-    // }
-
-    return reg.create(std::move(texture));
+    return texture;
 }
-
-ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
+std::optional<engine::Texture> engine::detail::loadTexture(std::size_t size, void const *data, LoadingFlags flags)
 {
     int width = 0, height = 0, numChannels = 0;
     stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::MODEL_FLIP_TEXTURES));
@@ -50,7 +43,7 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t 
     if(!buff)
     {
         ENGINE_CORE_ERROR("failed to load texture from memory: {}", stbi_failure_reason());
-        return 0;
+        return {};
     }
     ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;
@@ -58,18 +51,5 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t 
     texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);
 
-    // const int pixelCount = glm::min(width * height, 10);
-    // unsigned seed = width * height;
-    // texture.grayscale = true;
-    // for (int i = 0; i < pixelCount; ++i) {
-    //     unsigned x = randZeroOne(seed) * width;
-    //     unsigned y = randZeroOne(seed) * height;
-    //     glm::vec4 pixel = texture.data.getPixel(x, y);
-    //     if (pixel.r != pixel.g || pixel.r != pixel.b) {
-    //         texture.grayscale = false;
-    //         break;
-    //     }
-    // }
-
-    return reg.create(std::move(texture));
+    return texture;
 }

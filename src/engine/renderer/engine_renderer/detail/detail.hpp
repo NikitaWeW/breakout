@@ -1,6 +1,7 @@
 #pragma once
 #include "engine/renderer/engine_renderer/engineRenderer.hpp"
 #include "ogl.hpp"
+#include "engine/animation/animation.hpp"
 
 namespace engine::detail
 {

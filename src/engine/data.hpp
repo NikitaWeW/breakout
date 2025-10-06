@@ -58,16 +58,16 @@ namespace engine
     };
     struct Animation
     {
-        struct KeyFrame
+        struct Keyframe
         {
-            // absolutes
+            // absolutes (no hierarchy)
             glm::vec3 position;
             glm::quat orientation;
             glm::vec3 scale;
             float timeTicks;
         };
 
-        std::vector<std::vector<KeyFrame>> bones; // indexed by Mesh::Primitives::boneIDs
+        std::vector<std::vector<Keyframe>> bones; // indexed by Mesh::Primitives::boneIDs
         std::string name = "";
         float durationTicks = 0;
         float ticksPerSecond = 0;
@@ -124,5 +124,10 @@ namespace engine
     {
         GLFWwindow *glfwWindow;
         glm::uvec2 size{0};
+    };
+    
+    struct Instance
+    {
+        ecs::entity e_model;
     };
 } // namespace engine
