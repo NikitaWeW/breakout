@@ -47,17 +47,6 @@ static void printModelData(ecs::entity e_model, ecs::registry const &registry)
         ENGINE_TRACE("Animation: \"{}\"", animation.name);
         ENGINE_TRACE("  Duration: {} ticks, tps: {}", animation.durationTicks, animation.ticksPerSecond);
         ENGINE_TRACE("  Bones size: {}", animation.bones.size());
-        if(animation.bones.size())
-        {
-            size_t minKfSize = ~0ull;
-            size_t maxKfSize = 0;
-            for(auto const &bone : animation.bones)
-            {
-                minKfSize = glm::min(minKfSize, bone.size());
-                maxKfSize = glm::max(maxKfSize, bone.size());
-            }
-            ENGINE_TRACE("  Number of keyframes: [ min: {}, max: {} ]", minKfSize, maxKfSize);
-        }
     }
 
     ENGINE_TRACE("Meshes: {}", model.meshes.size());
@@ -144,7 +133,7 @@ int main(int argc, char **argv) {
         glm::rotate(
             glm::translate(
                 glm::mat4{1.0f},
-                {1, 1, 2}
+                {1, 1, -2}
             ),
             45.0f,
             {1.0f, 2, -4}
@@ -154,7 +143,7 @@ int main(int argc, char **argv) {
         glm::rotate(
             glm::translate(
                 glm::mat4{1.0f},
-                {-1, 1, -5}
+                {-1, 1, 5}
             ),
             -26.0f,
             {1.0f, 2, -4}
@@ -165,11 +154,15 @@ int main(int argc, char **argv) {
         engine::ModelMatrix{
             glm::translate(
                 glm::mat4{1.0f},
-                {0, 0, 6}
+                {0, 0, -7}
+            ) *
+            glm::scale(
+                glm::mat4{1.0f},
+                glm::vec3{0.01}
             )
         },
         engine::CurrentAnimation{
-            .name = "Survey"
+            .name = "Run"
         }
     );
     registry.create(engine::Instance{cube}, engine::ModelMatrix{
@@ -213,13 +206,14 @@ int main(int argc, char **argv) {
         {
             auto &c = registry.get<engine::CurrentAnimation>(e);
 
-            // ENGINE_TRACE(fmt::streamed(c.boneMatrices.at(12)));
+            // ENGINE_TRACE(fmt::streamed(c.boneMatrices.at(10)));
         }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
 
         deltatime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1e-9f;
+        glfwSetWindowTitle(window, (std::to_string(deltatime * 1e3) + "ms | " + std::to_string(1/deltatime) + "fps").c_str());
     }
 
     ENGINE_INFO("Exiting...");

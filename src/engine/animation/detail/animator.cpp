@@ -3,6 +3,13 @@
 #include <algorithm>
 #include <optional>
 
+struct Keyframe
+{
+    glm::vec3 position;
+    glm::quat orientation;
+    glm::vec3 scale;
+};
+
 float getDurationSeconds(engine::Animation const &animation)
 {
     float ticksPerSecond = animation.ticksPerSecond;
@@ -22,7 +29,7 @@ bool updateAnimation(engine::Model const &model, engine::CurrentAnimation &curre
         switch (current.repeat)
         {
         case engine::CurrentAnimation::RepeatMode::LOOP:
-            current.time -= glm::floor(current.time);
+            current.time = glm::mod(current.time, 1.0f);
             break;
         case engine::CurrentAnimation::RepeatMode::EXIT:
             exited = true;
@@ -40,9 +47,9 @@ bool updateAnimation(engine::Model const &model, engine::CurrentAnimation &curre
 
     return exited;
 }
-engine::Animation::Keyframe interpolateKeyframes(engine::Animation::Keyframe const &first, engine::Animation::Keyframe const &second, float factor)
+Keyframe interpolateKeyframes(Keyframe const &first, Keyframe const &second, float factor)
 {
-    return engine::Animation::Keyframe{
+    return Keyframe{
         .position = glm::mix(
             first.position, 
             second.position,
@@ -60,26 +67,90 @@ engine::Animation::Keyframe interpolateKeyframes(engine::Animation::Keyframe con
         )
     };
 }
-engine::Animation::Keyframe calculateInterpolatedKeyframe(std::vector<engine::Animation::Keyframe> const &keyframes, float time)
+
+glm::vec3 calculateInterpolatedPosition(engine::Animation::Keyframes const &keyframes, float time)
 {
-    ENGINE_ASSERT(keyframes.size() > 0);
+    auto const &keys = keyframes.positions;
+    if(keys.empty())
+        return {0, 0, 0};
+    if(keys.size() == 1)
+        return keys.back().value;
 
-    if(keyframes.size() == 1)
-        return keyframes.back();
+    auto it = std::upper_bound(keys.begin(), keys.end(), time, [](float time, engine::Animation::PositionKey const &keyframe){ return keyframe.timeTicks > time; });
 
-    auto it = std::lower_bound(keyframes.begin(), keyframes.end(), time, [](engine::Animation::Keyframe const &first, float time){ return first.timeTicks < time; });
+    if(it+1 >= keys.end())
+        return keys.back().value;
 
-    if(it+1 >= keyframes.end())
-        return keyframes.back();
-
-    auto const &first = *it;
-    auto const &second = *(it+1);
+    auto const &second = *it;
+    auto const &first = *(it-1);
 
     float deltatime = second.timeTicks - first.timeTicks;
     float factor = (time - first.timeTicks) / deltatime;
     factor = glm::clamp<float>(factor, 0, 1);
+    return glm::mix(
+        first.value,
+        second.value,
+        factor
+    );
+}
+glm::quat calculateInterpolatedOrientation(engine::Animation::Keyframes const &keyframes, float time)
+{
+    auto const &keys = keyframes.orientations;
+    if(keys.empty())
+        return {0, 0, 0, 1};
+    if(keys.size() == 1)
+        return keys.back().value;
 
-    return interpolateKeyframes(first, second, factor);
+    auto it = std::upper_bound(keys.begin(), keys.end(), time, [](float time, engine::Animation::OrientationKey const &keyframe){ return keyframe.timeTicks > time; });
+
+    if(it+1 >= keys.end())
+        return keys.back().value;
+
+    auto const &second = *it;
+    auto const &first = *(it-1);
+
+    float deltatime = second.timeTicks - first.timeTicks;
+    float factor = (time - first.timeTicks) / deltatime;
+    factor = glm::clamp<float>(factor, 0, 1);
+    return glm::slerp(
+        first.value,
+        second.value,
+        factor
+    );
+}
+glm::vec3 calculateInterpolatedScale(engine::Animation::Keyframes const &keyframes, float time)
+{
+    auto const &keys = keyframes.scales;
+    if(keys.empty())
+        return {1, 1, 1};
+    if(keys.size() == 1)
+        return keys.back().value;
+
+    auto it = std::upper_bound(keys.begin(), keys.end(), time, [](float time, engine::Animation::ScaleKey const &keyframe){ return keyframe.timeTicks > time; });
+
+    if(it+1 >= keys.end())
+        return keys.back().value;
+
+    auto const &second = *it;
+    auto const &first = *(it-1);
+
+    float deltatime = second.timeTicks - first.timeTicks;
+    float factor = (time - first.timeTicks) / deltatime;
+    factor = glm::clamp<float>(factor, 0, 1);
+    return glm::mix(
+        first.value,
+        second.value,
+        factor
+    );
+}
+
+Keyframe calculateInterpolatedKeyframe(engine::Animation::Keyframes const &keyframes, float time)
+{
+    return Keyframe{
+        .position    = calculateInterpolatedPosition(keyframes, time),
+        .orientation = calculateInterpolatedOrientation(keyframes, time),
+        .scale       = calculateInterpolatedScale(keyframes, time),
+    };
 }
 
 void engine::Animator::update(ecs::registry &registry, float deltatime)
@@ -103,10 +174,9 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
             continue;
         }
 
-        float time = current.time * animation.durationTicks;
-
         size_t numBones = animation.bones.size();
         current.boneMatrices.resize(numBones);
+        current.localBoneMatrices.resize(numBones);
 
         if(registry.has<AnimationTransition>(entity)) {
             AnimationTransition &transition = registry.get<AnimationTransition>(entity);
@@ -121,19 +191,19 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
 
             transition.factor += transition.factorPerSecond * deltatime;
 
-            for(size_t i = 0; i < numBones; ++i)
+            for(size_t bone = 0; bone < numBones; ++bone)
             {
-                auto &matrix = current.boneMatrices.at(i);
-
-                auto first = calculateInterpolatedKeyframe(animation.bones.at(i), time);
-                auto second = calculateInterpolatedKeyframe(secondAnimation.bones.at(i), time);
+                auto first = calculateInterpolatedKeyframe(animation.bones.at(bone), current.time * animation.durationTicks);
+                auto second = calculateInterpolatedKeyframe(secondAnimation.bones.at(bone), current.time * secondAnimation.durationTicks);
             
                 auto result = interpolateKeyframes(first, second, transition.easeFunction(transition.factor));
 
-                matrix = 
+                glm::mat4 transform = 
                     glm::translate(glm::mat4{1.0f}, result.position) * 
                     glm::mat4_cast(result.orientation) * 
                     glm::scale(glm::mat4{1.0f}, result.scale);
+
+                current.localBoneMatrices.at(bone) = transform;
             }
 
             if(transition.factor >= 1) {
@@ -143,16 +213,33 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
         }
         else
         {
-            for(size_t i = 0; i < numBones; ++i)
+            for(size_t bone = 0; bone < numBones; ++bone)
             {
-                auto &matrix = current.boneMatrices.at(i);
-                auto result = calculateInterpolatedKeyframe(animation.bones.at(i), time);
+                auto result = calculateInterpolatedKeyframe(animation.bones.at(bone), current.time * animation.durationTicks);
 
-                matrix = 
+                glm::mat4 transform = 
                     glm::translate(glm::mat4{1.0f}, result.position) * 
                     glm::mat4_cast(result.orientation) * 
                     glm::scale(glm::mat4{1.0f}, result.scale);
+
+                current.localBoneMatrices.at(bone) = transform;
             }
+        }
+
+        for(size_t bone = 0; bone < numBones; ++bone)
+        {
+            int parent = model.skeleton.parents.at(bone);
+            auto &matrix = current.boneMatrices.at(bone);
+            auto &local = current.localBoneMatrices.at(bone);
+            if(parent == -1)
+                matrix = local;
+            else
+                matrix = current.boneMatrices.at(parent) * local;
+        }
+        for(size_t bone = 0; bone < numBones; ++bone)
+        {
+            auto &matrix = current.boneMatrices.at(bone);
+            matrix = matrix * model.skeleton.inverseTposeTransform.at(bone);
         }
     }
 }

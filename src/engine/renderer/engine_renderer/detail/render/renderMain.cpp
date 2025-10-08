@@ -47,12 +47,11 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
     glEnable(GL_CULL_FACE);
     glEnable(GL_FRAMEBUFFER_SRGB);
     glCullFace(GL_BACK);
-    
+
     for(ecs::entity e_instance : reg.view<engine::Instance>())
     {
         detail::Model const &model = reg.get<detail::Model>(reg.get<detail::ProcessedModel>(reg.get<engine::Instance>(e_instance).e_model).data);
-        std::vector<glm::mat4> const *boneMatrices = reg.has<CurrentAnimation>(e_instance) ? &reg.get<CurrentAnimation>(e_instance).boneMatrices : &model.skeleton.tposeTransform;
-        ENGINE_ASSERT(boneMatrices->size() == model.skeleton.boneMap.size());
+        bool animated = model.animated && reg.has<CurrentAnimation>(e_instance);
 
         for(auto const &mesh : model.meshes)
         {
@@ -63,10 +62,14 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
             
             glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
             glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
-            if(model.animated)
-                glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), boneMatrices->size(), false, glm::value_ptr(boneMatrices->front()));
-            glUniform1i(ogl::getUniform(data.plainColorShader, "u_animated"), model.animated);
-    
+            if(animated)
+            {
+                auto const &boneMatrices = reg.get<CurrentAnimation>(e_instance).boneMatrices;
+                ENGINE_ASSERT(boneMatrices.size() == model.skeleton.boneMap.size());
+                glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), boneMatrices.size(), false, glm::value_ptr(boneMatrices.front())); // TODO: switch to ssbo or ubo.
+            }
+            glUniform1i(ogl::getUniform(data.plainColorShader, "u_animated"), animated);
+
             glBindVertexArray(mesh.vao.id);
             glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);
         }

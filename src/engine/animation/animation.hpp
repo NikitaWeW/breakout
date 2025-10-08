@@ -18,6 +18,8 @@ namespace engine
         float time = 0; // normalized
         float speed = 1;
         std::vector<glm::mat4> boneMatrices;
+        // used to avoid unnecessary allocations to construct hierarchy-free boneMatrices, but can be used too.
+        std::vector<glm::mat4> localBoneMatrices;
     };
     struct AnimationTransition
     {

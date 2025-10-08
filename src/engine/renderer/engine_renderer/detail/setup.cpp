@@ -125,7 +125,7 @@ static void setupOpengl(ecs::registry &reg)
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(debugCallback, nullptr);
 }
-void setupPipeline(ecs::registry &reg)
+void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
 {
     ENGINE_PROFILE();
     using namespace engine;

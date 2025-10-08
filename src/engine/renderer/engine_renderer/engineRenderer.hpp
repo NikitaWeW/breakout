@@ -16,9 +16,13 @@ namespace engine
             float shadowMapNearPlane = 0.01f;
             float shadowMapFarPlane = 100;
         };
-    protected: // expose some of the implementation to be able to override
+    // expose some of the implementation to be able to override it in the derivatives.
+    protected: 
         Context m_context;
         void renderMain(ecs::registry &reg, detail::RendererData &data);
+        void setupPipeline(ecs::registry &reg);
+        void processModels(ecs::registry &reg);
+        void processTextures(ecs::registry &reg);
     public:
         EngineRenderer() = default;
         EngineRenderer(Context const &context);

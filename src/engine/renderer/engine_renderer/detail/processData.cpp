@@ -37,7 +37,7 @@ static void addVertexBuffer(ogl::VAO &vao, ogl::Buffer &buff, std::size_t count,
     glVertexArrayAttribBinding(vao.id, attrib, vao.numVertexBuffers);
     ++vao.numVertexBuffers;
 }
-static void processModels(ecs::registry &reg)
+void engine::EngineRenderer::processModels(ecs::registry &reg)
 {
     using namespace engine;
     for(ecs::entity e_model : reg.view<engine::Model>(ecs::exclude_t<detail::ProcessedModel>{}))
@@ -75,7 +75,7 @@ static void processModels(ecs::registry &reg)
             addVertexBuffer(newMesh.vao, newMesh.buffers.texCoords, 2, GL_FLOAT);
             addVertexBuffer(newMesh.vao, newMesh.buffers.normals,   4, GL_FLOAT);
             addVertexBuffer(newMesh.vao, newMesh.buffers.tangents,  4, GL_FLOAT);
-            addVertexBuffer(newMesh.vao, newMesh.buffers.boneIDs,   4, GL_INT);
+            addVertexBuffer(newMesh.vao, newMesh.buffers.boneIDs,   4, GL_FLOAT);
             addVertexBuffer(newMesh.vao, newMesh.buffers.weights,   4, GL_FLOAT);
             
             newMesh.ibo = ogl::makeBuffer<ogl::IBO>(mesh.primitives.indices);
@@ -89,7 +89,7 @@ static void processModels(ecs::registry &reg)
         reg.emplace<detail::ProcessedModel>(e_model, entity);
     }
 }
-static void processTextures(ecs::registry &reg)
+void engine::EngineRenderer::processTextures(ecs::registry &reg)
 {
     using namespace engine;
     for(ecs::entity e_texture : reg.view<engine::Texture>(ecs::exclude_t<detail::ProcessedTexture>{}))

@@ -3,7 +3,7 @@ layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec2 a_texCoord;
 layout(location = 2) in vec4 a_normal;
 layout(location = 3) in vec4 a_tangent;
-layout(location = 4) in ivec4 a_boneIDs;
+layout(location = 4) in vec4 a_boneIDs;
 layout(location = 5) in vec4 a_weights;
 
 out VS_OUT {
@@ -31,7 +31,7 @@ void main() {
                 position = a_position;
                 break;
             }
-            vec4 localPosition = u_boneMatrices[a_boneIDs[i]] * a_position;
+            vec4 localPosition = u_boneMatrices[int(a_boneIDs[i])] * a_position;
             position += localPosition * a_weights[i];
         }
     } else {

@@ -58,16 +58,29 @@ namespace engine
     };
     struct Animation
     {
-        struct Keyframe
+        struct PositionKey
         {
-            // absolutes (no hierarchy)
-            glm::vec3 position;
-            glm::quat orientation;
-            glm::vec3 scale;
+            glm::vec3 value;
             float timeTicks;
         };
+        struct OrientationKey
+        {
+            glm::quat value;
+            float timeTicks;
+        };
+        struct ScaleKey
+        {
+            glm::vec3 value;
+            float timeTicks;
+        };
+        struct Keyframes
+        {
+            std::vector<PositionKey   > positions;
+            std::vector<OrientationKey> orientations;
+            std::vector<ScaleKey      > scales;
+        };
 
-        std::vector<std::vector<Keyframe>> bones; // indexed by Mesh::Primitives::boneIDs
+        std::vector<Keyframes> bones;
         std::string name = "";
         float durationTicks = 0;
         float ticksPerSecond = 0;
@@ -97,7 +110,8 @@ namespace engine
         std::string path;
         struct Skeleton
         {
-            std::vector<glm::mat4> tposeTransform;
+            std::vector<glm::mat4> inverseTposeTransform;
+            std::vector<int> parents; // -1 if root
             std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
         } skeleton;
     };

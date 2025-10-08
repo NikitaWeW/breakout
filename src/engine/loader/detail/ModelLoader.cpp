@@ -402,7 +402,7 @@ static void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh)
         if(currentModel->skeleton.boneMap.find(boneName) == currentModel->skeleton.boneMap.end()) 
         {
             unsigned id = boneCounter;
-            currentModel->skeleton.tposeTransform.emplace_back(toMat4(bone->mOffsetMatrix));
+            currentModel->skeleton.inverseTposeTransform.emplace_back(glm::inverse(toMat4(bone->mOffsetMatrix)));
             currentModel->skeleton.boneMap.try_emplace(boneName, id);
             boneID = id;
             ++boneCounter;
@@ -474,60 +474,41 @@ static aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string_
 
     return nullptr;
 }
-static unsigned findPosition(float animationTimeTicks, aiNodeAnim const *nodeAnim)
-{
-    ENGINE_ASSERT(nodeAnim->mNumPositionKeys > 0);
-    for(unsigned i = 0; i < nodeAnim->mNumPositionKeys - 1; ++i) {
-        float time = (float) nodeAnim->mPositionKeys[i + 1].mTime;
-        if(animationTimeTicks < time) {
-            return i;
-        }
-    }
-    return glm::max(0, (int) nodeAnim->mNumPositionKeys - 1);
-}
-static unsigned findRotation(float animationTimeTicks, aiNodeAnim const *nodeAnim)
-{
-    ENGINE_ASSERT(nodeAnim->mNumRotationKeys > 0);
-    for(unsigned i = 0; i < nodeAnim->mNumRotationKeys - 1; ++i) {
-        float time = (float) nodeAnim->mRotationKeys[i + 1].mTime;
-        if(animationTimeTicks < time) {
-            return i;
-        }
-    }
-    return glm::max(0, (int) nodeAnim->mNumRotationKeys - 1);
-}
-static unsigned findScaling(float animationTimeTicks, aiNodeAnim const *nodeAnim)
-{
-    ENGINE_ASSERT(nodeAnim->mNumScalingKeys > 0);
-    for(unsigned i = 0; i < nodeAnim->mNumScalingKeys - 1; ++i) {
-        float time = (float) nodeAnim->mScalingKeys[i + 1].mTime;
-        if(animationTimeTicks < time) {
-            return i;
-        }
-    }
-    return glm::max(0, (int) nodeAnim->mNumScalingKeys - 1);
-}
-static void processAnimationNode(engine::Animation &result, aiAnimation const *animation, float timeTicks, aiNode const *node, engine::Animation::Keyframe const &parentKeyFrame)
+static void processAnimationNode(engine::Animation &result, aiAnimation const *animation, aiNode const *node)
 {
     std::string nodeName = node->mName.C_Str();
     aiNodeAnim const *nodeAnim = findNodeAnim(animation, nodeName);
-    engine::Animation::Keyframe keyframe = parentKeyFrame;
-    keyframe.timeTicks = timeTicks;
-    
-    if(nodeAnim) {
-        keyframe.position += toVec3(nodeAnim->mPositionKeys[findPosition(timeTicks, nodeAnim)].mValue);
-        keyframe.orientation = toQuat(nodeAnim->mRotationKeys[findRotation(timeTicks, nodeAnim)].mValue) * keyframe.orientation;
-        keyframe.scale *= toVec3(nodeAnim->mScalingKeys[findScaling(timeTicks, nodeAnim)].mValue);
-    }
 
-    if(currentModel->skeleton.boneMap.find(nodeName) != currentModel->skeleton.boneMap.end())
-    {
+    if(nodeAnim && currentModel->skeleton.boneMap.find(nodeName) != currentModel->skeleton.boneMap.end()) {
         auto &keyframes = result.bones.at(currentModel->skeleton.boneMap.at(nodeName));
-        keyframes.emplace_back(keyframe);
+        for(unsigned i = 0; i < nodeAnim->mNumPositionKeys; ++i)
+        {
+            auto const &key = nodeAnim->mPositionKeys[i];
+            keyframes.positions.emplace_back(engine::Animation::PositionKey{
+                .value = toVec3(key.mValue),
+                .timeTicks = static_cast<float>(key.mTime)
+            });
+        }
+        for(unsigned i = 0; i < nodeAnim->mNumRotationKeys; ++i)
+        {
+            auto const &key = nodeAnim->mRotationKeys[i];
+            keyframes.orientations.emplace_back(engine::Animation::OrientationKey{
+                .value = toQuat(key.mValue),
+                .timeTicks = static_cast<float>(key.mTime)
+            });
+        }
+        for(unsigned i = 0; i < nodeAnim->mNumScalingKeys; ++i)
+        {
+            auto const &key = nodeAnim->mScalingKeys[i];
+            keyframes.scales.emplace_back(engine::Animation::ScaleKey{
+                .value = toVec3(key.mValue),
+                .timeTicks = static_cast<float>(key.mTime)
+            });
+        }
     }
 
     for(unsigned i = 0; i < node->mNumChildren; ++i) {
-        processAnimationNode(result, animation, timeTicks, node->mChildren[i], keyframe);
+        processAnimationNode(result, animation, node->mChildren[i]);
     }
 }
 static engine::Animation processAnimation(aiAnimation const *animation)
@@ -540,23 +521,35 @@ static engine::Animation processAnimation(aiAnimation const *animation)
     result.name = animation->mName.C_Str();
     result.bones.resize(currentModel->skeleton.boneMap.size());
 
-    engine::Animation::Keyframe rootKeyframe = {
-        .position = {0, 0, 0},
-        .orientation = {1, 0, 0, 0},
-        .scale = {1, 1, 1}
-    };
-
     for(float timeTicks = 0; timeTicks < result.durationTicks; timeTicks += 1)
     {
-        processAnimationNode(result, animation, timeTicks, currentScene->mRootNode, rootKeyframe);
+        processAnimationNode(result, animation, currentScene->mRootNode);
     }
 
     for(auto &bone : result.bones)
     {
-        std::sort(bone.begin(), bone.end(), [](engine::Animation::Keyframe const &first, engine::Animation::Keyframe const &second){ return first.timeTicks < second.timeTicks; });
+        std::sort(bone.positions   .begin(), bone.positions   .end(), [](engine::Animation::PositionKey    const &first, engine::Animation::PositionKey    const &second){ return first.timeTicks < second.timeTicks; });
+        std::sort(bone.orientations.begin(), bone.orientations.end(), [](engine::Animation::OrientationKey const &first, engine::Animation::OrientationKey const &second){ return first.timeTicks < second.timeTicks; });
+        std::sort(bone.scales      .begin(), bone.scales      .end(), [](engine::Animation::ScaleKey       const &first, engine::Animation::ScaleKey       const &second){ return first.timeTicks < second.timeTicks; });
     }
 
     return result;
+}
+
+static void calculateParent(aiNode const *node, int parent)
+{
+    std::string nodeName = node->mName.C_Str();
+
+    if(currentModel->skeleton.boneMap.find(nodeName) != currentModel->skeleton.boneMap.end())
+    {
+        unsigned bone = currentModel->skeleton.boneMap.at(nodeName);
+        currentModel->skeleton.parents.at(bone) = parent;
+        parent = bone;
+    }
+
+    for(unsigned i = 0; i < node->mNumChildren; ++i) {
+        calculateParent(node->mChildren[i], parent);
+    }
 }
 
 ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
@@ -596,6 +589,9 @@ ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_vi
         MODEL_LOADER_TRACE("Loading {} animations", currentScene->mNumAnimations);
 
     processNode(currentScene->mRootNode);
+
+    currentModel->skeleton.parents.resize(currentModel->skeleton.boneMap.size());
+    calculateParent(currentScene->mRootNode, -1);
 
     for(unsigned i = 0; i < currentScene->mNumAnimations; ++i)
     {
