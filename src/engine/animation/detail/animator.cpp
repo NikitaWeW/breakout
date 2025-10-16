@@ -73,12 +73,10 @@ glm::vec3 calculateInterpolatedPosition(engine::Animation::Keyframes const &keyf
     auto const &keys = keyframes.positions;
     if(keys.empty())
         return {0, 0, 0};
-    if(keys.size() == 1)
-        return keys.back().value;
 
     auto it = std::upper_bound(keys.begin(), keys.end(), time, [](float time, engine::Animation::PositionKey const &keyframe){ return keyframe.timeTicks > time; });
 
-    if(it+1 >= keys.end())
+    if(it >= keys.end() || it == keys.begin())
         return keys.back().value;
 
     auto const &second = *it;
@@ -98,12 +96,10 @@ glm::quat calculateInterpolatedOrientation(engine::Animation::Keyframes const &k
     auto const &keys = keyframes.orientations;
     if(keys.empty())
         return {0, 0, 0, 1};
-    if(keys.size() == 1)
-        return keys.back().value;
 
     auto it = std::upper_bound(keys.begin(), keys.end(), time, [](float time, engine::Animation::OrientationKey const &keyframe){ return keyframe.timeTicks > time; });
 
-    if(it+1 >= keys.end())
+    if(it >= keys.end() || it == keys.begin())
         return keys.back().value;
 
     auto const &second = *it;
@@ -112,23 +108,21 @@ glm::quat calculateInterpolatedOrientation(engine::Animation::Keyframes const &k
     float deltatime = second.timeTicks - first.timeTicks;
     float factor = (time - first.timeTicks) / deltatime;
     factor = glm::clamp<float>(factor, 0, 1);
-    return glm::slerp(
+    return glm::normalize(glm::slerp(
         first.value,
         second.value,
         factor
-    );
+    ));
 }
 glm::vec3 calculateInterpolatedScale(engine::Animation::Keyframes const &keyframes, float time)
 {
     auto const &keys = keyframes.scales;
     if(keys.empty())
         return {1, 1, 1};
-    if(keys.size() == 1)
-        return keys.back().value;
 
     auto it = std::upper_bound(keys.begin(), keys.end(), time, [](float time, engine::Animation::ScaleKey const &keyframe){ return keyframe.timeTicks > time; });
 
-    if(it+1 >= keys.end())
+    if(it >= keys.end() || it == keys.begin())
         return keys.back().value;
 
     auto const &second = *it;
@@ -230,7 +224,7 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
         {
             int parent = model.skeleton.parents.at(bone);
             auto &matrix = current.boneMatrices.at(bone);
-            auto &local = current.localBoneMatrices.at(bone);
+            auto const &local = current.localBoneMatrices.at(bone);
             if(parent == -1)
                 matrix = local;
             else
@@ -239,7 +233,7 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
         for(size_t bone = 0; bone < numBones; ++bone)
         {
             auto &matrix = current.boneMatrices.at(bone);
-            matrix = matrix * model.skeleton.inverseTposeTransform.at(bone);
+            matrix = matrix * model.skeleton.bindTransform.at(bone);
         }
     }
 }

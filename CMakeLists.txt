@@ -8,22 +8,27 @@ project(breakout C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(cmake/cpm.cmake)
+if(NOT CPM_USE_LOCAL_PACKAGES)
+    set(CPM_USE_LOCAL_PACKAGES, ON)
+endif()
 
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/ecs@1.3.0")
-CPMAddPackage("gh:gabime/spdlog@1.15.3")
+CPMAddPackage("gh:nikitawew/ecs@1.4.0")
+CPMAddPackage("gh:gabime/spdlog@1.16.0")
 CPMAddPackage("gh:assimp/assimp@6.0.2")
 
 file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
 add_library(dependencies ${DEPENDENCIES_SOURCES})
-target_include_directories(dependencies PUBLIC dependencies/include)
+target_include_directories(dependencies PRIVATE dependencies/include)
+target_include_directories(dependencies INTERFACE dependencies/include)
+target_link_libraries(dependencies INTERFACE glfw ecs spdlog assimp)
 
 ######################################################################
 
 file(GLOB_RECURSE ENGINE_SOURCES "src/engine/*.cpp")
 
 add_library(engine ${ENGINE_SOURCES})
-target_link_libraries(engine PUBLIC ecs spdlog assimp glfw dependencies)
+target_link_libraries(engine PUBLIC dependencies)
 target_include_directories(engine PRIVATE src)
 
 target_precompile_headers(engine PRIVATE 

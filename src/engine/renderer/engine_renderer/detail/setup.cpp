@@ -100,7 +100,7 @@ static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity
         break;
     }
 
-    ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.severity, error.type, error.source, error.message);
+    ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.id, error.severity, error.type, error.source, error.message);
     ENGINE_ASSERT_MSG(severity != GL_DEBUG_SEVERITY_HIGH, "high severity error in the opengl renderer!");
 }
 static void setupOpengl(ecs::registry &reg)

@@ -81,8 +81,8 @@ void controller::update(ecs::registry &reg)
 
             if(controllable.locked)
             {
-                controllable.fov -= event.scroll * 0.5;
-                controllable.fov = glm::clamp<float>(controllable.fov, 0.05, 45);
+                controllable.fov -= event.scroll * 4;
+                controllable.fov = glm::clamp<float>(controllable.fov, 0.2, 45);
             }
         }
 

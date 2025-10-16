@@ -52,7 +52,7 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
             detail::Mesh newMesh;
             newMesh.mode = GL_TRIANGLES;
             newMesh.material = mesh.material.properties;
-            newMesh.count = mesh.primitives.indices.size();
+            newMesh.count = mesh.geometry.indices.size();
             newMesh.textures = {
                 .albedo       = getTexture(reg, mesh.material.textures.albedo),
                 .normal       = getTexture(reg, mesh.material.textures.normal),
@@ -61,12 +61,12 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
             };
     
             newMesh.buffers = {
-                .positions = ogl::makeBuffer<ogl::VBO>(mesh.primitives.positions),
-                .texCoords = ogl::makeBuffer<ogl::VBO>(mesh.primitives.texCoords),
-                .normals   = ogl::makeBuffer<ogl::VBO>(mesh.primitives.normals),
-                .tangents  = ogl::makeBuffer<ogl::VBO>(mesh.primitives.tangents),
-                .boneIDs   = ogl::makeBuffer<ogl::VBO>(mesh.primitives.boneIDs),
-                .weights   = ogl::makeBuffer<ogl::VBO>(mesh.primitives.weights) 
+                .positions = ogl::makeBuffer<ogl::VBO>(mesh.geometry.positions),
+                .texCoords = ogl::makeBuffer<ogl::VBO>(mesh.geometry.texCoords),
+                .normals   = ogl::makeBuffer<ogl::VBO>(mesh.geometry.normals),
+                .tangents  = ogl::makeBuffer<ogl::VBO>(mesh.geometry.tangents),
+                .boneIDs   = ogl::makeBuffer<ogl::VBO>(mesh.geometry.boneIDs),
+                .weights   = ogl::makeBuffer<ogl::VBO>(mesh.geometry.weights) 
             };
     
             glCreateVertexArrays(1, &newMesh.vao.id);
@@ -78,7 +78,7 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
             addVertexBuffer(newMesh.vao, newMesh.buffers.boneIDs,   4, GL_FLOAT);
             addVertexBuffer(newMesh.vao, newMesh.buffers.weights,   4, GL_FLOAT);
             
-            newMesh.ibo = ogl::makeBuffer<ogl::IBO>(mesh.primitives.indices);
+            newMesh.ibo = ogl::makeBuffer<ogl::IBO>(mesh.geometry.indices);
             glVertexArrayElementBuffer(newMesh.vao.id, newMesh.ibo.id);
 
             newModel.meshes.emplace_back(std::move(newMesh));

@@ -46,9 +46,8 @@ namespace engine
         struct Properties
         {
             glm::vec3 ambient;
-            glm::vec3 albedo;
+            glm::vec4 albedo;
             glm::vec3 specular;
-            glm::vec3 transmittance;
             glm::vec3 emission;
     
             float shininess;
@@ -87,7 +86,7 @@ namespace engine
     };
     struct Mesh
     {
-        struct Primitives // TODO: rename to Geometry
+        struct Geometry
         {
             // guaranteed
             std::vector<glm::vec4> positions;
@@ -100,20 +99,21 @@ namespace engine
             // hope 4 bones per vertex would be enough
             std::vector<glm::vec4> boneIDs;
             std::vector<glm::vec4> weights;
-        } primitives;
+        } geometry;
         Material material;
+    };
+    struct Skeleton
+    {
+        std::vector<glm::mat4> bindTransform;
+        std::vector<int> parents; // -1 if root
+        std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
     };
     struct Model
     {
         std::vector<Mesh> meshes;
         std::vector<Animation> animations;
         std::string path;
-        struct Skeleton
-        {
-            std::vector<glm::mat4> inverseTposeTransform;
-            std::vector<int> parents; // -1 if root
-            std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
-        } skeleton;
+        Skeleton skeleton;
     };
     struct Camera
     {

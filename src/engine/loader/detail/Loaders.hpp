@@ -13,6 +13,26 @@ namespace engine::detail
     };
     class ModelLoader : public ILoader
     {
+    private:
+        aiScene const *currentScene;
+        engine::Model *currentModel;
+        ecs::registry *currentRegistry;
+        engine::LoadingFlags currentFlags;
+    private:
+        void calculateMissingPrimitives(engine::Mesh &mesh);
+        void optimizeMesh(engine::Mesh &mesh);
+        void moveMesh(engine::Mesh::Geometry &primitives, glm::mat4 const &mat);
+        void loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out);
+        void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh);
+        void processNode(aiNode const *node, glm::mat4 parentTransform);
+        void processAnimationNode(engine::Animation &result, aiAnimation const *animation, aiNode const *node);
+        void calculateParent(aiNode const *node, int parent);
+        void extractVertexData(aiMesh const *aimesh, engine::Mesh &mesh);
+        engine::Material getDefaultMaterial();
+        engine::Material convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties);
+        engine::Mesh processMesh(aiMesh const *aimesh, glm::mat4 const &transform);
+        engine::Animation processAnimation(aiAnimation const *animation);
+        ecs::entity fromRawAssimpTexture(aiTexture const *texture);
     public:
         ecs::entity load(ecs::registry &reg, std::string_view path, LoadingFlags flags) override;
     };

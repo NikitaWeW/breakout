@@ -26,6 +26,7 @@ ecs::entity engine::Loader::load(DataType type, std::string_view path, LoadingFl
     auto result = m_loaderMap.at(type)->load(*m_registry, path, flags);
     if(result == 0)
         ENGINE_CORE_ERROR("Failed to load \"{}\"", path);
+    ENGINE_CORE_TRACE("---");
     return result;
 }
 
@@ -39,6 +40,7 @@ ecs::entity engine::Loader::load(DataType type, std::size_t size, void const *da
     auto result = m_loaderMap.at(type)->load(*m_registry, size, data, flags);
     if(result == 0)
         ENGINE_CORE_ERROR("Failed to load {} from memory", getDatatypeString(type));
+    ENGINE_CORE_TRACE("---");
     return result;
 }
 bool engine::Loader::checkType(DataType type)

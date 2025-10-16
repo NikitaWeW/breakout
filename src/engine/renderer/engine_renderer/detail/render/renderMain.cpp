@@ -36,7 +36,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, camera.size.x, camera.size.y);
-    glClearColor(0, 0, 0, 1);
+    glClearColor(0.1, 0.1, 0.1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     glUseProgram(data.plainColorShader.id);
@@ -68,7 +68,8 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
                 ENGINE_ASSERT(boneMatrices.size() == model.skeleton.boneMap.size());
                 glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), boneMatrices.size(), false, glm::value_ptr(boneMatrices.front())); // TODO: switch to ssbo or ubo.
             }
-            glUniform1i(ogl::getUniform(data.plainColorShader, "u_animated"), animated);
+            glUniform1i (ogl::getUniform(data.plainColorShader, "u_animated"), animated);
+            glUniform4fv(ogl::getUniform(data.plainColorShader, "u_color"), 1, glm::value_ptr(mesh.material.albedo));
 
             glBindVertexArray(mesh.vao.id);
             glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);

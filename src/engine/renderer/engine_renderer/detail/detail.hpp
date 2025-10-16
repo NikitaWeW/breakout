@@ -43,7 +43,7 @@ namespace engine::detail
     };
     struct Model
     {
-        engine::Model::Skeleton skeleton;
+        engine::Skeleton skeleton;
         std::vector<detail::Mesh> meshes;
         bool animated = false;
     };
