@@ -13,7 +13,7 @@ if(NOT CPM_USE_LOCAL_PACKAGES)
 endif()
 
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/ecs@1.4.0")
+CPMAddPackage("gh:nikitawew/nicecs@1.4.0")
 CPMAddPackage("gh:gabime/spdlog@1.16.0")
 CPMAddPackage("gh:assimp/assimp@6.0.2")
 

@@ -7,8 +7,8 @@
 #include "assimp/postprocess.h"
 #include "stb_image.h"
 
-#define MODEL_LOADER_TRACE(...)
-// #define MODEL_LOADER_TRACE(...) ENGINE_CORE_TRACE(__VA_ARGS__)
+// #define MODEL_LOADER_TRACE(...)
+#define MODEL_LOADER_TRACE(...) ENGINE_CORE_TRACE(__VA_ARGS__)
 
 constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
 {
@@ -212,7 +212,7 @@ void engine::detail::ModelLoader::loadMaterialTexture(aiMaterial const *material
         if(embedded->mHeight == 0)
         {
             MODEL_LOADER_TRACE("Loading embedded compressed texture \"{}\"", embedded->mFilename.C_Str());
-            out = loader.load(*currentRegistry, embedded->mWidth, embedded->pcData, currentFlags);
+            out = loader.load(*currentRegistry, embedded->mWidth, embedded->pcData, LoadingFlags::NONE);
         } else
         {
             MODEL_LOADER_TRACE("Loading embedded raw texture \"{}\"", embedded->mFilename.C_Str());
@@ -238,7 +238,7 @@ void engine::detail::ModelLoader::loadMaterialTexture(aiMaterial const *material
     }
 
     MODEL_LOADER_TRACE("Loading file texture \"{}\"", filepath);
-    out = loader.load(*currentRegistry, filepath, currentFlags);
+    out = loader.load(*currentRegistry, filepath, LoadingFlags::NONE);
 
     if(out)
     {
@@ -483,18 +483,20 @@ engine::Mesh engine::detail::ModelLoader::processMesh(aiMesh const *aimesh, glm:
 
     calculateMissingPrimitives(mesh);
     optimizeMesh(mesh);
-    moveMesh(mesh.geometry, transform);
+    if(!currentScene->HasAnimations())
+        moveMesh(mesh.geometry, transform);
 
     return mesh;
 }
-void engine::detail::ModelLoader::processNode(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f})
+void engine::detail::ModelLoader::processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f})
 {
+    MODEL_LOADER_TRACE("processing node \"{}\"", node->mName.C_Str());
     glm::mat4 nodeTransform = parentTransform * toMat4(node->mTransformation);
     for(unsigned i = 0; i < node->mNumMeshes; ++i) {
         currentModel->meshes.emplace_back(std::move(processMesh(currentScene->mMeshes[node->mMeshes[i]], nodeTransform)));
     }
     for(unsigned i = 0; i < node->mNumChildren; ++i) {
-        processNode(node->mChildren[i], nodeTransform);
+        processNodeMeshes(node->mChildren[i], nodeTransform);
     }
 }
 
@@ -557,19 +559,21 @@ engine::Animation engine::detail::ModelLoader::processAnimation(aiAnimation cons
     return result;
 }
 
-void engine::detail::ModelLoader::calculateParent(aiNode const *node, int parent)
+void engine::detail::ModelLoader::calculateParent(aiNode const *node, int parent, glm::mat4 parentTransform)
 {
     std::string nodeName = node->mName.C_Str();
+    glm::mat4 nodeTransform = parentTransform * toMat4(node->mTransformation);
 
     if(currentModel->skeleton.boneMap.find(nodeName) != currentModel->skeleton.boneMap.end())
     {
         unsigned bone = currentModel->skeleton.boneMap.at(nodeName);
         currentModel->skeleton.parents.at(bone) = parent;
+        currentModel->skeleton.nodeTransform.at(bone) = nodeTransform;
         parent = bone;
     }
 
     for(unsigned i = 0; i < node->mNumChildren; ++i) {
-        calculateParent(node->mChildren[i], parent);
+        calculateParent(node->mChildren[i], parent, nodeTransform);
     }
 }
 
@@ -577,6 +581,8 @@ ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_vi
 {
     MODEL_LOADER_TRACE("Loading model \"{}\"", path);
     Assimp::Importer importer;
+    importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+    importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
     aiScene const *scene = importer.ReadFile(std::string{path}, 
         aiProcess_SplitLargeMeshes      |
         aiProcess_GenNormals            |
@@ -587,7 +593,11 @@ ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_vi
         aiProcess_JoinIdenticalVertices |
         aiProcess_SortByPType           |
         aiProcess_OptimizeGraph         |
-        aiProcess_OptimizeMeshes
+        aiProcess_OptimizeMeshes        |
+        aiProcess_ValidateDataStructure |
+        aiProcess_LimitBoneWeights      |
+        (bool(flags & LoadingFlags::MODEL_FLIP_WINDING_ORDER) ? aiProcess_FlipWindingOrder : 0) |
+        (bool(flags & LoadingFlags::MODEL_FLIP_TEXTURES)      ? aiProcess_FlipUVs : 0)
     );
 
     if(!scene)
@@ -603,19 +613,20 @@ ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_vi
     currentScene = scene;
     currentRegistry = &reg;
     currentFlags = flags;
-    // currentModel->skeleton.globalInverseTransform = glm::inverse(toMat4(currentScene->mRootNode->mTransformation));
+    currentModel->skeleton.globalInverseTransform = glm::inverse(toMat4(currentScene->mRootNode->mTransformation));
 
     if(currentScene->HasMeshes())
         MODEL_LOADER_TRACE("Loading {} meshes.", currentScene->mNumMeshes);
     if(currentScene->HasAnimations())
         MODEL_LOADER_TRACE("Loading {} animations.", currentScene->mNumAnimations);
 
-    processNode(currentScene->mRootNode);
+    processNodeMeshes(currentScene->mRootNode);
 
     MODEL_LOADER_TRACE("Model has {} bones. Bone map size: {}.", currentModel->skeleton.boneMap.size(), currentModel->skeleton.boneMap.size());
 
     currentModel->skeleton.parents.resize(currentModel->skeleton.boneMap.size());
-    calculateParent(currentScene->mRootNode, -1);
+    currentModel->skeleton.nodeTransform.resize(currentModel->skeleton.boneMap.size());
+    calculateParent(currentScene->mRootNode, -1, glm::mat4{1.0f});
 
     for(unsigned i = 0; i < currentScene->mNumAnimations; ++i)
     {

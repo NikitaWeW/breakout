@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
         engine::ModelMatrix{
             glm::translate(
                 glm::mat4{1.0f},
-                {-3, 0, -7}
+                {-5, 0, -7}
             ) 
             * glm::scale(
                 glm::mat4{1.0f},
@@ -200,7 +200,26 @@ int main(int argc, char **argv) {
             )
         }
         ,engine::CurrentAnimation{
-            .name = "mixamo.com"
+            .name = "mixamo.com",
+            .speed = 2
+        }
+    );
+    registry.create(
+        engine::Instance{
+            loader.load(engine::DataType::MODEL, "res/models/Gangnam.fbx")
+        }, 
+        engine::ModelMatrix{
+            glm::translate(
+                glm::mat4{1.0f},
+                {-2, 0, -8}
+            ) 
+            * glm::scale(
+                glm::mat4{1.0f},
+                glm::vec3{0.01}
+            )
+        }
+        ,engine::CurrentAnimation{
+            .name = "mixamo.com",
         }
     );
     registry.create(

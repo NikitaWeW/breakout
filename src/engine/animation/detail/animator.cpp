@@ -187,8 +187,8 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
 
             for(size_t bone = 0; bone < numBones; ++bone)
             {
-                auto first = calculateInterpolatedKeyframe(animation.bones.at(bone), current.time * animation.durationTicks);
-                auto second = calculateInterpolatedKeyframe(secondAnimation.bones.at(bone), current.time * secondAnimation.durationTicks);
+                auto first = calculateInterpolatedKeyframe(animation.bones[bone], current.time * animation.durationTicks);
+                auto second = calculateInterpolatedKeyframe(secondAnimation.bones[bone], current.time * secondAnimation.durationTicks);
             
                 auto result = interpolateKeyframes(first, second, transition.easeFunction(transition.factor));
 
@@ -197,7 +197,7 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
                     glm::mat4_cast(result.orientation) * 
                     glm::scale(glm::mat4{1.0f}, result.scale);
 
-                current.localBoneMatrices.at(bone) = transform;
+                current.localBoneMatrices[bone] = transform;
             }
 
             if(transition.factor >= 1) {
@@ -209,31 +209,31 @@ void engine::Animator::update(ecs::registry &registry, float deltatime)
         {
             for(size_t bone = 0; bone < numBones; ++bone)
             {
-                auto result = calculateInterpolatedKeyframe(animation.bones.at(bone), current.time * animation.durationTicks);
+                auto result = calculateInterpolatedKeyframe(animation.bones[bone], current.time * animation.durationTicks);
 
                 glm::mat4 transform = 
                     glm::translate(glm::mat4{1.0f}, result.position) * 
                     glm::mat4_cast(result.orientation) * 
                     glm::scale(glm::mat4{1.0f}, result.scale);
 
-                current.localBoneMatrices.at(bone) = transform;
+                current.localBoneMatrices[bone] = transform;
             }
         }
 
         for(size_t bone = 0; bone < numBones; ++bone)
         {
-            int parent = model.skeleton.parents.at(bone);
-            auto &matrix = current.boneMatrices.at(bone);
-            auto const &local = current.localBoneMatrices.at(bone);
+            int parent = model.skeleton.parents[bone];
+            auto &matrix = current.boneMatrices[bone];
+            auto const &local = current.localBoneMatrices[bone];
             if(parent == -1)
                 matrix = local;
             else
-                matrix = current.boneMatrices.at(parent) * local;
+                matrix = current.boneMatrices[parent] * local;
         }
         for(size_t bone = 0; bone < numBones; ++bone)
         {
-            auto &matrix = current.boneMatrices.at(bone);
-            matrix = matrix * model.skeleton.bindTransform.at(bone);
+            auto &matrix = current.boneMatrices[bone];
+            matrix = model.skeleton.globalInverseTransform * matrix * model.skeleton.bindTransform[bone];
         }
     }
 }

@@ -10,6 +10,7 @@ namespace engine
         NONE = 0,
         MODEL_FLIP_TEXTURES = 1 << 0,
         MODEL_FLIP_WINDING_ORDER = 1 << 1,
+        FLIP_TEXTURES = 1 << 2,
     };
 
     constexpr LoadingFlags DEFAULT_LOADING_FLAGS = LoadingFlags::MODEL_FLIP_TEXTURES;

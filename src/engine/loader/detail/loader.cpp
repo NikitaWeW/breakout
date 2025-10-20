@@ -10,7 +10,7 @@ static std::string_view getDatatypeString(engine::DataType type)
     case engine::DataType::TEXTURE2D: return "TEXTURE2D";
     case engine::DataType::MESH:      return "MESH";
     case engine::DataType::MATERIAL:  return "MATERIAL";
-    case engine::DataType::DATA:      return "DATA";
+    case engine::DataType::BUFFER:    return "BUFFER";
     case engine::DataType::AUDIO:     return "AUDIO";
     default:                          return "UNKNOWN";
     }

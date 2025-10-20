@@ -18,7 +18,7 @@ namespace engine
         MESH, 
         MATERIAL,
         AUDIO, 
-        DATA,
+        BUFFER,
         TEXTURE2D
     };
 
@@ -104,7 +104,9 @@ namespace engine
     };
     struct Skeleton
     {
+        glm::mat4 globalInverseTransform;
         std::vector<glm::mat4> bindTransform;
+        std::vector<glm::mat4> nodeTransform;
         std::vector<int> parents; // -1 if root
         std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
     };

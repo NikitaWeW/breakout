@@ -20,7 +20,7 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t 
 std::optional<engine::Texture> engine::detail::loadTexture(std::string_view path, LoadingFlags flags)
 {
     int width = 0, height = 0, numChannels = 0;
-    stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::MODEL_FLIP_TEXTURES));
+    stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::FLIP_TEXTURES));
     float *buff = stbi_loadf(path.data(), &width, &height, &numChannels, 0);
     if(!buff)
     {
@@ -38,7 +38,7 @@ std::optional<engine::Texture> engine::detail::loadTexture(std::string_view path
 std::optional<engine::Texture> engine::detail::loadTexture(std::size_t size, void const *data, LoadingFlags flags)
 {
     int width = 0, height = 0, numChannels = 0;
-    stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::MODEL_FLIP_TEXTURES));
+    stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::FLIP_TEXTURES));
     float *buff = stbi_loadf_from_memory(static_cast<unsigned char const *>(data), size, &width, &height, &numChannels, 0);
     if(!buff)
     {
