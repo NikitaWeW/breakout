@@ -10,6 +10,8 @@
 // #define MODEL_LOADER_TRACE(...)
 #define MODEL_LOADER_TRACE(...) ENGINE_CORE_TRACE(__VA_ARGS__)
 
+// TODO: make the loader cleaner by removing all this private member function thing
+
 constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
 {
     glm::mat4 to{};
@@ -458,6 +460,14 @@ void engine::detail::ModelLoader::extractBoneData(aiMesh const *aimesh, engine::
         }
     }
 }
+void normalizeWeights(engine::Mesh::Geometry &geometry)
+{
+    for(auto &weight : geometry.weights)
+    {
+        if(weight != glm::vec4{0})
+            weight /= weight[0] + weight[1] + weight[2] + weight[3];
+    }
+}
 engine::Mesh engine::detail::ModelLoader::processMesh(aiMesh const *aimesh, glm::mat4 const &transform)
 {
     MODEL_LOADER_TRACE("Loading mesh \"{}\"", aimesh->mName.C_Str());
@@ -467,6 +477,7 @@ engine::Mesh engine::detail::ModelLoader::processMesh(aiMesh const *aimesh, glm:
     if(aimesh->HasBones())
     {
         extractBoneData(aimesh, mesh);
+        normalizeWeights(mesh.geometry);
     }
 
     auto defaultMaterial = getDefaultMaterial();

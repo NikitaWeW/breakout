@@ -19,10 +19,11 @@ namespace engine
     // expose some of the implementation to be able to override it in the derivatives.
     protected: 
         Context m_context;
-        void renderMain(ecs::registry &reg, detail::RendererData &data);
-        void setupPipeline(ecs::registry &reg);
-        void processModels(ecs::registry &reg);
-        void processTextures(ecs::registry &reg);
+        virtual void renderMainInstance(ecs::registry &reg, detail::RendererData const &data, ecs::entity const &e_instance);
+        virtual void renderMain(ecs::registry &reg, detail::RendererData &data);
+        virtual void setupPipeline(ecs::registry &reg);
+        virtual void processModels(ecs::registry &reg);
+        virtual void processTextures(ecs::registry &reg);
     public:
         EngineRenderer() = default;
         EngineRenderer(Context const &context);

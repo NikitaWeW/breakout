@@ -30,9 +30,36 @@ void bindTextures(ogl::Program const &program, engine::detail::MaterialTextures 
     bindTexture(ogl::getUniform(program, "u_material.normal"), textures.normal, defaultTexture, slot);
 }
 
+void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, detail::RendererData const &data, ecs::entity const &e_instance)
+{
+    detail::Model const &model = reg.get<detail::Model>(reg.get<detail::ProcessedModel>(reg.get<engine::Instance>(e_instance).e_model).data);
+    bool animated = model.animated && reg.has<CurrentAnimation>(e_instance);
+
+    for(auto const &mesh : model.meshes)
+    {
+        glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance).value : glm::mat4{1.0f};
+        glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
+
+        bindTextures(data.plainColorShader, mesh.textures, data.defaultTexture);
+        
+        glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
+        glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
+        if(animated)
+        {
+            auto const &boneMatrices = reg.get<CurrentAnimation>(e_instance).boneMatrices;
+            ENGINE_ASSERT(boneMatrices.size() == model.skeleton.boneMap.size());
+            glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), boneMatrices.size(), false, glm::value_ptr(boneMatrices.front())); // TODO: switch to ssbo or ubo.
+        }
+        glUniform1i (ogl::getUniform(data.plainColorShader, "u_animated"), animated);
+        glUniform4fv(ogl::getUniform(data.plainColorShader, "u_color"), 1, glm::value_ptr(mesh.material.albedo));
+
+        glBindVertexArray(mesh.vao.id);
+        glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);
+    }
+}
 void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData &data)
 {
-    auto &camera = reg.get<engine::Camera>(m_context.e_camera);
+    auto const &camera = reg.get<engine::Camera>(m_context.e_camera);
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, camera.size.x, camera.size.y);
@@ -50,29 +77,6 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData
 
     for(ecs::entity e_instance : reg.view<engine::Instance>())
     {
-        detail::Model const &model = reg.get<detail::Model>(reg.get<detail::ProcessedModel>(reg.get<engine::Instance>(e_instance).e_model).data);
-        bool animated = model.animated && reg.has<CurrentAnimation>(e_instance);
-
-        for(auto const &mesh : model.meshes)
-        {
-            glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance).value : glm::mat4{1.0f};
-            glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
-
-            bindTextures(data.plainColorShader, mesh.textures, data.defaultTexture);
-            
-            glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
-            glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
-            if(animated)
-            {
-                auto const &boneMatrices = reg.get<CurrentAnimation>(e_instance).boneMatrices;
-                ENGINE_ASSERT(boneMatrices.size() == model.skeleton.boneMap.size());
-                glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_boneMatrices"), boneMatrices.size(), false, glm::value_ptr(boneMatrices.front())); // TODO: switch to ssbo or ubo.
-            }
-            glUniform1i (ogl::getUniform(data.plainColorShader, "u_animated"), animated);
-            glUniform4fv(ogl::getUniform(data.plainColorShader, "u_color"), 1, glm::value_ptr(mesh.material.albedo));
-
-            glBindVertexArray(mesh.vao.id);
-            glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);
-        }
+        renderMainInstance(reg, data, e_instance);
     }
 }

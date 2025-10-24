@@ -6,6 +6,7 @@
 #include "engine/renderer/engine_renderer/engineRenderer.hpp"
 #include "engine/loader/loader.hpp"
 #include "controller/controller.hpp"
+#include "boneDebugRenderer.hpp"
 #include "engine/physics/physics.hpp"
 #include "engine/input/input.hpp"
 #include "engine/animation/animation.hpp"
@@ -220,6 +221,7 @@ int main(int argc, char **argv) {
         }
         ,engine::CurrentAnimation{
             .name = "mixamo.com",
+            .speed = 1
         }
     );
     registry.create(
@@ -245,11 +247,23 @@ int main(int argc, char **argv) {
     camera.speed = 4;
     camera.sensitivity = 0.125;
 
-    engine::EngineRenderer renderer1{}; // check if everything initializes without conflicts..
-
-    engine::EngineRenderer renderer{{
+    engine::EngineRenderer mainRenderer{{
         .e_camera = e_camera
     }};
+    BoneDebugRenderer debugRenderer{
+        engine::EngineRenderer::Context{
+            .e_camera = e_camera
+        },
+        registry.get<engine::Model>(loader.load(engine::DataType::MODEL, "res/models/arrow.glb"))
+    };
+
+    // FIXME: 2 renderers cant operate on one registry
+    // 
+    // engine::IRenderer &renderer = mainRenderer;
+    // renderer.setup(registry); 
+    // renderer.processData(registry);
+
+    engine::IRenderer &renderer = debugRenderer;
     renderer.setup(registry);
     renderer.processData(registry);
 
