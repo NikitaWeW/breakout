@@ -19,23 +19,16 @@ namespace engine::detail
         ecs::registry *currentRegistry;
         engine::LoadingFlags currentFlags;
     private:
-        void calculateMissingPrimitives(engine::Mesh &mesh);
-        void optimizeMesh(engine::Mesh &mesh);
-        void moveMesh(engine::Mesh::Geometry &primitives, glm::mat4 const &mat);
         void loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out);
-        void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh);
-        void processAnimationNode(engine::Animation &result, aiAnimation const *animation, aiNode const *node);
-        void processNodeMeshes(aiNode const *node, glm::mat4 parentTransform);
-        void extractVertexData(aiMesh const *aimesh, engine::Mesh &mesh);
-        engine::Material getDefaultMaterial();
         engine::Material convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties);
         engine::Mesh processMesh(aiMesh const *aimesh, glm::mat4 const &transform);
+        void processNodeMeshes(aiNode const *node, glm::mat4 parentTransform);
         engine::Animation processAnimation(aiAnimation const *animation);
-        void calculateParent(aiNode const *node, int parent, glm::mat4 parentTransform);
-        ecs::entity fromRawAssimpTexture(aiTexture const *texture);
 
+        ecs::entity load();
     public:
         ecs::entity load(ecs::registry &reg, std::string_view path, LoadingFlags flags) override;
+        ecs::entity load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags) override;
     };
 
     std::optional<engine::Texture> loadTexture(std::string_view path, LoadingFlags flags);
