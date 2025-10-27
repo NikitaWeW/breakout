@@ -36,6 +36,8 @@ void BoneDebugRenderer::renderBones(ecs::registry &reg, engine::detail::Renderer
     for (size_t i = 0; i < current.boneMatrices.size(); ++i) {
         glm::mat4 boneGlobal = current.boneMatrices[i];
         glm::mat4 bindInv    = glm::inverse(model.skeleton.bindTransform[i]);
+        // boneGlobal = glm::mat4(1.0f);
+        // bindInv    = glm::mat4(1.0f);
 
         glm::mat4 boneTransform = boneGlobal * bindInv;
 

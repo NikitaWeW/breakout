@@ -12,7 +12,6 @@
 #include "engine/animation/animation.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/io.hpp"
-#include "fmt/ostream.h"
 #include "cooload.hpp"
 #include <thread>
 #include <random>
@@ -56,6 +55,7 @@ static void printModelData(ecs::entity e_model, ecs::registry const &registry)
         ENGINE_INFO("-----------------");
 
         ENGINE_INFO("Geometry:");
+        ENGINE_INFO("  Triangles: {}", mesh.geometry.indices.size() / 3);
         ENGINE_INFO("  Indices:   {}", mesh.geometry.indices.size());
         ENGINE_INFO("  Positions: {}", mesh.geometry.positions.size());
         ENGINE_INFO("  TexCoords: {}", mesh.geometry.texCoords.size());
@@ -154,11 +154,6 @@ int main(int argc, char **argv) {
                 glm::mat4{1.0f},
                 {4, 0, -7}
             ) 
-            * glm::rotate(
-                glm::mat4{1.0f},
-                glm::radians(-90.0f),
-                {1, 0, 0}
-            )
             * glm::scale(
                 glm::mat4{1.0f},
                 glm::vec3{0.01}
@@ -237,6 +232,25 @@ int main(int argc, char **argv) {
             //     glm::mat4{1.0f},
             //     glm::vec3{0.01}
             // )
+        }
+    );
+    registry.create(
+        engine::Instance{
+            loader.load(engine::DataType::MODEL, "res/models/blob.glb")
+        }, 
+        engine::ModelMatrix{
+            glm::translate(
+                glm::mat4{1.0f},
+                {5, 0, -3}
+            ) 
+            * glm::scale(
+                glm::mat4(1.0f),
+                glm::vec3(0.5)
+            )
+        }
+        ,engine::CurrentAnimation{
+            .name = "ArmatureAction",
+            .speed = 1
         }
     );
 

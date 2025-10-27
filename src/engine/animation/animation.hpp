@@ -1,8 +1,6 @@
 #pragma once
-#include "engine/config.hpp"
 #include <string>
 #include <vector>
-#include "glm/glm.hpp"
 #include "ecs.hpp"
 #include "engine/ease_functions.hpp"
 
@@ -31,7 +29,8 @@ namespace engine
 
     class Animator
     {
-    private:
+    protected:
+        void animate(ecs::registry &registry, ecs::entity entity, float deltatime);
     public:
         void update(ecs::registry &registry, float deltatime);
     };

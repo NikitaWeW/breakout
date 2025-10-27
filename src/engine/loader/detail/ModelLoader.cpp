@@ -586,7 +586,6 @@ static void calculateParent(engine::Skeleton &skeleton, aiNode const *node, int 
     }
 }
 
-
 ecs::entity engine::detail::ModelLoader::load()
 {
     if(currentScene->HasMeshes())

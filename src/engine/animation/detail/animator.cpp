@@ -147,93 +147,86 @@ Keyframe calculateInterpolatedKeyframe(engine::Animation::Keyframes const &keyfr
     };
 }
 
+static bool boneHasAnyKeyframes(size_t bone, engine::Animation const &anim) 
+{
+    auto const &k = anim.bones[bone];
+    return !(k.positions.empty() && k.orientations.empty() && k.scales.empty());
+};
+void engine::Animator::animate(ecs::registry & registry, ecs::entity entity, float deltatime)
+{
+    auto const &model = registry.get<engine::Model>(registry.get<engine::Instance>(entity).e_model);
+    auto &current = registry.get<engine::CurrentAnimation>(entity);
+    auto animationIt = std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == current.name; });
+    if(animationIt == model.animations.end())
+    {
+        ENGINE_CORE_ERROR("Invalid animation \"{}\" in model \"{}\"", current.name, model.path);
+        ENGINE_ASSERT_MSG(false, "Invalid animation");
+        return;
+    }
+    auto const &animation = *animationIt;
+
+    if(updateAnimation(model, current, animation, deltatime))
+    {
+        registry.remove<engine::CurrentAnimation>(entity);
+        return;
+    }
+    if(registry.has<AnimationTransition>(entity)) {
+        AnimationTransition &transition = registry.get<AnimationTransition>(entity);
+        transition.factor += transition.factorPerSecond * deltatime;
+
+        if(transition.factor >= 1) {
+            current.name = transition.to;
+            registry.remove<AnimationTransition>(entity);
+        }
+    }
+
+    size_t numBones = animation.bones.size();
+    current.boneMatrices.resize(numBones);
+    current.localBoneMatrices.resize(numBones);
+
+    for(size_t bone = 0; bone < numBones; ++bone)
+    {
+        glm::mat4 &transform = current.localBoneMatrices[bone] = model.skeleton.nodeTransform[bone];
+        
+        if(boneHasAnyKeyframes(bone, animation))
+        {
+            auto result = calculateInterpolatedKeyframe(animation.bones[bone], current.time * animation.durationTicks);
+
+            if(registry.has<AnimationTransition>(entity)) {
+                AnimationTransition &transition = registry.get<AnimationTransition>(entity);
+                auto const &secondAnimation = *std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == transition.to; });
+
+                auto second = calculateInterpolatedKeyframe(secondAnimation.bones[bone], current.time * secondAnimation.durationTicks);
+                result = interpolateKeyframes(result, second, transition.easeFunction(transition.factor));
+            }
+
+            transform = 
+                glm::translate(glm::mat4{1.0f}, result.position) * 
+                glm::mat4_cast(result.orientation) * 
+                glm::scale(glm::mat4{1.0f}, result.scale);
+        }
+    }
+
+    for(size_t bone = 0; bone < numBones; ++bone)
+    {
+        int parent = model.skeleton.parents[bone];
+        auto &matrix = current.boneMatrices[bone];
+        auto const &local = current.localBoneMatrices[bone];
+        if(parent == -1)
+            matrix = local;
+        else
+            matrix = current.boneMatrices[parent] * local;
+    }
+    for(size_t bone = 0; bone < numBones; ++bone)
+    {
+        auto &matrix = current.boneMatrices[bone];
+        matrix = model.skeleton.globalInverseTransform * matrix * model.skeleton.bindTransform[bone];
+    }
+}
 void engine::Animator::update(ecs::registry &registry, float deltatime)
 {
     for(ecs::entity entity : registry.view<engine::Instance, engine::CurrentAnimation>())
     {
-        auto const &model = registry.get<engine::Model>(registry.get<engine::Instance>(entity).e_model);
-        auto &current = registry.get<engine::CurrentAnimation>(entity);
-        auto animationIt = std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == current.name; });
-        if(animationIt == model.animations.end())
-        {
-            ENGINE_CORE_ERROR("Invalid animation \"{}\" in model \"{}\"", current.name, model.path);
-            ENGINE_ASSERT_MSG(false, "Invalid animation");
-            continue;
-        }
-        auto const &animation = *animationIt;
-
-        if(updateAnimation(model, current, animation, deltatime))
-        {
-            registry.remove<engine::CurrentAnimation>(entity);
-            continue;
-        }
-
-        size_t numBones = animation.bones.size();
-        current.boneMatrices.resize(numBones);
-        current.localBoneMatrices.resize(numBones);
-
-        if(registry.has<AnimationTransition>(entity)) {
-            AnimationTransition &transition = registry.get<AnimationTransition>(entity);
-            auto secondAnimationIt = std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == transition.to; });
-            if(secondAnimationIt == model.animations.end())
-            {
-                ENGINE_CORE_ERROR("Invalid animation transition \"{}\" in model \"{}\"", transition.to, model.path);
-                ENGINE_ASSERT_MSG(false, "Invalid animation");
-                return;
-            }
-            auto const &secondAnimation = *secondAnimationIt;
-
-            transition.factor += transition.factorPerSecond * deltatime;
-
-            for(size_t bone = 0; bone < numBones; ++bone)
-            {
-                auto first = calculateInterpolatedKeyframe(animation.bones[bone], current.time * animation.durationTicks);
-                auto second = calculateInterpolatedKeyframe(secondAnimation.bones[bone], current.time * secondAnimation.durationTicks);
-            
-                auto result = interpolateKeyframes(first, second, transition.easeFunction(transition.factor));
-
-                glm::mat4 transform = 
-                    glm::translate(glm::mat4{1.0f}, result.position) * 
-                    glm::mat4_cast(result.orientation) * 
-                    glm::scale(glm::mat4{1.0f}, result.scale);
-
-                current.localBoneMatrices[bone] = transform;
-            }
-
-            if(transition.factor >= 1) {
-                current.name = transition.to;
-                registry.remove<AnimationTransition>(entity);
-            }
-        }
-        else
-        {
-            for(size_t bone = 0; bone < numBones; ++bone)
-            {
-                auto result = calculateInterpolatedKeyframe(animation.bones[bone], current.time * animation.durationTicks);
-
-                glm::mat4 transform = 
-                    glm::translate(glm::mat4{1.0f}, result.position) * 
-                    glm::mat4_cast(result.orientation) * 
-                    glm::scale(glm::mat4{1.0f}, result.scale);
-
-                current.localBoneMatrices[bone] = transform;
-            }
-        }
-
-        for(size_t bone = 0; bone < numBones; ++bone)
-        {
-            int parent = model.skeleton.parents[bone];
-            auto &matrix = current.boneMatrices[bone];
-            auto const &local = current.localBoneMatrices[bone];
-            if(parent == -1)
-                matrix = local;
-            else
-                matrix = current.boneMatrices[parent] * local;
-        }
-        for(size_t bone = 0; bone < numBones; ++bone)
-        {
-            auto &matrix = current.boneMatrices[bone];
-            matrix = model.skeleton.globalInverseTransform * matrix * model.skeleton.bindTransform[bone];
-        }
+        animate(registry, entity, deltatime);
     }
 }

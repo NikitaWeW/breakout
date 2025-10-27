@@ -47,7 +47,7 @@ std::optional<engine::Texture> engine::detail::loadTexture(std::size_t size, voi
     }
     ENGINE_ASSERT_MSG(width > 0 && height > 0, "failed to load a texture");
     engine::Texture texture;
-    texture.path = "from memory";
+    texture.path = "memory";
     texture.data = engine::Bitmap{(unsigned) width, (unsigned) height, (unsigned) numChannels, buff};
     stbi_image_free(buff);
 
