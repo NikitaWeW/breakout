@@ -1,11 +1,11 @@
 #pragma once
 #include "glad/gl.h"
-#include "engine/bitmap.hpp"
+#include "engine/core/bitmap.hpp"
 #include <string>
 #include <vector>
 #include <map>
 
-namespace engine::detail::ogl
+namespace engine::renderer::ogl
 {
     /**
      * \brief An opengl object. Id 0 is invalid.
@@ -96,6 +96,4 @@ namespace engine::detail::ogl
     {
         return makeBuffer<Buffer_t>(data.size() * sizeof(T), data.data(), usage);
     }
-} // namespace engine::detail::ogl
-
-namespace ogl = engine::detail::ogl;
+} // namespace engine::renderer::ogl

@@ -1,5 +1,6 @@
 #include "engine/animation/animation.hpp"
-#include "engine/data.hpp"
+#include "engine/core/logging.hpp"
+#include "engine/core/data.hpp"
 #include <algorithm>
 #include <optional>
 
@@ -10,7 +11,7 @@ struct Keyframe
     glm::vec3 scale;
 };
 
-float getDurationSeconds(engine::Animation const &animation)
+static float getDurationSeconds(engine::Animation const &animation)
 {
     float ticksPerSecond = animation.ticksPerSecond;
     ENGINE_ASSERT(ticksPerSecond != 0);
@@ -19,7 +20,7 @@ float getDurationSeconds(engine::Animation const &animation)
     return animationDurationSeconds;
 }
 
-bool updateAnimation(engine::Model const &model, engine::CurrentAnimation &current, engine::Animation const &animation, float deltatime)
+static bool updateAnimation(engine::Model const &model, engine::CurrentAnimation &current, engine::Animation const &animation, float deltatime)
 {
     current.time += (deltatime * current.speed) / getDurationSeconds(animation);
 
@@ -47,7 +48,7 @@ bool updateAnimation(engine::Model const &model, engine::CurrentAnimation &curre
 
     return exited;
 }
-Keyframe interpolateKeyframes(Keyframe const &first, Keyframe const &second, float factor)
+static Keyframe interpolateKeyframes(Keyframe const &first, Keyframe const &second, float factor)
 {
     return Keyframe{
         .position = glm::mix(
@@ -68,7 +69,7 @@ Keyframe interpolateKeyframes(Keyframe const &first, Keyframe const &second, flo
     };
 }
 
-glm::vec3 calculateInterpolatedPosition(engine::Animation::Keyframes const &keyframes, float time)
+static glm::vec3 calculateInterpolatedPosition(engine::Animation::Keyframes const &keyframes, float time)
 {
     auto const &keys = keyframes.positions;
     if(keys.empty())
@@ -91,7 +92,7 @@ glm::vec3 calculateInterpolatedPosition(engine::Animation::Keyframes const &keyf
         factor
     );
 }
-glm::quat calculateInterpolatedOrientation(engine::Animation::Keyframes const &keyframes, float time)
+static glm::quat calculateInterpolatedOrientation(engine::Animation::Keyframes const &keyframes, float time)
 {
     auto const &keys = keyframes.orientations;
     if(keys.empty())
@@ -114,7 +115,7 @@ glm::quat calculateInterpolatedOrientation(engine::Animation::Keyframes const &k
         factor
     ));
 }
-glm::vec3 calculateInterpolatedScale(engine::Animation::Keyframes const &keyframes, float time)
+static glm::vec3 calculateInterpolatedScale(engine::Animation::Keyframes const &keyframes, float time)
 {
     auto const &keys = keyframes.scales;
     if(keys.empty())
@@ -152,51 +153,65 @@ static bool boneHasAnyKeyframes(size_t bone, engine::Animation const &anim)
     auto const &k = anim.bones[bone];
     return !(k.positions.empty() && k.orientations.empty() && k.scales.empty());
 };
-void engine::Animator::animate(ecs::registry & registry, ecs::entity entity, float deltatime)
+void engine::Animator::animate(ecs::registry &registry, ecs::entity entity, float deltatime)
 {
-    auto const &model = registry.get<engine::Model>(registry.get<engine::Instance>(entity).e_model);
-    auto &current = registry.get<engine::CurrentAnimation>(entity);
-    auto animationIt = std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == current.name; });
-    if(animationIt == model.animations.end())
+    auto const &model = registry.get<Model>(registry.get<Instance>(entity).e_model);
+    auto &current = registry.get<CurrentAnimation>(entity);
+    auto animation = findAnimation(model, current.name);
+    if(!animation)
     {
         ENGINE_CORE_ERROR("Invalid animation \"{}\" in model \"{}\"", current.name, model.path);
         ENGINE_ASSERT_MSG(false, "Invalid animation");
         return;
     }
-    auto const &animation = *animationIt;
 
-    if(updateAnimation(model, current, animation, deltatime))
+    if(updateAnimation(model, current, *animation, deltatime))
     {
-        registry.remove<engine::CurrentAnimation>(entity);
+        registry.remove<CurrentAnimation>(entity);
         return;
     }
+
+    Animation const *secondAnimation = nullptr;
     if(registry.has<AnimationTransition>(entity)) {
         AnimationTransition &transition = registry.get<AnimationTransition>(entity);
-        transition.factor += transition.factorPerSecond * deltatime;
 
+        secondAnimation = findAnimation(model, transition.to);
+        if(!secondAnimation)
+        {
+            ENGINE_CORE_ERROR("Invalid animation transition destination \"{}\" (from \"{}\") in model \"{}\"", transition.to, model.path, current.name);
+            ENGINE_ASSERT_MSG(false, "Invalid animation");
+            return;
+        }
+        
+        transition.factor += transition.factorPerSecond * deltatime;
         if(transition.factor >= 1) {
             current.name = transition.to;
             registry.remove<AnimationTransition>(entity);
         }
-    }
 
+        calculateBoneMatrices(current.boneMatrices, model.skeleton, current.time, *animation, secondAnimation, transition);
+    }
+    else
+    {
+        calculateBoneMatrices(current.boneMatrices, model.skeleton, current.time, *animation);
+    }
+}
+void engine::Animator::calculateBoneMatrices(std::vector<glm::mat4> &boneMatrices, Skeleton const &skeleton, float normalizedTime, Animation const &animation, Animation const *secondAnimation, AnimationTransition transition)
+{
     size_t numBones = animation.bones.size();
-    current.boneMatrices.resize(numBones);
-    current.localBoneMatrices.resize(numBones);
+    boneMatrices.resize(numBones);
+    std::vector<glm::mat4> localBoneMatrices(numBones);
 
     for(size_t bone = 0; bone < numBones; ++bone)
     {
-        glm::mat4 &transform = current.localBoneMatrices[bone] = model.skeleton.nodeTransform[bone];
+        glm::mat4 &transform = localBoneMatrices[bone] = skeleton.nodeTransform[bone];
         
         if(boneHasAnyKeyframes(bone, animation))
         {
-            auto result = calculateInterpolatedKeyframe(animation.bones[bone], current.time * animation.durationTicks);
+            auto result = calculateInterpolatedKeyframe(animation.bones[bone], normalizedTime * animation.durationTicks);
 
-            if(registry.has<AnimationTransition>(entity)) {
-                AnimationTransition &transition = registry.get<AnimationTransition>(entity);
-                auto const &secondAnimation = *std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == transition.to; });
-
-                auto second = calculateInterpolatedKeyframe(secondAnimation.bones[bone], current.time * secondAnimation.durationTicks);
+            if(secondAnimation) {
+                auto second = calculateInterpolatedKeyframe(secondAnimation->bones[bone], normalizedTime * secondAnimation->durationTicks);
                 result = interpolateKeyframes(result, second, transition.easeFunction(transition.factor));
             }
 
@@ -209,24 +224,33 @@ void engine::Animator::animate(ecs::registry & registry, ecs::entity entity, flo
 
     for(size_t bone = 0; bone < numBones; ++bone)
     {
-        int parent = model.skeleton.parents[bone];
-        auto &matrix = current.boneMatrices[bone];
-        auto const &local = current.localBoneMatrices[bone];
+        int parent = skeleton.parents[bone];
+        auto &matrix = boneMatrices[bone];
+        auto const &local = localBoneMatrices[bone];
         if(parent == -1)
             matrix = local;
         else
-            matrix = current.boneMatrices[parent] * local;
+            matrix = boneMatrices[parent] * local;
     }
     for(size_t bone = 0; bone < numBones; ++bone)
     {
-        auto &matrix = current.boneMatrices[bone];
-        matrix = model.skeleton.globalInverseTransform * matrix * model.skeleton.bindTransform[bone];
+        auto &matrix = boneMatrices[bone];
+        matrix = skeleton.globalInverseTransform * matrix * skeleton.bindTransform[bone];
     }
 }
+
 void engine::Animator::update(ecs::registry &registry, float deltatime)
 {
     for(ecs::entity entity : registry.view<engine::Instance, engine::CurrentAnimation>())
     {
         animate(registry, entity, deltatime);
     }
+}
+
+engine::Animation const *engine::findAnimation(engine::Model const &model, std::string_view name)
+{
+    auto animationIt = std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == name; });
+    if(animationIt == model.animations.end())
+        return nullptr;
+    return &*animationIt;
 }

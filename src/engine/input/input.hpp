@@ -2,8 +2,7 @@
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
-#include "engine/config.hpp"
-#include "ecs.hpp"
+#include "engine/core/ecs.hpp"
 #include <queue>
 
 // TODO: better event system

@@ -3,7 +3,7 @@
 #include "assimp/scene.h"
 #include <optional>
 
-namespace engine::detail
+namespace engine::loader
 {
     class TextureLoader : public ILoader
     {
@@ -33,4 +33,4 @@ namespace engine::detail
 
     std::optional<engine::Texture> loadTexture(std::string_view path, LoadingFlags flags);
     std::optional<engine::Texture> loadTexture(std::size_t size, void const *data, LoadingFlags flags);
-} // namespace engine::detail
+} // namespace engine::loader

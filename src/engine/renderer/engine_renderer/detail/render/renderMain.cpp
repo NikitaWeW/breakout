@@ -1,6 +1,8 @@
 #include "engine/renderer/engine_renderer/engineRenderer.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
+namespace ogl = engine::renderer::ogl;
+
 void bindTexture(int location, ogl::Texture texture, ogl::Texture defaultTexture, unsigned &slot)
 {
     if(location == -1 || (texture.id == 0 && defaultTexture.id == 0))
@@ -21,7 +23,7 @@ void bindTexture(int location, ogl::Texture texture, ogl::Texture defaultTexture
 
     ++slot;
 }
-void bindTextures(ogl::Program const &program, engine::detail::MaterialTextures const &textures, ogl::Texture defaultTexture)
+void bindTextures(ogl::Program const &program, engine::renderer::MaterialTextures const &textures, ogl::Texture defaultTexture)
 {
     unsigned slot = 0;
     bindTexture(ogl::getUniform(program, "u_material.albedo"), textures.albedo, defaultTexture, slot);
@@ -30,9 +32,9 @@ void bindTextures(ogl::Program const &program, engine::detail::MaterialTextures 
     bindTexture(ogl::getUniform(program, "u_material.normal"), textures.normal, defaultTexture, slot);
 }
 
-void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, detail::RendererData const &data, ecs::entity const &e_instance)
+void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, renderer::RendererData const &data, ecs::entity const &e_instance)
 {
-    detail::Model const &model = reg.get<detail::Model>(reg.get<detail::ProcessedModel>(reg.get<engine::Instance>(e_instance).e_model).data);
+    renderer::Model const &model = reg.get<renderer::Model>(reg.get<renderer::ProcessedModel>(reg.get<engine::Instance>(e_instance).e_model).data);
     bool animated = model.animated && reg.has<CurrentAnimation>(e_instance);
 
     for(auto const &mesh : model.meshes)
@@ -57,7 +59,7 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, detail::Rend
         glDrawElements(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr);
     }
 }
-void engine::EngineRenderer::renderMain(ecs::registry &reg, detail::RendererData &data)
+void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererData &data)
 {
     auto const &camera = reg.get<engine::Camera>(m_context.e_camera);
     

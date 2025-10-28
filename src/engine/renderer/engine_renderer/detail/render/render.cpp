@@ -1,5 +1,7 @@
 #include "engine/renderer/engine_renderer/engineRenderer.hpp"
 
+namespace ogl = engine::renderer::ogl;
+
 static void resizeAttachment(ogl::Framebuffer &fbo, ogl::Texture &texture, glm::uvec2 size, GLenum attachment = GL_COLOR_ATTACHMENT0, GLenum format = GL_RGBA32F)
 {
     if(texture.id != 0)
@@ -39,8 +41,8 @@ static void resizeAttachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm:
 
 void engine::EngineRenderer::draw(ecs::registry &reg)
 {
-    ENGINE_ASSERT_MSG(reg.view<detail::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
-    detail::RendererData &data = reg.get<detail::RendererData>(reg.view<detail::RendererData>().at(0));
+    ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
+    renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
     auto &camera = reg.get<engine::Camera>(m_context.e_camera);
 
     if(data.prevCamSize != camera.size) { // resize or initialize buffers / textures

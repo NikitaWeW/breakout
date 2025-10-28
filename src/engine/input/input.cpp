@@ -1,5 +1,5 @@
 #include "input.hpp"
-#include "engine/data.hpp"
+#include "engine/core/data.hpp"
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {

@@ -2,14 +2,16 @@
 #include "detail.hpp"
 #include "ogl.hpp"
 
+namespace ogl = engine::renderer::ogl;
+
 static ogl::Texture getTexture(ecs::registry const &reg, ecs::entity e_texture)
 {
     using namespace engine;
     if(e_texture == 0)
         return ogl::Texture{};
-    ENGINE_ASSERT(reg.has<detail::ProcessedTexture>(e_texture));
+    ENGINE_ASSERT(reg.has<renderer::ProcessedTexture>(e_texture));
 
-    return reg.get<ogl::Texture>(reg.get<detail::ProcessedTexture>(e_texture).data);
+    return reg.get<ogl::Texture>(reg.get<renderer::ProcessedTexture>(e_texture).data);
 }
 static void addVertexBuffer(ogl::VAO &vao, ogl::Buffer &buff, std::size_t count, GLenum type)
 {
@@ -40,16 +42,16 @@ static void addVertexBuffer(ogl::VAO &vao, ogl::Buffer &buff, std::size_t count,
 void engine::EngineRenderer::processModels(ecs::registry &reg)
 {
     using namespace engine;
-    for(ecs::entity e_model : reg.view<engine::Model>(ecs::exclude_t<detail::ProcessedModel>{}))
+    for(ecs::entity e_model : reg.view<engine::Model>(ecs::exclude_t<renderer::ProcessedModel>{}))
     {
         auto const &model = reg.get<engine::Model>(e_model);
-        detail::Model newModel;
+        renderer::Model newModel;
         newModel.skeleton = model.skeleton;
         newModel.animated = model.skeleton.boneMap.size() != 0;
 
         for(auto const &mesh : model.meshes)
         {
-            detail::Mesh newMesh;
+            renderer::Mesh newMesh;
             newMesh.mode = GL_TRIANGLES;
             newMesh.material = mesh.material.properties;
             newMesh.count = mesh.geometry.indices.size();
@@ -85,21 +87,21 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
         }
 
         ecs::entity entity = e_model;
-        reg.emplace<detail::Model>(entity, std::move(newModel));
-        reg.emplace<detail::ProcessedModel>(e_model, entity);
+        reg.emplace<renderer::Model>(entity, std::move(newModel));
+        reg.emplace<renderer::ProcessedModel>(e_model, entity);
     }
 }
 void engine::EngineRenderer::processTextures(ecs::registry &reg)
 {
     using namespace engine;
-    for(ecs::entity e_texture : reg.view<engine::Texture>(ecs::exclude_t<detail::ProcessedTexture>{}))
+    for(ecs::entity e_texture : reg.view<engine::Texture>(ecs::exclude_t<renderer::ProcessedTexture>{}))
     {
         auto const &texture = reg.get<engine::Texture>(e_texture);
 
         ecs::entity const &entity = e_texture;
 
         reg.emplace<ogl::Texture>(entity, ogl::makeTexture(texture.data, texture.srgb));
-        reg.emplace<detail::ProcessedTexture>(e_texture, entity);
+        reg.emplace<renderer::ProcessedTexture>(e_texture, entity);
     }
 }
 

@@ -1,7 +1,6 @@
 #pragma once
-#include "engine/config.hpp"
-#include "engine/data.hpp"
-#include "ecs.hpp"
+#include "engine/core/data.hpp"
+#include "engine/core/ecs.hpp"
 #include "GLFW/glfw3.h"
 
 namespace controller

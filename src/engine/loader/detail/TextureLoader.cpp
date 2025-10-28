@@ -1,7 +1,7 @@
 #include "Loaders.hpp"
 #include "stb_image.h"
 
-ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
+ecs::entity engine::loader::TextureLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
 {
     auto texture = loadTexture(path, flags);
     if(!texture.has_value())
@@ -9,7 +9,7 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::string_
     return reg.create(std::move(texture.value()));
 }
 
-ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
+ecs::entity engine::loader::TextureLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
 {
     auto texture = loadTexture(size, data, flags);
     if(!texture.has_value())
@@ -17,7 +17,7 @@ ecs::entity engine::detail::TextureLoader::load(ecs::registry &reg, std::size_t 
     return reg.create(std::move(texture.value()));
 }
 
-std::optional<engine::Texture> engine::detail::loadTexture(std::string_view path, LoadingFlags flags)
+std::optional<engine::Texture> engine::loader::loadTexture(std::string_view path, LoadingFlags flags)
 {
     int width = 0, height = 0, numChannels = 0;
     stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::FLIP_TEXTURES));
@@ -35,7 +35,7 @@ std::optional<engine::Texture> engine::detail::loadTexture(std::string_view path
 
     return texture;
 }
-std::optional<engine::Texture> engine::detail::loadTexture(std::size_t size, void const *data, LoadingFlags flags)
+std::optional<engine::Texture> engine::loader::loadTexture(std::size_t size, void const *data, LoadingFlags flags)
 {
     int width = 0, height = 0, numChannels = 0;
     stbi_set_flip_vertically_on_load(static_cast<int>(flags & LoadingFlags::FLIP_TEXTURES));

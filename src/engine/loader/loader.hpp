@@ -1,7 +1,7 @@
 #pragma once
-#include "engine/config.hpp"
-#include "ecs.hpp"
-#include "engine/data.hpp"
+#include "engine/core/ecs.hpp"
+#include "engine/core/data.hpp"
+#include "engine/core/logging.hpp"
 
 namespace engine
 {
@@ -15,7 +15,7 @@ namespace engine
 
     constexpr LoadingFlags DEFAULT_LOADING_FLAGS = LoadingFlags::MODEL_FLIP_TEXTURES;
     
-    namespace detail
+    namespace loader
     {
         class ILoader
         {
@@ -25,7 +25,7 @@ namespace engine
             /**
              * \brief Load from file into the ecs::registry.
              */
-            virtual ecs::entity load(ecs::registry &reg, std::string_view path, LoadingFlags flags) 
+            virtual inline ecs::entity load(ecs::registry &reg, std::string_view path, LoadingFlags flags) 
             { 
                 ENGINE_CORE_ERROR("Calling undefined ILoader function: {}", "load(ecs::registry &reg, std::string_view path, LoadingFlags flags)"); 
                 return 0;
@@ -33,19 +33,19 @@ namespace engine
             /**
              * \brief Load from file into the ecs::registry.
              */
-            virtual ecs::entity load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags) 
+            virtual inline ecs::entity load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags) 
             { 
                 ENGINE_CORE_ERROR("Calling undefined ILoader function: {}", "load(ecs::registry &reg, void const *data, std::size_t size, LoadingFlags flags)"); 
                 return 0;
             }
         };
-    } // namespace detail
+    } // namespace loader
 
     class Loader
     {
     private:
-        std::vector<std::unique_ptr<detail::ILoader>> m_loaders;
-        std::unordered_map<DataType, detail::ILoader *> m_loaderMap;
+        std::vector<std::unique_ptr<loader::ILoader>> m_loaders;
+        std::unordered_map<DataType, loader::ILoader *> m_loaderMap;
         ecs::registry *m_registry;
 
         bool checkType(DataType type);
@@ -60,11 +60,11 @@ namespace engine
         ecs::entity load(DataType type, std::string_view path, LoadingFlags flats = DEFAULT_LOADING_FLAGS);
         ecs::entity load(DataType type, std::size_t size, void const *data, LoadingFlags flags = DEFAULT_LOADING_FLAGS);
 
-        void registerLoader(DataType type, std::unique_ptr<detail::ILoader> &&loader);
+        void registerLoader(DataType type, std::unique_ptr<loader::ILoader> &&loader);
     };
 } // namespace engine
 
-inline void ::engine::Loader::registerLoader(DataType type, std::unique_ptr<detail::ILoader> &&loader)
+inline void ::engine::Loader::registerLoader(DataType type, std::unique_ptr<loader::ILoader> &&loader)
 {
     m_loaders.emplace_back(std::move(loader));
     m_loaderMap[type] = m_loaders.back().get();

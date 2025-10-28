@@ -13,15 +13,16 @@ if(NOT CPM_USE_LOCAL_PACKAGES)
 endif()
 
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/nicecs@1.4.0")
+CPMAddPackage("gh:nikitawew/nicecs@1.4.2")
 CPMAddPackage("gh:gabime/spdlog@1.16.0")
 CPMAddPackage("gh:assimp/assimp@6.0.2")
+CPMAddPackage("gh:g-truc/glm#1.0.2")
 
 file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
 add_library(dependencies ${DEPENDENCIES_SOURCES})
 target_include_directories(dependencies PRIVATE dependencies/include)
 target_include_directories(dependencies INTERFACE dependencies/include)
-target_link_libraries(dependencies INTERFACE glfw ecs spdlog assimp)
+target_link_libraries(dependencies INTERFACE glfw ecs spdlog assimp glm)
 
 ######################################################################
 
@@ -32,11 +33,7 @@ target_link_libraries(engine PUBLIC dependencies)
 target_include_directories(engine PRIVATE src)
 
 target_precompile_headers(engine PRIVATE 
-    src/engine/config.hpp # to configure ecs.hpp
-    ${ECS_SOURCE_DIR}/ecs.hpp
-    dependencies/include/glm/glm.hpp
-    dependencies/include/glm/gtc/quaternion.hpp
-    dependencies/include/glm/gtc/matrix_transform.hpp
+    src/engine/engine.hpp
 )
 
 ######################################################################

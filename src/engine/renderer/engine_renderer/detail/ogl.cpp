@@ -1,8 +1,9 @@
 #include "ogl.hpp"
+#include "engine/core/logging.hpp"
 #include <filesystem>
 #include <fstream>
 
-namespace ogl = engine::detail::ogl;
+namespace ogl = engine::renderer::ogl;
 
 static bool compileProgramShader(ogl::Program::Shader &shader) noexcept {
     shader.id = glCreateShader(shader.type);

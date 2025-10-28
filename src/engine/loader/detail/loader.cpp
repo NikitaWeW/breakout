@@ -65,6 +65,6 @@ bool engine::Loader::checkType(DataType type)
 engine::Loader::Loader(ecs::registry &registry)
 {
     m_registry = &registry;
-    registerLoader(DataType::MODEL,     std::make_unique<detail::ModelLoader>());
-    registerLoader(DataType::TEXTURE2D, std::make_unique<detail::TextureLoader>());
+    registerLoader(DataType::MODEL,     std::make_unique<loader::ModelLoader>());
+    registerLoader(DataType::TEXTURE2D, std::make_unique<loader::TextureLoader>());
 }

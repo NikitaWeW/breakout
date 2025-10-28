@@ -19,8 +19,8 @@ namespace engine
     // expose some of the implementation to be able to override it in the derivatives.
     protected: 
         Context m_context;
-        virtual void renderMainInstance(ecs::registry &reg, detail::RendererData const &data, ecs::entity const &e_instance);
-        virtual void renderMain(ecs::registry &reg, detail::RendererData &data);
+        virtual void renderMainInstance(ecs::registry &reg, renderer::RendererData const &data, ecs::entity const &e_instance);
+        virtual void renderMain(ecs::registry &reg, renderer::RendererData &data);
         virtual void setupPipeline(ecs::registry &reg);
         virtual void processModels(ecs::registry &reg);
         virtual void processTextures(ecs::registry &reg);

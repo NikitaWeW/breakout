@@ -7,8 +7,8 @@ private:
     struct BoneModel {};
     engine::Model m_boneModel;
 protected:
-    void renderBones(ecs::registry &reg, engine::detail::RendererData const &data, ecs::entity const &e_instance);
-    void renderMain(ecs::registry &reg, engine::detail::RendererData &data) override;
+    void renderBones(ecs::registry &reg, engine::renderer::RendererData const &data, ecs::entity const &e_instance);
+    void renderMain(ecs::registry &reg, engine::renderer::RendererData &data) override;
 public:
     BoneDebugRenderer() = default;
     BoneDebugRenderer(Context const &context, engine::Model const &boneModel);

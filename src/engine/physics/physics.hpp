@@ -1,7 +1,6 @@
 #pragma once
-#include "engine/data.hpp"
-#include "engine/config.hpp"
-#include "ecs.hpp"
+#include "engine/core/data.hpp"
+#include "engine/core/ecs.hpp"
 #include "glm/glm.hpp"
 
 // TODO: refactor

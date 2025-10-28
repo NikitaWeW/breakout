@@ -3,7 +3,7 @@
 #include "ogl.hpp"
 #include "engine/animation/animation.hpp"
 
-namespace engine::detail
+namespace engine::renderer
 {
     struct Processed 
     {
@@ -33,7 +33,7 @@ namespace engine::detail
     struct Mesh
     {
         engine::Material::Properties material;
-        detail::MaterialTextures textures;
+        MaterialTextures textures;
         VertexBuffers buffers;
         ogl::VAO vao;
         ogl::IBO ibo;
@@ -44,7 +44,7 @@ namespace engine::detail
     struct Model
     {
         engine::Skeleton skeleton;
-        std::vector<detail::Mesh> meshes;
+        std::vector<Mesh> meshes;
         bool animated = false;
     };
 
@@ -64,4 +64,4 @@ namespace engine::detail
 
         ogl::Texture defaultTexture;
     }; 
-} // namespace engine::detail
+} // namespace engine::renderer

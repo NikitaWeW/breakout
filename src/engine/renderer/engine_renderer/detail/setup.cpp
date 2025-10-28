@@ -1,6 +1,8 @@
 #include "engine/renderer/engine_renderer/engineRenderer.hpp"
-#include "engine/config.hpp"
+#include "engine/core/logging.hpp"
 #include "detail.hpp"
+
+namespace ogl = engine::renderer::ogl;
 
 static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
@@ -129,7 +131,7 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
 {
     ENGINE_PROFILE();
     using namespace engine;
-    detail::RendererData &data = reg.get<detail::RendererData>(reg.view<detail::RendererData>().at(0));
+    renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
     
     glCreateFramebuffers(1, &data.oitFBO.id);
     {
@@ -153,7 +155,8 @@ engine::EngineRenderer::EngineRenderer(Context const &context)
 void engine::EngineRenderer::setup(ecs::registry &reg)
 {
     ENGINE_PROFILE();
-    reg.create<detail::RendererData>();
+    if(reg.view<renderer::RendererData>().empty())
+        reg.create<renderer::RendererData>();
     setupOpengl(reg);
     setupPipeline(reg);
 }

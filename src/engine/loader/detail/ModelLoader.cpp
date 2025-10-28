@@ -192,9 +192,9 @@ static ecs::entity fromRawAssimpTexture(ecs::registry &registry, aiTexture const
 
     return registry.create(std::move(result));
 }
-void engine::detail::ModelLoader::loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out)
+void engine::loader::ModelLoader::loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out)
 {
-    static engine::detail::TextureLoader loader;
+    static engine::loader::TextureLoader loader;
 
     if(material->GetTextureCount(type) == 0 || out != 0)
         return;
@@ -245,7 +245,7 @@ void engine::detail::ModelLoader::loadMaterialTexture(aiMaterial const *material
         currentRegistry->get<engine::Texture>(out).srgb = srgb;
     }
 }
-engine::Material engine::detail::ModelLoader::convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties)
+engine::Material engine::loader::ModelLoader::convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties)
 {
     engine::Material material;
 
@@ -464,7 +464,7 @@ void normalizeWeights(engine::Mesh::Geometry &geometry)
         if(weight[0] + weight[1] + weight[2] + weight[3] > 1e-6f)
             weight /= weight[0] + weight[1] + weight[2] + weight[3];
 }
-engine::Mesh engine::detail::ModelLoader::processMesh(aiMesh const *aimesh, glm::mat4 const &transform)
+engine::Mesh engine::loader::ModelLoader::processMesh(aiMesh const *aimesh, glm::mat4 const &transform)
 {
     MODEL_LOADER_TRACE("Loading mesh \"{}\"", aimesh->mName.C_Str());
     engine::Mesh mesh;
@@ -498,7 +498,7 @@ engine::Mesh engine::detail::ModelLoader::processMesh(aiMesh const *aimesh, glm:
 
     return mesh;
 }
-void engine::detail::ModelLoader::processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f})
+void engine::loader::ModelLoader::processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f})
 {
     MODEL_LOADER_TRACE("processing node \"{}\"", node->mName.C_Str());
     glm::mat4 nodeTransform = parentTransform * toMat4(node->mTransformation);
@@ -547,7 +547,7 @@ static void processAnimationNode(engine::Animation &result, aiAnimation const *a
         processAnimationNode(result, animation, skeleton, node->mChildren[i]);
     }
 }
-engine::Animation engine::detail::ModelLoader::processAnimation(aiAnimation const *animation)
+engine::Animation engine::loader::ModelLoader::processAnimation(aiAnimation const *animation)
 {
     MODEL_LOADER_TRACE("Processing animation \"{}\"", animation->mName.C_Str());
 
@@ -586,7 +586,7 @@ static void calculateParent(engine::Skeleton &skeleton, aiNode const *node, int 
     }
 }
 
-ecs::entity engine::detail::ModelLoader::load()
+ecs::entity engine::loader::ModelLoader::load()
 {
     if(currentScene->HasMeshes())
         MODEL_LOADER_TRACE("Loading {} meshes.", currentScene->mNumMeshes);
@@ -611,7 +611,7 @@ ecs::entity engine::detail::ModelLoader::load()
     return currentRegistry->create(std::move(*currentModel));
 }
 
-ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
+ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
 {
     MODEL_LOADER_TRACE("Loading model \"{}\"", path);
     Assimp::Importer importer;
@@ -652,7 +652,7 @@ ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::string_vi
 
     return load();
 }
-ecs::entity engine::detail::ModelLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
+ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
 {
     MODEL_LOADER_TRACE("Loading model from memory");
     Assimp::Importer importer;

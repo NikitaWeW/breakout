@@ -3,19 +3,16 @@
 #include <chrono>
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
-#include "engine/renderer/engine_renderer/engineRenderer.hpp"
-#include "engine/loader/loader.hpp"
+#include "engine/engine.hpp"
 #include "controller/controller.hpp"
 #include "boneDebugRenderer.hpp"
-#include "engine/physics/physics.hpp"
-#include "engine/input/input.hpp"
-#include "engine/animation/animation.hpp"
-#define GLM_ENABLE_EXPERIMENTAL
-#include "glm/gtx/io.hpp"
 #include "cooload.hpp"
 #include <thread>
 #include <random>
 #include <stack>
+
+// The engine pipeline, game loop and other stuff will be abstracted 
+// into the engine::Engine class one the engine becomes mature enough.
 
 static std::string printTexture(ecs::entity e_texture, ecs::registry const &reg)
 {
@@ -165,24 +162,6 @@ int main(int argc, char **argv) {
     ); 
     registry.create(
         engine::Instance{
-            loader.load(engine::DataType::MODEL, "res/models/vampire/dancing_vampire.dae")
-        }, 
-        engine::ModelMatrix{
-            glm::translate(
-                glm::mat4{1.0f},
-                {-5, 0, -7}
-            ) 
-            * glm::scale(
-                glm::mat4{1.0f},
-                glm::vec3{0.01}
-            )
-        }
-        ,engine::CurrentAnimation{
-            .name = "Hips"
-        }
-    );
-    registry.create(
-        engine::Instance{
             loader.load(engine::DataType::MODEL, "res/models/Silly_Dancing.fbx")
         }, 
         engine::ModelMatrix{
@@ -271,15 +250,15 @@ int main(int argc, char **argv) {
         registry.get<engine::Model>(loader.load(engine::DataType::MODEL, "res/models/arrow.glb"))
     };
 
-    // FIXME: 2 renderers cant operate on one registry
-    // 
-    // engine::IRenderer &renderer = mainRenderer;
-    // renderer.setup(registry); 
-    // renderer.processData(registry);
+    engine::IRenderer *renderer = &mainRenderer;
+    renderer->setup(registry); 
+    renderer->processData(registry);
 
-    engine::IRenderer &renderer = debugRenderer;
-    renderer.setup(registry);
-    renderer.processData(registry);
+    renderer = &debugRenderer;
+    renderer->setup(registry);
+    renderer->processData(registry);
+
+    renderer = &mainRenderer;
 
     engine::Animator animator;
 
@@ -317,7 +296,7 @@ int main(int argc, char **argv) {
         controller::update(registry);
         animator.update(registry, deltatime);
         engine::physics::update(registry, deltatime);
-        renderer.draw(registry);
+        renderer->draw(registry);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
