@@ -1,10 +1,12 @@
 #pragma once
-#include "engine/core/data.hpp"
-#include "engine/core/ecs.hpp"
+#include "engine/engine.hpp"
 #include "GLFW/glfw3.h"
 
-namespace controller
+class Controller
 {
+private:
+    engine::UID m_uid;
+public:
     struct ControllableCamera
     {
         ecs::entity window;
@@ -18,7 +20,7 @@ namespace controller
         bool locked = true;
     };
 
-    ecs::entity createCamera(ecs::registry &reg, ecs::entity window);
+    static ecs::entity createCamera(ecs::registry &reg, ecs::entity window);
 
     void update(ecs::registry &reg);
-} // namespace engine::controller
+};

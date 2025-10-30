@@ -15,10 +15,11 @@ void BoneDebugRenderer::renderBones(ecs::registry &reg, renderer::RendererData c
 
     ENGINE_ASSERT_MSG(reg.view<BoneModel>().size() == 1, "forgot to call BoneDebugRenderer::setup?");
     ecs::entity boneModelEntity = reg.view<BoneModel>().at(0);
+    reg.emplace<Instance>(boneModelEntity, boneModelEntity);
 
     constexpr glm::vec3 boneScaleFactor(0.2f);
 
-    glm::mat4 instanceModel = reg.get<ModelMatrix>(e_instance).value;
+    glm::mat4 instanceModel = reg.get<ModelMatrix>(e_instance);
     glm::vec3 instance_scale, instance_translation, instance_skew;
     glm::vec4 instance_perspective;
     glm::quat instance_rotation;
@@ -45,9 +46,10 @@ void BoneDebugRenderer::renderBones(ecs::registry &reg, renderer::RendererData c
             glm::scale(glm::mat4(1.0f), boneScaleFactor)
         ;
 
-        reg.get<ModelMatrix>(boneModelEntity).value = finalTransform;
+        static_cast<glm::mat4 &>(reg.get<ModelMatrix>(boneModelEntity)) = finalTransform;
         renderMainInstance(reg, data, boneModelEntity);
     }
+    reg.remove<Instance>(boneModelEntity);
 }
 
 void BoneDebugRenderer::renderMain(ecs::registry &reg, renderer::RendererData &data)
@@ -60,7 +62,8 @@ void BoneDebugRenderer::renderMain(ecs::registry &reg, renderer::RendererData &d
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     glUseProgram(data.plainColorShader.id);
-    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_viewMat"), 1, false, glm::value_ptr(camera.viewMat));
+    glm::mat4 viewMat = reg.has<engine::ModelMatrix>(m_context.e_camera) ? reg.get<engine::ModelMatrix>(m_context.e_camera) : glm::mat4{1.0f};
+    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
     glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
 
     glEnable(GL_CULL_FACE);
@@ -83,7 +86,6 @@ void BoneDebugRenderer::setup(ecs::registry &reg)
     if(reg.view<BoneModel>().empty())
     {
         auto e = reg.create<>();
-        reg.emplace<Instance>(e, e);
         reg.emplace<BoneModel>(e);
         reg.emplace<Model>(e, m_boneModel);
         reg.emplace<ModelMatrix>(e);

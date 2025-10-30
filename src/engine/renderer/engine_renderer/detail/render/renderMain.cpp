@@ -39,7 +39,7 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, renderer::Re
 
     for(auto const &mesh : model.meshes)
     {
-        glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance).value : glm::mat4{1.0f};
+        glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance) : glm::mat4{1.0f};
         glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
 
         bindTextures(data.plainColorShader, mesh.textures, data.defaultTexture);
@@ -69,7 +69,8 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     glUseProgram(data.plainColorShader.id);
-    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_viewMat"), 1, false, glm::value_ptr(camera.viewMat));
+    glm::mat4 viewMat = reg.has<engine::ModelMatrix>(m_context.e_camera) ? reg.get<engine::ModelMatrix>(m_context.e_camera) : glm::mat4{1.0f};
+    glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
     glUniformMatrix4fv(ogl::getUniform(data.plainColorShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
 
     glEnable(GL_DEPTH_TEST);

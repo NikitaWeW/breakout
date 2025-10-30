@@ -15,7 +15,9 @@
 #include "loader/loader.hpp"
 #include "input/input.hpp"
 #include "animation/animation.hpp"
+
 #include "physics/physics.hpp"
+#include "physics/ModelMatrixAssembler.hpp"
 
 namespace engine
 {

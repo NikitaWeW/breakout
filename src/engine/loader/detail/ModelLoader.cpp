@@ -613,6 +613,7 @@ ecs::entity engine::loader::ModelLoader::load()
 
 ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
 {
+    MODEL_LOADER_TRACE("---");
     MODEL_LOADER_TRACE("Loading model \"{}\"", path);
     Assimp::Importer importer;
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
@@ -654,6 +655,7 @@ ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::string_vi
 }
 ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
 {
+    MODEL_LOADER_TRACE("---");
     MODEL_LOADER_TRACE("Loading model from memory");
     Assimp::Importer importer;
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);

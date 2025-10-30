@@ -1,33 +1,34 @@
 #include "controller.hpp"
-#include "engine/input/input.hpp"
-#include "engine/physics/physics.hpp"
-#include "engine/core/data.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/io.hpp"
 
-ecs::entity controller::createCamera(ecs::registry &reg, ecs::entity window)
+#define CAMERA_COMPONENTS engine::Camera, engine::ModelMatrix, engine::ModelMatrixAssemblerExclude, Controller::ControllableCamera, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener
+
+ecs::entity Controller::createCamera(ecs::registry &reg, ecs::entity window)
 {
-    auto e = reg.create<engine::Camera, controller::ControllableCamera, engine::physics::MoveIntent, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener>();
+    auto e = reg.create<CAMERA_COMPONENTS>();
     ENGINE_ASSERT(reg.has<engine::Window>(window));
-    reg.get<ControllableCamera>(e).window = window;
+    reg.get<Controller::ControllableCamera>(e).window = window;
     return e;
 }
 
-void controller::update(ecs::registry &reg)
+void Controller::update(ecs::registry &reg)
 {
-    for(ecs::entity e_camera : reg.view<engine::Camera, controller::ControllableCamera, engine::physics::MoveIntent, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener>())
+    for(ecs::entity e_camera : reg.view<CAMERA_COMPONENTS>())
     {
-        auto &controllable = reg.get<controller::ControllableCamera>(e_camera);
+        auto &controllable = reg.get<Controller::ControllableCamera>(e_camera);
         auto &camera = reg.get<engine::Camera>(e_camera);
         auto &listener = reg.get<engine::input::InputListener>(e_camera);
-        auto &velocity = reg.get<engine::physics::MoveIntent>(e_camera);
-        auto &orientation = reg.get<engine::Orientation>(e_camera);
+        auto &velocity = reg.get<engine::Velocity>(e_camera).values[m_uid];
+        auto &orientation = static_cast<glm::quat &>(reg.get<engine::Orientation>(e_camera));
         auto &window = reg.get<engine::Window>(controllable.window);
+        auto &viewMat = static_cast<glm::mat4 &>(reg.get<engine::ModelMatrix>(e_camera));
 
-        glm::mat4 invViewMat = glm::inverse(camera.viewMat);
-        glm::vec3 right   = invViewMat * glm::vec4{1, 0, 0, 0};
-        glm::vec3 up      = invViewMat * glm::vec4{0, 1, 0, 0};
-        glm::vec3 forward = invViewMat * glm::vec4{0, 0,-1, 0};
+        glm::mat3 invViewMat = glm::inverse(glm::mat3(viewMat));
+        glm::vec3 right   = invViewMat * glm::vec3{1, 0, 0};
+        glm::vec3 up      = invViewMat * glm::vec3{0, 1, 0};
+        glm::vec3 forward = invViewMat * glm::vec3{0, 0,-1};
+        ENGINE_TRACE(fmt::streamed(velocity));
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -91,6 +92,6 @@ void controller::update(ecs::registry &reg)
         camera.size = window.size;
 
         camera.projMat = glm::perspective<float>(glm::radians(controllable.fov), (float) camera.size.x / (float) camera.size.y, controllable.znear, controllable.zfar);
-        camera.viewMat = glm::translate(glm::mat4_cast(glm::normalize(orientation)), -reg.get<engine::Position>(e_camera));
+        viewMat = glm::mat4_cast(glm::normalize(orientation)) * glm::translate(glm::mat4(1.0f), -reg.get<engine::Position>(e_camera));
     }
 }

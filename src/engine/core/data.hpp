@@ -119,17 +119,15 @@ namespace engine
     struct Camera
     {
         glm::uvec2 size{0};
-        glm::mat4 viewMat{1.0f};
         glm::mat4 projMat{1.0f};
     };
-    struct ModelMatrix 
-    {
-        glm::mat4 value;
-    };
+
+    struct ModelMatrix : glm::mat4 {};
 
     struct Position : glm::vec3 {};
     struct Orientation : glm::quat {};
-    struct Velocity : glm::vec3 {};
+    struct OrientationEulerXYZ : glm::vec3 {};
+    struct Scale : glm::vec3 {};
 
     // TODO: move it somewhere or do it better.
     /**

@@ -112,50 +112,37 @@ int main(int argc, char **argv) {
 
     ecs::registry registry;
 
-    auto e_window = registry.create(engine::Window{window});
+    auto e_window = registry.create(
+        engine::Window{window}
+    );
 
     engine::input::setup(registry);
-    engine::physics::setup(registry);
     engine::Logger::init();
     
     engine::Loader loader{registry};
     auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");
     auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.obj");
 
-    registry.create(engine::Instance{cube}, engine::ModelMatrix{
-        glm::rotate(
-            glm::translate(
-                glm::mat4{1.0f},
-                {1, 1, -2}
-            ),
-            45.0f,
-            {1.0f, 2, -4}
-        )
-    });
-    registry.create(engine::Instance{suzanne}, engine::ModelMatrix{
-        glm::rotate(
-            glm::translate(
-                glm::mat4{1.0f},
-                {-1, 1, 5}
-            ),
+    registry.create(
+        engine::Instance{cube}, 
+        engine::Position{{1, 1, -2}},
+        engine::OrientationEulerXYZ{{-45, 90, 35}}
+    );
+    registry.create(
+        engine::Instance{suzanne},
+        engine::Position{{-1, 1, 5}},
+        engine::Orientation{glm::angleAxis(
             -26.0f,
-            {1.0f, 2, -4}
-        )
-    });
+            glm::vec3{1.0f, 2, -4}
+        )},
+        engine::Scale{glm::vec3{0.1}}
+    );
     auto fox_instance = registry.create(
         engine::Instance{
             loader.load(engine::DataType::MODEL, "res/models/fox.glb")
         }, 
-        engine::ModelMatrix{
-            glm::translate(
-                glm::mat4{1.0f},
-                {4, 0, -7}
-            ) 
-            * glm::scale(
-                glm::mat4{1.0f},
-                glm::vec3{0.01}
-            )
-        },
+        engine::Position{{4, 0, -7}},
+        engine::Scale{glm::vec3{0.01}},
         engine::CurrentAnimation{
             .name = "Survey"
         }
@@ -164,17 +151,9 @@ int main(int argc, char **argv) {
         engine::Instance{
             loader.load(engine::DataType::MODEL, "res/models/Silly_Dancing.fbx")
         }, 
-        engine::ModelMatrix{
-            glm::translate(
-                glm::mat4{1.0f},
-                {0, 0, -7}
-            ) 
-            * glm::scale(
-                glm::mat4{1.0f},
-                glm::vec3{0.01}
-            )
-        }
-        ,engine::CurrentAnimation{
+        engine::Position{{0, 0, -7}},
+        engine::Scale{glm::vec3{0.01}},
+        engine::CurrentAnimation{
             .name = "mixamo.com",
             .speed = 2
         }
@@ -183,17 +162,9 @@ int main(int argc, char **argv) {
         engine::Instance{
             loader.load(engine::DataType::MODEL, "res/models/Gangnam.fbx")
         }, 
-        engine::ModelMatrix{
-            glm::translate(
-                glm::mat4{1.0f},
-                {-2, 0, -8}
-            ) 
-            * glm::scale(
-                glm::mat4{1.0f},
-                glm::vec3{0.01}
-            )
-        }
-        ,engine::CurrentAnimation{
+        engine::Position{{-2, 0, -8}},
+        engine::Scale{glm::vec3{0.01}},
+        engine::CurrentAnimation{
             .name = "mixamo.com",
             .speed = 1
         }
@@ -202,32 +173,16 @@ int main(int argc, char **argv) {
         engine::Instance{
             loader.load(engine::DataType::MODEL, "res/models/deccer_cubes/SM_Deccer_Cubes_Textured_Complex.glb")
         }, 
-        engine::ModelMatrix{
-            glm::translate(
-                glm::mat4{1.0f},
-                {-5, 0, 0}
-            )
-            // * glm::scale(
-            //     glm::mat4{1.0f},
-            //     glm::vec3{0.01}
-            // )
-        }
+        engine::Position{{-5, 0, 0}},
+        engine::Scale{glm::vec3{0.5}}
     );
     registry.create(
         engine::Instance{
             loader.load(engine::DataType::MODEL, "res/models/blob.glb")
         }, 
-        engine::ModelMatrix{
-            glm::translate(
-                glm::mat4{1.0f},
-                {5, 0, -3}
-            ) 
-            * glm::scale(
-                glm::mat4(1.0f),
-                glm::vec3(0.5)
-            )
-        }
-        ,engine::CurrentAnimation{
+        engine::Position{{5, 0, -3}},
+        engine::Scale{glm::vec3{0.5}},
+        engine::CurrentAnimation{
             .name = "ArmatureAction",
             .speed = 1
         }
@@ -235,8 +190,8 @@ int main(int argc, char **argv) {
 
     progress += 1.0f / toLoad;
     
-    ecs::entity e_camera = controller::createCamera(registry, e_window);
-    auto &camera = registry.get<controller::ControllableCamera>(e_camera);
+    ecs::entity e_camera = Controller::createCamera(registry, e_window);
+    auto &camera = registry.get<Controller::ControllableCamera>(e_camera);
     camera.speed = 4;
     camera.sensitivity = 0.125;
 
@@ -261,6 +216,13 @@ int main(int argc, char **argv) {
     renderer = &mainRenderer;
 
     engine::Animator animator;
+    Controller controller;
+
+    engine::IPhysicsEngine *physics;
+    engine::EnginePhysics mainPhysics;
+    physics = &mainPhysics;
+
+    engine::ModelMatrixAssembler modelMatrixAssembler;
 
     progress = 1;
     loadingScreenThread.join();
@@ -293,9 +255,10 @@ int main(int argc, char **argv) {
         }
 
         engine::input::update(registry);
-        controller::update(registry);
+        controller.update(registry);
         animator.update(registry, deltatime);
-        engine::physics::update(registry, deltatime);
+        physics->update(registry, deltatime);
+        modelMatrixAssembler.update(registry);
         renderer->draw(registry);
 
         glfwSwapBuffers(window);

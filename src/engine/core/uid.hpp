@@ -12,6 +12,23 @@ namespace engine
         type m_id;
     public:
         inline UID() : m_id(m_next++) {};
-        inline type get() const { return m_id; };
+        inline type value() const { return m_id; };
+
+        friend bool operator==(UID const &lhs, UID const &rhs) { return lhs.m_id == rhs.m_id; }
+        friend bool operator!=(UID const &lhs, UID const &rhs) { return lhs.m_id != rhs.m_id; }
+        friend bool operator< (UID const &lhs, UID const &rhs) { return lhs.m_id <  rhs.m_id; }
+        friend bool operator<=(UID const &lhs, UID const &rhs) { return lhs.m_id <= rhs.m_id; }
+        friend bool operator> (UID const &lhs, UID const &rhs) { return lhs.m_id >  rhs.m_id; }
+        friend bool operator>=(UID const &lhs, UID const &rhs) { return lhs.m_id >= rhs.m_id; }
     };
 } // namespace engine
+
+namespace std {
+    template <>
+    struct hash<engine::UID> {
+        inline size_t operator()(engine::UID const &uid) const 
+        {
+            return hash<engine::UID::type>{}(uid.value()); 
+        }
+    };
+} // namespace std
