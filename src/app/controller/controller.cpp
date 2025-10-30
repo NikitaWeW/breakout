@@ -28,7 +28,6 @@ void Controller::update(ecs::registry &reg)
         glm::vec3 right   = invViewMat * glm::vec3{1, 0, 0};
         glm::vec3 up      = invViewMat * glm::vec3{0, 1, 0};
         glm::vec3 forward = invViewMat * glm::vec3{0, 0,-1};
-        ENGINE_TRACE(fmt::streamed(velocity));
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 

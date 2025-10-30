@@ -153,9 +153,11 @@ int main(int argc, char **argv) {
         }, 
         engine::Position{{0, 0, -7}},
         engine::Scale{glm::vec3{0.01}},
+        engine::Acceleration{.values = {{engine::UID{}, {0, 0.01, 0}}}},
+        engine::Velocity{},
         engine::CurrentAnimation{
             .name = "mixamo.com",
-            .speed = 2
+            .speed = 8
         }
     );
     registry.create(

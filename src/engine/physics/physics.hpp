@@ -31,6 +31,8 @@ namespace engine
     struct EnginePhysics : public IPhysicsEngine
     {
     private:
+        void movement(ecs::registry &reg, float deltatime);
+        engine::UID m_uid;
     public:
         void update(ecs::registry &registry, float deltatime) override;
     };
