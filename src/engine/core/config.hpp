@@ -3,6 +3,7 @@
 #include <cassert>
 
 #define ENGINE_ASSERT(x) assert(x)
+#define ENGINE_THROW(x) throw x
 #define ENGINE_ASSERT_MSG(x, m) ENGINE_ASSERT((x) && m)
 #define ENGINE_PROFILE()
 

@@ -15,6 +15,7 @@ namespace engine
     {
         MODEL, 
         MESH, 
+        CUBEMAP, 
         MATERIAL,
         AUDIO, 
         BUFFER,
@@ -120,6 +121,12 @@ namespace engine
     {
         glm::uvec2 size{0};
         glm::mat4 projMat{1.0f};
+    };
+
+    struct Cubemap
+    {
+        std::array<Bitmap<float>, 6> faces;
+        std::string path;
     };
 
     struct ModelMatrix : glm::mat4 {};

@@ -102,6 +102,8 @@ static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity
         break;
     }
 
+    while(error.message.back() == '\n')
+        error.message.pop_back();
     ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.id, error.severity, error.type, error.source, error.message);
     ENGINE_ASSERT_MSG(severity != GL_DEBUG_SEVERITY_HIGH, "high severity error in the opengl renderer!");
 }
@@ -135,17 +137,25 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
     
     glCreateFramebuffers(1, &data.oitFBO.id);
     {
-        std::array<GLenum, 2> const drawbuffers = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+        std::array<GLenum, 3> const drawbuffers = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
         glNamedFramebufferDrawBuffers(data.oitFBO.id, drawbuffers.size(), drawbuffers.data());
     }
 
     glCreateFramebuffers(1, &data.mainFBO.id);
 
-    data.plainColorShader = ogl::compileShader("shaders/" "temporary_test");
+    data.screenShader                  = ogl::compileShader("shaders/hdrImage");
+    data.propShader                    = ogl::compileShader("shaders/prop");
+    data.oitCompositeShader            = ogl::compileShader("shaders/oitComposite");
+    data.skyboxShader                  = ogl::compileShader("shaders/skybox");
+    data.depthMapShader                = ogl::compileShader("shaders/depthMapOpaque");
+    data.depthMapOmnidirectionalShader = ogl::compileShader("shaders/depthMapOmnidirectionalOpaque");
 
     data.defaultTexture = ogl::makeTexture(engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
         1, 1, 1
     }.data()}, false);
+
+    glCreateBuffers(1, &data.lightUBO.id);
+    glNamedBufferData(data.lightUBO.id, sizeof(renderer::RendererData::LightsUBOStorage), nullptr, GL_DYNAMIC_DRAW);
 }
 
 engine::EngineRenderer::EngineRenderer(Context const &context)

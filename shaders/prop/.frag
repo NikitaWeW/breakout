@@ -1,16 +1,30 @@
 #version 430 core
-out vec4 o_color;
+layout (location = 0) out vec4  o_color;
+layout (location = 1) out vec4  o_accumulation;
+layout (location = 2) out float o_revealage;
+
+uniform bool u_transparent = false;
 
 const uint MAX_LIGHTS = 5u;
 const float ambientKoeffitient = 0.05;
-const float opaqueTreshold = 0.95;
+const float opaqueThreshold = 0.95;
 
+struct MaterialTextures 
+{
+    sampler2D albedo;
+    sampler2D normal;
+    sampler2D roughness;
+    sampler2D metallic;
+};
+struct MaterialProperties
+{
+    float shininess;
+    vec4 albedo;
+};
 struct Material
 {
-    sampler2D diffuse;
-    sampler2D normal;
-    sampler2D rough;
-    float shininess;
+    MaterialTextures textures;
+    MaterialProperties properties;
 };
 
 // TODO: atlas
@@ -52,8 +66,8 @@ in VS_OUT {
     flat mat3 TBN;
 } fs_in;
 
+uniform mat4 u_viewMat;
 uniform Material u_material;
-uniform vec3 u_camPos;
 layout(std140) uniform u_lights {
     uint numPointLights;
     PointLight pointLights[MAX_LIGHTS];
@@ -62,7 +76,6 @@ layout(std140) uniform u_lights {
     uint numSpotLights;
     SpotLight spotLights[MAX_LIGHTS];
 };
-uniform vec4 u_color;
 
 vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
 vec3 calculateLight(DirLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
@@ -71,13 +84,14 @@ vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3
 void main() 
 {
     vec2 texCoords = fs_in.texCoords;
-    vec3 viewDir = u_camPos - fs_in.fragPos;
-    vec3 normal = normalize(fs_in.TBN * normalize(texture(u_material.normal, texCoords).rgb * 2.0 - 1.0));
+    vec3 viewDir = -u_viewMat[3].xyz - fs_in.fragPos;
+    vec3 normal = normalize(fs_in.TBN * normalize(texture(u_material.textures.normal, texCoords).rgb * 2.0 - 1.0));
     vec3 fragPos = fs_in.fragPos;
 
-    o_color = texture(u_material.diffuse, texCoords) * u_color;
+    vec4 color = texture(u_material.textures.albedo, texCoords) * u_material.properties.albedo;
 
-    if(o_color.a < opaqueTreshold) discard;
+    if(u_transparent && color.a > opaqueThreshold) discard;
+    if(!u_transparent && color.a < opaqueThreshold) discard;
 
     vec3 lightColor = vec3(0);
     for(uint i = 0u; i < numPointLights; ++i) {
@@ -90,8 +104,15 @@ void main()
         lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
     }
 
-    o_color *= vec4(lightColor, 1);
-    // o_color = vec4(lightColor, 1);
+    color *= vec4(lightColor, 1);
+
+    if(u_transparent) {
+        float weight = clamp(pow(min(1.0, color.a * 10.0) + 0.01, 3.0) * 1e8 * pow(1.0 - gl_FragCoord.z * 0.9, 3.0), 1e-2, 3e3);
+        o_accumulation = vec4(color.rgb * color.a, color.a) * weight;
+        o_revealage = color.a;
+    } else {
+        o_color = color;
+    }
 }
 
 vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 normal, vec3 viewDir);
@@ -114,8 +135,8 @@ vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, v
     vec3 specular = 
         light.color * 
         attenuation *
-        pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.shininess) *
-        vec3(1 - texture(material.rough, texCoords));
+        pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.properties.shininess) *
+        vec3(1 - texture(material.textures.roughness, texCoords));
     vec3 shadow = calculateShadow(light, depthMap, fragPos, normal, viewDir);
 
     return vec3(ambient + (1 - shadow) * (diffuse + specular));
@@ -130,8 +151,8 @@ vec3 calculateLight(DirLight light, sampler2D depthMap, Material material, vec3 
         vec3(max(dot(normal, lightDir), 0.0));
     vec3 specular = 
         light.color * 
-        pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.shininess) * 
-        vec3(1 - texture(material.rough, texCoords));
+        pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.properties.shininess) * 
+        vec3(1 - texture(material.textures.roughness, texCoords));
     vec3 shadow = calculateShadow(light, depthMap, fragPos, normal, viewDir);
 
     return ambient + (1 - shadow) * (diffuse + specular);
@@ -157,8 +178,8 @@ vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3
             light.color *
             intensity * 
             attenuation *
-            pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.shininess) * 
-            vec3(1 - texture(material.rough, texCoords));
+            pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.properties.shininess) * 
+            vec3(1 - texture(material.textures.roughness, texCoords));
         vec3 shadow = calculateShadow(light, depthMap, fragPos, normal, viewDir);
 
         return ambient + (1 - shadow) * (diffuse + specular);
@@ -166,7 +187,7 @@ vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3
         return ambient;
     }
 }
-float linearizeDepth(float depth, float near_plane, float far_plane) { return (2.0 * near_plane * far_plane) / (far_plane + near_plane - (depth * 2.0 - 1.0) * (far_plane - near_plane)); }
+// float linearizeDepth(float depth, float near_plane, float far_plane) { return (2.0 * near_plane * far_plane) / (far_plane + near_plane - (depth * 2.0 - 1.0) * (far_plane - near_plane)); }
 
 // array of offset direction for sampling
 const vec3 gridSamplingDisk[20] = vec3[]
@@ -179,6 +200,7 @@ const vec3 gridSamplingDisk[20] = vec3[]
 );
 vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 normal, vec3 viewDir)
 {
+    return vec3(0);
     vec3 lightToFrag = fragPos - light.position;
     float currentDepth = length(lightToFrag) / light.farPlane;
 
@@ -197,6 +219,7 @@ vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 
 }
 vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 fragPos, vec3 normal, vec3 viewDir)
 {
+    return vec3(0);
     vec4 fragPosLightSpace = light.viewProj * vec4(fragPos, 1);
     vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projectedCoords = projectedCoords * 0.5 + 0.5;
@@ -227,6 +250,7 @@ vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 fragPos, vec3 norm
 }
 vec3 calculateShadow(SpotLight light, sampler2D depthMap, vec3 fragPos, vec3 normal, vec3 viewDir)
 {
+    return vec3(0);
     vec4 fragPosLightSpace = light.viewProj * vec4(fragPos, 1);
     vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projectedCoords = projectedCoords * 0.5 + 0.5;

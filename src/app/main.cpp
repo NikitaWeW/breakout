@@ -10,6 +10,7 @@
 #include <thread>
 #include <random>
 #include <stack>
+#include "scene.hpp"
 
 // The engine pipeline, game loop and other stuff will be abstracted 
 // into the engine::Engine class one the engine becomes mature enough.
@@ -85,8 +86,8 @@ int main(int argc, char **argv) {
     constexpr unsigned toLoad = 3 + 1;
     float progress = 0; // will be easier once i'll implement some kind of asset manager.
     
-    // std::thread loadingScreenThread{cooload::loadingScreen, nullptr}; // disable loading screen
-    std::thread loadingScreenThread{cooload::loadingScreen, &progress};
+    std::thread loadingScreenThread{cooload::loadingScreen, nullptr}; // disable loading screen
+    // std::thread loadingScreenThread{cooload::loadingScreen, &progress};
 
     GLFWwindow* window;
     
@@ -119,76 +120,7 @@ int main(int argc, char **argv) {
     engine::input::setup(registry);
     engine::Logger::init();
     
-    engine::Loader loader{registry};
-    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");
-    auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.obj");
-
-    registry.create(
-        engine::Instance{cube}, 
-        engine::Position{{1, 1, -2}},
-        engine::OrientationEulerXYZ{{-45, 90, 35}}
-    );
-    registry.create(
-        engine::Instance{suzanne},
-        engine::Position{{-1, 1, 5}},
-        engine::Orientation{glm::angleAxis(
-            -26.0f,
-            glm::vec3{1.0f, 2, -4}
-        )},
-        engine::Scale{glm::vec3{0.1}}
-    );
-    auto fox_instance = registry.create(
-        engine::Instance{
-            loader.load(engine::DataType::MODEL, "res/models/fox.glb")
-        }, 
-        engine::Position{{4, 0, -7}},
-        engine::Scale{glm::vec3{0.01}},
-        engine::CurrentAnimation{
-            .name = "Survey"
-        }
-    ); 
-    registry.create(
-        engine::Instance{
-            loader.load(engine::DataType::MODEL, "res/models/Silly_Dancing.fbx")
-        }, 
-        engine::Position{{0, 0, -7}},
-        engine::Scale{glm::vec3{0.01}},
-        engine::Acceleration{.values = {{engine::UID{}, {0, 0.01, 0}}}},
-        engine::Velocity{},
-        engine::CurrentAnimation{
-            .name = "mixamo.com",
-            .speed = 8
-        }
-    );
-    registry.create(
-        engine::Instance{
-            loader.load(engine::DataType::MODEL, "res/models/Gangnam.fbx")
-        }, 
-        engine::Position{{-2, 0, -8}},
-        engine::Scale{glm::vec3{0.01}},
-        engine::CurrentAnimation{
-            .name = "mixamo.com",
-            .speed = 1
-        }
-    );
-    registry.create(
-        engine::Instance{
-            loader.load(engine::DataType::MODEL, "res/models/deccer_cubes/SM_Deccer_Cubes_Textured_Complex.glb")
-        }, 
-        engine::Position{{-5, 0, 0}},
-        engine::Scale{glm::vec3{0.5}}
-    );
-    registry.create(
-        engine::Instance{
-            loader.load(engine::DataType::MODEL, "res/models/blob.glb")
-        }, 
-        engine::Position{{5, 0, -3}},
-        engine::Scale{glm::vec3{0.5}},
-        engine::CurrentAnimation{
-            .name = "ArmatureAction",
-            .speed = 1
-        }
-    );
+    createScene(registry);
 
     progress += 1.0f / toLoad;
     
@@ -200,22 +132,10 @@ int main(int argc, char **argv) {
     engine::EngineRenderer mainRenderer{{
         .e_camera = e_camera
     }};
-    BoneDebugRenderer debugRenderer{
-        engine::EngineRenderer::Context{
-            .e_camera = e_camera
-        },
-        registry.get<engine::Model>(loader.load(engine::DataType::MODEL, "res/models/arrow.glb"))
-    };
 
     engine::IRenderer *renderer = &mainRenderer;
     renderer->setup(registry); 
     renderer->processData(registry);
-
-    renderer = &debugRenderer;
-    renderer->setup(registry);
-    renderer->processData(registry);
-
-    renderer = &mainRenderer;
 
     engine::Animator animator;
     Controller controller;
@@ -235,25 +155,28 @@ int main(int argc, char **argv) {
     {
         auto start = std::chrono::high_resolution_clock::now();
 
-        if(glm::mod<float>(glfwGetTime(), 5) < 0.01 && !registry.has<engine::AnimationTransition>(fox_instance))
+        for(auto e_instance : registry.view<ChangeAnimationsTag, engine::Instance>())
         {
-            auto const &model = registry.get<engine::Model>(registry.get<engine::Instance>(fox_instance).e_model);
-
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_int_distribution<> distrib(0, model.animations.size() - 1);
-            
-            std::string newAnimation = model.animations.at(distrib(gen)).name;
-            auto const &newAnim = *std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == newAnimation; });
-            float duration = 0.5 * newAnim.durationTicks / newAnim.ticksPerSecond;
-
-            // ENGINE_INFO("transition from {} to {} in {}s", current.name, newAnimation, duration);
-
-            registry.emplace<engine::AnimationTransition>(fox_instance, engine::AnimationTransition{
-                .to = newAnimation,
-                .factorPerSecond = 1 / duration,
-                .easeFunction = engine::ease::inOutCubic,
-            });
+            if(glm::mod<float>(glfwGetTime(), 5) < 0.01 && !registry.has<engine::AnimationTransition>(e_instance))
+            {
+                auto const &model = registry.get<engine::Model>(registry.get<engine::Instance>(e_instance).e_model);
+    
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::uniform_int_distribution<> distrib(0, model.animations.size() - 1);
+                
+                std::string newAnimation = model.animations.at(distrib(gen)).name;
+                auto const &newAnim = *std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == newAnimation; });
+                float duration = 0.5 * newAnim.durationTicks / newAnim.ticksPerSecond;
+    
+                // ENGINE_INFO("transition from {} to {} in {}s", current.name, newAnimation, duration);
+    
+                registry.emplace<engine::AnimationTransition>(e_instance, engine::AnimationTransition{
+                    .to = newAnimation,
+                    .factorPerSecond = 1 / duration,
+                    .easeFunction = engine::ease::inOutCubic,
+                });
+            }
         }
 
         engine::input::update(registry);
@@ -262,7 +185,7 @@ int main(int argc, char **argv) {
         physics->update(registry, deltatime);
         modelMatrixAssembler.update(registry);
         renderer->draw(registry);
-
+        
         glfwSwapBuffers(window);
         glfwPollEvents();
 

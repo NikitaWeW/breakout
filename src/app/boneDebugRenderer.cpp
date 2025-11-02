@@ -1,3 +1,4 @@
+/*
 #include "boneDebugRenderer.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
@@ -93,3 +94,4 @@ void BoneDebugRenderer::setup(ecs::registry &reg)
 
     EngineRenderer::setup(reg);
 }
+*/

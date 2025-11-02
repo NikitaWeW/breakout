@@ -48,20 +48,69 @@ namespace engine::renderer
         bool animated = false;
     };
 
+    constexpr unsigned MAX_STORAGE_LIGHTS = 5u;
     struct RendererData
     {
         ogl::Framebuffer oitFBO;
         ogl::Texture oitAccumTexture;
-        ogl::Texture oitRevelageTexture;
+        ogl::Texture oitRevealageTexture;
 
         ogl::Framebuffer mainFBO;
         ogl::Texture mainFBOColor;
         ogl::Renderbuffer mainFBORBO;
 
-        ogl::Program plainColorShader;
-
         glm::uvec2 prevCamSize{0};
 
+        ogl::Program screenShader;
+        ogl::Program propShader;
+        ogl::Program oitCompositeShader;
+        ogl::Program skyboxShader;
+        ogl::Program depthMapShader;
+        ogl::Program depthMapOmnidirectionalShader;
+
+        // The model loader should handle the default textures. This is for edge cases.
         ogl::Texture defaultTexture;
+
+        struct LightsUBOStorage
+        {
+            struct PointLight
+            {
+                glm::vec3 color;
+                float attenuation;
+                glm::vec3 position;
+                float farPlane;
+            }; // 64 bytes
+            struct DirLight
+            {
+                glm::vec3 direction;
+                float _pad0;
+                glm::vec3 color;
+                float _pad1;
+                glm::mat4 viewProj;
+            }; // 96 bytes
+            struct SpotLight
+            {
+                glm::vec3 position;
+                float innerConeAngle;
+                glm::vec3 direction;
+                float outerConeAngle;
+                glm::vec3 _pad0;
+                float attenuation;
+                glm::vec3 color;
+                float _pad1;
+                glm::mat4 viewProj;
+            }; // 128 bytes
+
+            uint32_t numPointLights;
+            glm::vec3 _pad0;
+            std::array<PointLight, MAX_STORAGE_LIGHTS> pointLights;
+            uint32_t numDirLights;
+            glm::vec3 _pad1;
+            std::array<DirLight, MAX_STORAGE_LIGHTS> dirLights;
+            uint32_t numSpotLights;
+            glm::vec3 _pad2;
+            std::array<SpotLight, MAX_STORAGE_LIGHTS> spotLights;
+        } lightStorage;
+        ogl::UBO lightUBO; 
     }; 
 } // namespace engine::renderer

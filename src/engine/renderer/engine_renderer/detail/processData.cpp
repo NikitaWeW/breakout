@@ -105,6 +105,85 @@ void engine::EngineRenderer::processTextures(ecs::registry &reg)
     }
 }
 
+static void processPointLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light, engine::EngineRenderer::Context const &context)
+{
+    auto const &light = reg.get<engine::PointLight>(e_light);
+    auto &storageLight = data.lightStorage.pointLights[data.lightStorage.numPointLights];
+
+    storageLight.farPlane = context.shadowMapFarPlane;
+    storageLight.attenuation = 1 / light.intensity;
+    storageLight.color = light.color;
+    storageLight.position = reg.has<engine::ModelMatrix>(e_light) ? reg.get<engine::ModelMatrix>(e_light)[3] : glm::vec3{0};
+}
+static void processDirLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light, engine::EngineRenderer::Context const &context)
+{
+    auto const &light = reg.get<engine::DirectionalLight>(e_light);
+    auto &storageLight = data.lightStorage.dirLights[data.lightStorage.numDirLights];
+
+    glm::mat4 const &modelMat = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f};
+    storageLight.color = light.color;
+    storageLight.direction = -glm::normalize(glm::vec3(modelMat[2]));
+    storageLight.viewProj = modelMat; // TODO
+}
+static void processSpotLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light, engine::EngineRenderer::Context const &)
+{
+    auto const &light = reg.get<engine::SpotLight>(e_light);
+    auto &storageLight = data.lightStorage.spotLights[data.lightStorage.numSpotLights];
+
+    glm::mat4 const &modelMat = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f};
+    storageLight.color = light.color;
+    storageLight.direction = -glm::normalize(glm::vec3(modelMat[2]));
+    storageLight.position = glm::normalize(glm::vec3(modelMat[3]));
+    storageLight.attenuation = 1 / light.intensity;
+    storageLight.innerConeAngle = light.innerConeAngle;
+    storageLight.outerConeAngle = light.outerConeAngle;
+    storageLight.viewProj = modelMat; // TODO
+}
+void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::RendererData &data)
+{
+    data.lightStorage.numPointLights = 0;
+    data.lightStorage.numDirLights = 0;
+    data.lightStorage.numSpotLights = 0;
+    for(ecs::entity e_light : reg.view<DynamicLight>())
+    {
+        if(reg.has<PointLight>(e_light))
+        {
+            if(data.lightStorage.numPointLights >= renderer::MAX_STORAGE_LIGHTS)
+            {
+                ENGINE_CORE_ERROR("Too many point lights for renderer to store!");
+                continue;
+            }
+            processPointLight(data, reg, e_light, m_context);
+            ++data.lightStorage.numPointLights;
+        }
+        if(reg.has<DirectionalLight>(e_light))
+        {
+            if(data.lightStorage.numDirLights >= renderer::MAX_STORAGE_LIGHTS)
+            {
+                ENGINE_CORE_ERROR("Too many dir lights for renderer to store!");
+                continue;
+            }
+            processDirLight(data, reg, e_light, m_context);
+            ++data.lightStorage.numDirLights;
+        }
+        if(reg.has<SpotLight>(e_light))
+        {
+            if(data.lightStorage.numSpotLights >= renderer::MAX_STORAGE_LIGHTS)
+            {
+                ENGINE_CORE_ERROR("Too many spot lights for renderer to store!");
+                continue;
+            }
+            processSpotLight(data, reg, e_light, m_context);
+            ++data.lightStorage.numSpotLights;
+        }
+        if(reg.has<AreaLight>(e_light))
+        {
+            ENGINE_ASSERT_MSG(false, "Area lights not implemented yet!");
+        }
+    } 
+
+    glNamedBufferSubData(data.lightUBO.id, 0, sizeof(data.lightStorage), &data.lightStorage);
+}
 void engine::EngineRenderer::processData(ecs::registry &reg)
 {
     processTextures(reg);
