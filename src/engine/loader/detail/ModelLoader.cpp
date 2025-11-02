@@ -7,8 +7,11 @@
 #include "assimp/postprocess.h"
 #include "stb_image.h"
 
-#define MODEL_LOADER_TRACE(...)
+// Enable verbose loading by uncommenting the line below or adding a compiler definition.
 // #define MODEL_LOADER_TRACE(...) ENGINE_CORE_TRACE(__VA_ARGS__)
+#ifndef MODEL_LOADER_TRACE
+#define MODEL_LOADER_TRACE(...)
+#endif
 
 constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
 {
@@ -500,7 +503,7 @@ engine::Mesh engine::loader::ModelLoader::processMesh(aiMesh const *aimesh, glm:
 }
 void engine::loader::ModelLoader::processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f})
 {
-    MODEL_LOADER_TRACE("processing node \"{}\"", node->mName.C_Str());
+    MODEL_LOADER_TRACE("Processing node \"{}\"", node->mName.C_Str());
     glm::mat4 nodeTransform = parentTransform * toMat4(node->mTransformation);
     for(unsigned i = 0; i < node->mNumMeshes; ++i) {
         currentModel->meshes.emplace_back(std::move(processMesh(currentScene->mMeshes[node->mMeshes[i]], nodeTransform)));
@@ -595,7 +598,7 @@ ecs::entity engine::loader::ModelLoader::load()
 
     processNodeMeshes(currentScene->mRootNode);
 
-    MODEL_LOADER_TRACE("Model has {} bones. Bone map size: {}.", currentModel->skeleton.boneMap.size(), currentModel->skeleton.boneMap.size());
+    MODEL_LOADER_TRACE("Model has {} bones.", currentModel->skeleton.boneMap.size());
 
     currentModel->skeleton.parents.resize(currentModel->skeleton.boneMap.size());
     currentModel->skeleton.nodeTransform.resize(currentModel->skeleton.boneMap.size());
