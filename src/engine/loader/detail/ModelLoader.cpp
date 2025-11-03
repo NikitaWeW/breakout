@@ -84,7 +84,7 @@ aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string_view no
     return nullptr;
 }
 
-static engine::Material getDefaultMaterial(ecs::registry &registry)
+static ecs::entity getDefaultMaterial(ecs::registry &registry)
 {
     ecs::entity white = 0;
     ecs::entity blue = 0;
@@ -131,7 +131,7 @@ static engine::Material getDefaultMaterial(ecs::registry &registry)
         });
     if(!tile)
         tile = registry.create(engine::Texture{
-            .data = engine::Bitmap<float>{8, 8, 3, std::array<float, 8*8*3>{
+            .data = engine::Bitmap<float>{8, 8, 3, std::array<float, 8*8*3>{ // checkerboard
                 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
                 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
                 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
@@ -145,26 +145,37 @@ static engine::Material getDefaultMaterial(ecs::registry &registry)
             .path = "default/tile"
         });
 
-    return {
-        .textures = {
-            .albedo = tile,
-            .metallic = black,
-            .roughness = white,
-            .ambient = white,
-            .normal = blue,
-            .displacement = black,
-            .alpha = white 
-        },
-        .properties = {
-            .ambient       = {0.1f, 0.1f, 0.1f},
-            .albedo        = {0.8f, 0.8f, 0.8f, 1.0f},
-            .specular      = {0.5f, 0.5f, 0.5f},
-            .emission      = {0.0f, 0.0f, 0.0f},
-    
-            .shininess = 32.0f,
-            .ior       = 1.5f
-        }
-    };
+    struct ModelLoaderDefaultMaterialTag {};
+    auto defaultMaterialView = registry.view<engine::Material, ModelLoaderDefaultMaterialTag>();
+    ENGINE_ASSERT(defaultMaterialView.size() <= 1);
+
+    if(defaultMaterialView.empty())
+    {
+        return registry.create(ModelLoaderDefaultMaterialTag{}, engine::Material{
+            .textures = {
+                .albedo = tile,
+                .metallic = black,
+                .roughness = white,
+                .ambient = white,
+                .normal = blue,
+                .displacement = black,
+                .alpha = white 
+            },
+            .properties = {
+                .ambient       = {0.1f, 0.1f, 0.1f},
+                .albedo        = {0.8f, 0.8f, 0.8f, 1.0f},
+                .specular      = {0.5f, 0.5f, 0.5f},
+                .emission      = {0.0f, 0.0f, 0.0f},
+        
+                .shininess = 32.0f,
+                .ior       = 1.5f
+            }
+        });
+    }
+    else 
+    {
+        return defaultMaterialView[0];
+    }
 }
 static ecs::entity fromRawAssimpTexture(ecs::registry &registry, aiTexture const *texture)
 {
@@ -479,16 +490,18 @@ engine::Mesh engine::loader::ModelLoader::processMesh(aiMesh const *aimesh, glm:
         normalizeWeights(mesh.geometry);
     }
 
-    auto defaultMaterial = getDefaultMaterial(*currentRegistry);
+    auto e_defaultMaterial = getDefaultMaterial(*currentRegistry);
     if(!currentScene->HasMaterials())
     {
-        mesh.material = defaultMaterial;
+        mesh.e_material = e_defaultMaterial;
     }
     else
     {
-        aiMaterial const *material = currentScene->mMaterials[aimesh->mMaterialIndex];
-        mesh.material = convertMaterial(material, defaultMaterial.properties);
-        setMissingTextures(mesh.material.textures, defaultMaterial.textures);
+        auto const &defaultMaterial = currentRegistry->get<engine::Material>(e_defaultMaterial);
+        aiMaterial const *aimaterial = currentScene->mMaterials[aimesh->mMaterialIndex];
+        auto material = convertMaterial(aimaterial, defaultMaterial.properties);
+        setMissingTextures(material.textures, defaultMaterial.textures);
+        mesh.e_material = currentRegistry->create(std::move(material));
     }
 
     calculateMissingPrimitives(mesh);

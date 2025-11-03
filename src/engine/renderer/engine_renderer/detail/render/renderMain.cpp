@@ -24,7 +24,7 @@ static void bindTexture(int location, ogl::Texture texture, ogl::Texture default
 
     ++slot;
 }
-static void bindTextures(ogl::Program const &program, engine::renderer::MaterialTextures const &textures, ogl::Texture defaultTexture)
+static void bindTextures(ogl::Program const &program, engine::renderer::Material::Textures const &textures, ogl::Texture defaultTexture)
 {
     unsigned slot = 0;
     bindTexture(ogl::getUniform(program, "u_material.textures.albedo"), textures.albedo, defaultTexture, slot);
@@ -43,19 +43,29 @@ static void sendMaterial(ogl::Program const &program, engine::Material::Properti
     glUniform1f(ogl::getUniform(program, "u_material.properties.metallic"), material.metallic);
     glUniform1f(ogl::getUniform(program, "u_material.properties.ior"), material.ior);
 }
+static engine::renderer::Material getMaterial(ecs::registry const &reg, ecs::entity e_material)
+{
+    using namespace engine;
+    ENGINE_ASSERT(e_material != 0);
+    ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedMaterial>(e_material), "Forgot to call engine::EngineRenderer::processData()?");
+
+    return reg.get<renderer::Material>(reg.get<renderer::ProcessedMaterial>(e_material).data);
+}
 
 void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance)
 {
-    renderer::Model const &model = reg.get<renderer::Model>(reg.get<renderer::ProcessedModel>(reg.get<engine::Instance>(e_instance).e_model).data);
+    auto const &instance = reg.get<engine::Instance>(e_instance);
+    renderer::Model const &model = reg.get<renderer::Model>(reg.get<renderer::ProcessedModel>(instance.e_model).data);
     bool animated = model.animated && reg.has<CurrentAnimation>(e_instance);
 
     for(auto const &mesh : model.meshes)
     {
         glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance) : glm::mat4{1.0f};
         glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
+        renderer::Material material = getMaterial(reg, instance.e_material ? instance.e_material : mesh.e_material);
 
-        bindTextures(shader, mesh.textures, data.defaultTexture);
-        sendMaterial(shader, mesh.material);
+        bindTextures(shader, material.textures, data.defaultTexture);
+        sendMaterial(shader, material.properties);
         
         glUniformMatrix4fv(ogl::getUniform(shader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
         glUniformMatrix4fv(ogl::getUniform(shader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));

@@ -4,11 +4,13 @@
 
 #define CAMERA_COMPONENTS engine::Camera, engine::ModelMatrix, engine::ModelMatrixAssemblerExclude, Controller::ControllableCamera, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener
 
-ecs::entity Controller::createCamera(ecs::registry &reg, ecs::entity window)
+ecs::entity Controller::createCamera(ecs::registry &reg, glm::vec3 pos, glm::vec3 target)
 {
     auto e = reg.create<CAMERA_COMPONENTS>();
-    ENGINE_ASSERT(reg.has<engine::Window>(window));
-    reg.get<Controller::ControllableCamera>(e).window = window;
+    reg.get<Controller::ControllableCamera>(e).window = reg.view<engine::Window>().at(0);
+    auto up = abs(glm::dot(glm::normalize(target - pos), glm::vec3{0,1,0})) > 0.99 ? glm::vec3{1,0,0} : glm::vec3{0,1,0};
+    static_cast<glm::quat &>(reg.get<engine::Orientation>(e)) = glm::quat_cast(glm::lookAt(pos, target, up));
+    static_cast<glm::vec3 &>(reg.get<engine::Position>(e)) = pos;
     return e;
 }
 
@@ -28,6 +30,7 @@ void Controller::update(ecs::registry &reg)
         glm::vec3 right   = invViewMat * glm::vec3{1, 0, 0};
         glm::vec3 up      = invViewMat * glm::vec3{0, 1, 0};
         glm::vec3 forward = invViewMat * glm::vec3{0, 0,-1};
+        // ENGINE_TRACE("{}", fmt::streamed(forward));
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
 

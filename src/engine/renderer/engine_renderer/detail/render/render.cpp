@@ -56,6 +56,8 @@ void engine::EngineRenderer::draw(ecs::registry &reg)
 
         resizeAttachment(data.mainFBO, data.mainFBOColor, camera.size);
         resizeAttachment(data.mainFBO, data.mainFBORBO, camera.size);
+
+        glNamedFramebufferRenderbuffer(data.oitFBO.id, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, data.mainFBORBO.id);
     }
 
     processLights(reg, data);

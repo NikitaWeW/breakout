@@ -53,15 +53,9 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
         {
             renderer::Mesh newMesh;
             newMesh.mode = GL_TRIANGLES;
-            newMesh.material = mesh.material.properties;
             newMesh.count = mesh.geometry.indices.size();
-            newMesh.textures = {
-                .albedo       = getTexture(reg, mesh.material.textures.albedo),
-                .normal       = getTexture(reg, mesh.material.textures.normal),
-                .metallic     = getTexture(reg, mesh.material.textures.metallic),
-                .roughness     = getTexture(reg, mesh.material.textures.roughness) 
-            };
     
+            newMesh.e_material = mesh.e_material;
             newMesh.buffers = {
                 .positions = ogl::makeBuffer<ogl::VBO>(mesh.geometry.positions),
                 .texCoords = ogl::makeBuffer<ogl::VBO>(mesh.geometry.texCoords),
@@ -91,9 +85,28 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
         reg.emplace<renderer::ProcessedModel>(e_model, entity);
     }
 }
+void engine::EngineRenderer::processMaterials(ecs::registry &reg) 
+{
+    for(ecs::entity e_material : reg.view<engine::Material>(ecs::exclude_t<renderer::ProcessedMaterial>{}))
+    {
+        auto const &material = reg.get<engine::Material>(e_material);
+        ecs::entity const &entity = e_material; // destination
+
+        renderer::Material newMaterial;
+        newMaterial.properties = material.properties;
+        newMaterial.textures = {
+            .albedo    = getTexture(reg, material.textures.albedo),
+            .normal    = getTexture(reg, material.textures.normal),
+            .metallic  = getTexture(reg, material.textures.metallic),
+            .roughness = getTexture(reg, material.textures.roughness) 
+        };
+
+        reg.emplace<renderer::Material>(entity, std::move(newMaterial));
+        reg.emplace<renderer::ProcessedMaterial>(e_material, entity);
+    }
+}
 void engine::EngineRenderer::processTextures(ecs::registry &reg)
 {
-    using namespace engine;
     for(ecs::entity e_texture : reg.view<engine::Texture>(ecs::exclude_t<renderer::ProcessedTexture>{}))
     {
         auto const &texture = reg.get<engine::Texture>(e_texture);
@@ -111,7 +124,7 @@ static void processPointLight(engine::renderer::RendererData &data, ecs::registr
     auto &storageLight = data.lightStorage.pointLights[data.lightStorage.numPointLights];
 
     storageLight.farPlane = context.shadowMapFarPlane;
-    storageLight.attenuation = 1 / light.intensity;
+    storageLight.attenuation = 1 / light.intensity; // TODO: switch entirely on intensity.
     storageLight.color = light.color;
     storageLight.position = reg.has<engine::ModelMatrix>(e_light) ? reg.get<engine::ModelMatrix>(e_light)[3] : glm::vec3{0};
 }
@@ -184,8 +197,10 @@ void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::R
 
     glNamedBufferSubData(data.lightUBO.id, 0, sizeof(data.lightStorage), &data.lightStorage);
 }
+
 void engine::EngineRenderer::processData(ecs::registry &reg)
 {
     processTextures(reg);
+    processMaterials(reg);
     processModels(reg);
 }

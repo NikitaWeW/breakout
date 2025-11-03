@@ -41,6 +41,7 @@ namespace engine
 
     /** 
      * \brief Tag to render Instance as transparent. 
+     * Dont forget to add it to transparent objects or else they wont render.
      * \see Instance
      */
     struct Transparent {};
@@ -63,8 +64,11 @@ namespace engine
         Context m_context;
         virtual void renderMainInstance(ecs::registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
         virtual void renderMain(ecs::registry &reg, renderer::RendererData &data);
+        
         virtual void setupPipeline(ecs::registry &reg);
+
         virtual void processModels(ecs::registry &reg);
+        virtual void processMaterials(ecs::registry &reg);
         virtual void processTextures(ecs::registry &reg);
         virtual void processLights(ecs::registry const &reg, renderer::RendererData &data);
     public:

@@ -1,13 +1,17 @@
 #pragma once
-#include "glm/glm.hpp"
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <optional>
+
+#include "glm/glm.hpp"
 #include "engine/core/ecs.hpp"
 #include "bitmap.hpp"
 #include "glm/gtc/quaternion.hpp"
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
+
+// TODO: sort this mess
 
 namespace engine
 {
@@ -100,7 +104,8 @@ namespace engine
             std::vector<glm::vec4> boneIDs;
             std::vector<glm::vec4> weights;
         } geometry;
-        Material material;
+        // Must have engine::Material
+        ecs::entity e_material;
     };
     struct Skeleton
     {
@@ -148,6 +153,8 @@ namespace engine
     
     struct Instance
     {
-        ecs::entity e_model;
+        ecs::entity e_model = 0;
+        // overrides the material contained in the Model of the e_model if not 0.
+        ecs::entity e_material = 0;
     };
 } // namespace engine

@@ -85,8 +85,10 @@ void main()
 {
     vec2 texCoords = fs_in.texCoords;
     vec3 viewDir = -u_viewMat[3].xyz - fs_in.fragPos;
-    vec3 normal = normalize(fs_in.TBN * normalize(texture(u_material.textures.normal, texCoords).rgb * 2.0 - 1.0));
-    vec3 fragPos = fs_in.fragPos;
+    vec3 normal = fs_in.TBN * normalize(texture(u_material.textures.normal, texCoords).rgb * 2.0 - 1.0);
+    normal = fs_in.TBN[2]; 
+    // FIXME: sus normal mat
+    // FIXME: wrong tangents (normal mat?)
 
     vec4 color = texture(u_material.textures.albedo, texCoords) * u_material.properties.albedo;
 
@@ -95,16 +97,17 @@ void main()
 
     vec3 lightColor = vec3(0);
     for(uint i = 0u; i < numPointLights; ++i) {
-        lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
+        lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fs_in.fragPos).xyz;
     }
     for(uint i = 0u; i < numDirLights; ++i) {
-        lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).rgb;
+        lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], u_material, normal, viewDir, texCoords, fs_in.fragPos).rgb;
     }
     for(uint i = 0u; i < numSpotLights; ++i) {
-        lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fragPos).xyz;
+        lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fs_in.fragPos).xyz;
     }
 
-    color *= vec4(lightColor, 1);
+    // color *= vec4(lightColor, 1);
+    // color.xyz = fs_in.TBN[0];
 
     if(u_transparent) {
         float weight = clamp(pow(min(1.0, color.a * 10.0) + 0.01, 3.0) * 1e8 * pow(1.0 - gl_FragCoord.z * 0.9, 3.0), 1e-2, 3e3);

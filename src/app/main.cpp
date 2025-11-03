@@ -4,7 +4,7 @@
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
 #include "engine/engine.hpp"
-#include "controller/controller.hpp"
+#include "controller.hpp"
 #include "boneDebugRenderer.hpp"
 #include "cooload.hpp"
 #include <thread>
@@ -14,73 +14,6 @@
 
 // The engine pipeline, game loop and other stuff will be abstracted 
 // into the engine::Engine class one the engine becomes mature enough.
-
-static std::string printTexture(ecs::entity e_texture, ecs::registry const &reg)
-{
-    std::stringstream ss;
-    auto const &texture = reg.get<engine::Texture>(e_texture);
-    ss 
-        << 'e' << e_texture << ", \"" 
-        << texture.path << "\", \t" 
-        << texture.data.getDimensions() << ", \t" 
-        << (texture.srgb ? "srgb" : "not srgb");
-    return ss.str();
-}
-static void printModelData(ecs::entity e_model, ecs::registry const &registry)
-{
-    ENGINE_ASSERT(registry.has<engine::Model>(e_model));
-    engine::Model const &model = registry.get<engine::Model>(e_model);
-    ENGINE_INFO("");
-    ENGINE_INFO("Model: \"{}\"", model.path);
-    ENGINE_INFO("Skeleton: ");
-    ENGINE_INFO("  Bone map size / number of bones: {}", model.skeleton.boneMap.size());
-    if(model.skeleton.boneMap.size() <= 30)
-        for(auto const &[name, id] : model.skeleton.boneMap)
-            ENGINE_INFO("    [\"{}\": {}]", name, id);
-
-    ENGINE_INFO("Animations: {}", model.animations.size());
-    for(auto const &animation : model.animations)
-    {
-        ENGINE_INFO("-----------------");
-        ENGINE_INFO("Animation: \"{}\"", animation.name);
-        ENGINE_INFO("  Duration: {} ticks, tps: {}", animation.durationTicks, animation.ticksPerSecond);
-        ENGINE_INFO("  Bones size: {}", animation.bones.size());
-    }
-
-    ENGINE_INFO("Meshes: {}", model.meshes.size());
-    for(auto const &mesh : model.meshes)
-    {
-        ENGINE_INFO("-----------------");
-
-        ENGINE_INFO("Geometry:");
-        ENGINE_INFO("  Triangles: {}", mesh.geometry.indices.size() / 3);
-        ENGINE_INFO("  Indices:   {}", mesh.geometry.indices.size());
-        ENGINE_INFO("  Positions: {}", mesh.geometry.positions.size());
-        ENGINE_INFO("  TexCoords: {}", mesh.geometry.texCoords.size());
-        ENGINE_INFO("  Normals:   {}", mesh.geometry.normals.size());
-        ENGINE_INFO("  Tangents:  {}", mesh.geometry.tangents.size());
-        ENGINE_INFO("  BoneIDs:   {}", mesh.geometry.boneIDs.size());
-        ENGINE_INFO("  Weights:   {}", mesh.geometry.weights.size());
-        
-        ENGINE_INFO("Material:");
-        ENGINE_INFO("Textures:");
-        ENGINE_INFO("  Albedo:       {}", printTexture(mesh.material.textures.albedo, registry));
-        ENGINE_INFO("  Metallic:     {}", printTexture(mesh.material.textures.metallic, registry));
-        ENGINE_INFO("  Roughness:    {}", printTexture(mesh.material.textures.roughness, registry));
-        ENGINE_INFO("  Ambient:      {}", printTexture(mesh.material.textures.ambient, registry));
-        ENGINE_INFO("  Normal:       {}", printTexture(mesh.material.textures.normal, registry));
-        ENGINE_INFO("  Displacement: {}", printTexture(mesh.material.textures.displacement, registry));
-        ENGINE_INFO("  Alpha:        {}", printTexture(mesh.material.textures.alpha, registry));
-        ENGINE_INFO("Properties:");
-        ENGINE_INFO("  Ambient:       {}", fmt::streamed(mesh.material.properties.ambient));
-        ENGINE_INFO("  Albedo:        {}", fmt::streamed(mesh.material.properties.albedo));
-        ENGINE_INFO("  Specular:      {}", fmt::streamed(mesh.material.properties.specular));
-        ENGINE_INFO("  Emission:      {}", fmt::streamed(mesh.material.properties.emission));
-        ENGINE_INFO("  Shininess:     {}", mesh.material.properties.shininess);
-        ENGINE_INFO("  Metallic:      {}", mesh.material.properties.metallic);
-        ENGINE_INFO("  IOR:           {}", mesh.material.properties.ior);
-    }
-}
 
 int main(int argc, char **argv) {
     constexpr unsigned toLoad = 3 + 1;
@@ -113,18 +46,17 @@ int main(int argc, char **argv) {
 
     ecs::registry registry;
 
-    auto e_window = registry.create(
-        engine::Window{window}
-    );
+    registry.create(engine::Window{window});
 
-    engine::input::setup(registry);
     engine::Logger::init();
     
     createScene(registry);
 
     progress += 1.0f / toLoad;
     
-    ecs::entity e_camera = Controller::createCamera(registry, e_window);
+    engine::input::setup(registry);
+
+    ecs::entity e_camera = registry.view<Controller::ControllableCamera>().at(0);
     auto &camera = registry.get<Controller::ControllableCamera>(e_camera);
     camera.speed = 4;
     camera.sensitivity = 0.125;

@@ -20,7 +20,7 @@ public:
         bool locked = true;
     };
 
-    static ecs::entity createCamera(ecs::registry &reg, ecs::entity window);
+    static ecs::entity createCamera(ecs::registry &reg, glm::vec3 pos = {0, 0, 0}, glm::vec3 target = {0, 0, -10});
 
     void update(ecs::registry &reg);
 };

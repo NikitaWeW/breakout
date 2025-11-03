@@ -12,15 +12,8 @@ namespace engine::renderer
 
     struct ProcessedModel : public Processed {};
     struct ProcessedTexture : public Processed {};
+    struct ProcessedMaterial : public Processed {};
 
-    
-    struct MaterialTextures
-    {
-        ogl::Texture albedo;
-        ogl::Texture normal;
-        ogl::Texture metallic;
-        ogl::Texture roughness;
-    };
     struct VertexBuffers
     {
         ogl::VBO positions;
@@ -30,10 +23,20 @@ namespace engine::renderer
         ogl::VBO boneIDs;
         ogl::VBO weights;
     };
+    struct Material
+    {
+        engine::Material::Properties properties;
+        struct Textures
+        {
+            ogl::Texture albedo;
+            ogl::Texture normal;
+            ogl::Texture metallic;
+            ogl::Texture roughness;
+        } textures;
+    };
     struct Mesh
     {
-        engine::Material::Properties material;
-        MaterialTextures textures;
+        ecs::entity e_material;
         VertexBuffers buffers;
         ogl::VAO vao;
         ogl::IBO ibo;
