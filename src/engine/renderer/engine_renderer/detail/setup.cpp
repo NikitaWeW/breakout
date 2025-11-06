@@ -137,7 +137,7 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
     
     glCreateFramebuffers(1, &data.oitFBO.id);
     {
-        std::array<GLenum, 3> const drawbuffers = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+        std::array<GLenum, 3> const drawbuffers = { GL_NONE, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
         glNamedFramebufferDrawBuffers(data.oitFBO.id, drawbuffers.size(), drawbuffers.data());
     }
 

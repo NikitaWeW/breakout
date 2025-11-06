@@ -4,7 +4,6 @@
 
 // output glm objects with spdlog
 #include "fmt/ostream.h"
-#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/io.hpp"
 
 namespace engine

@@ -15,7 +15,7 @@ out VS_OUT {
 const int MAX_BONES = 100;
 
 uniform mat4 u_modelMat;
-uniform mat4 u_normalMat;
+uniform mat3 u_normalMat;
 uniform mat4 u_viewMat;
 uniform mat4 u_projMat;
 
@@ -24,6 +24,8 @@ uniform bool u_animated;
 
 void main() {
     vec4 position = vec4(0);
+    vec3 normal = vec3(0);
+    vec3 tangent = vec3(0);
     if(u_animated) {
         for(int i = 0; i < 4; ++i) {
             if(a_boneIDs[i] == -1) continue;
@@ -31,19 +33,23 @@ void main() {
                 position = a_position;
                 break;
             }
-            vec4 localPosition = u_boneMatrices[int(a_boneIDs[i])] * a_position;
-            position += localPosition * a_weights[i];
+            mat4 matrix = u_boneMatrices[int(a_boneIDs[i])];
+            position += matrix * a_position * a_weights[i];
+            normal   += vec3(matrix * a_normal * a_weights[i]);
+            tangent  += vec3(matrix * a_tangent * a_weights[i]);
         }
     } else {
         position = a_position;
+        normal = vec3(a_normal);
+        tangent = vec3(a_tangent);
     }
 
     vs_out.fragPos = vec3(u_modelMat * position);
     gl_Position = u_projMat * u_viewMat * vec4(vs_out.fragPos, 1);
     vs_out.texCoords = a_texCoord;
     
-    vec3 normal = normalize(vec3(u_normalMat * a_normal));
-    vec3 tangent = normalize(vec3(u_normalMat * vec4(a_tangent.xyz, 0.0)));
+    normal = normalize(u_normalMat * normal);
+    tangent = normalize(u_normalMat * tangent);
     tangent = normalize(tangent - dot(tangent, normal) * normal);
     vec3 bitangent = cross(tangent, normal);
     vs_out.TBN = mat3(tangent, bitangent, normal);

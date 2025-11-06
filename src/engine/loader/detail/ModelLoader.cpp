@@ -87,7 +87,7 @@ aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string_view no
 static ecs::entity getDefaultMaterial(ecs::registry &registry)
 {
     ecs::entity white = 0;
-    ecs::entity blue = 0;
+    ecs::entity normal = 0;
     ecs::entity black = 0;
     ecs::entity tile = 0;
 
@@ -97,8 +97,8 @@ static ecs::entity getDefaultMaterial(ecs::registry &registry)
 
         if(texture.path == "default/white")
             white = e_texture;
-        if(texture.path == "default/blue")
-            blue = e_texture;
+        if(texture.path == "default/normal")
+            normal = e_texture;
         if(texture.path == "default/black")
             black = e_texture;
         if(texture.path == "default/tile")
@@ -113,13 +113,13 @@ static ecs::entity getDefaultMaterial(ecs::registry &registry)
             // .grayscale = true,
             .path = "default/white"
         });
-    if(!blue)
-        blue = registry.create(engine::Texture{
-            .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-                0, 0, 1
+    if(!normal)
+        normal = registry.create(engine::Texture{
+            .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
+                0.5f, 0.5f, 1.0f
             }.data()},
             // .grayscale = true,
-            .path = "default/blue"
+            .path = "default/normal"
         });
     if(!black)
         black = registry.create(engine::Texture{
@@ -157,7 +157,7 @@ static ecs::entity getDefaultMaterial(ecs::registry &registry)
                 .metallic = black,
                 .roughness = white,
                 .ambient = white,
-                .normal = blue,
+                .normal = normal,
                 .displacement = black,
                 .alpha = white 
             },

@@ -1,6 +1,16 @@
 #include "ModelMatrixAssembler.hpp"
 #include "engine/core/data.hpp"
 
+static constexpr float noZero(float x)
+{
+    constexpr float EPSILON = 1e-6;
+    return glm::abs(x) < EPSILON ? x < 0 ? -EPSILON : EPSILON : x;
+}
+static constexpr glm::vec3 noZero3(glm::vec3 const &v)
+{
+    return { noZero(v.x), noZero(v.y), noZero(v.z) };
+}
+
 void engine::ModelMatrixAssembler::update(ecs::registry &registry)
 {
     for(auto e : registry.view_any_of<engine::Position, engine::Orientation, engine::OrientationEulerXYZ, engine::Scale>(ecs::exclude_t<engine::ModelMatrix, ModelMatrixAssemblerExclude>{}))
@@ -26,6 +36,6 @@ void engine::ModelMatrixAssembler::update(ecs::registry &registry)
         }
 
         if(registry.has<engine::Scale>(e))
-            mat *= glm::scale(glm::mat4(1.0f), registry.get<engine::Scale>(e));
+            mat *= glm::scale(glm::mat4(1.0f), noZero3(registry.get<engine::Scale>(e)));
     }
 }

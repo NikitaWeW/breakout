@@ -154,7 +154,7 @@ namespace engine
     struct Instance
     {
         ecs::entity e_model = 0;
-        // overrides the material contained in the Model of the e_model if not 0.
+        /** Overrides the material contained in the Model of the e_material if not 0. contains engine::Material component. */ 
         ecs::entity e_material = 0;
     };
 } // namespace engine

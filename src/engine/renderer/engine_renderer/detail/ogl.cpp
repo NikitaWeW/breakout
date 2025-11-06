@@ -237,29 +237,33 @@ ogl::Cubemap ogl::makeCubemap(std::array<Bitmap<float>, 6> const &data)
     cubemap.width = data[0].getWidth();
     cubemap.height = data[0].getHeight();
     cubemap.numSamples = 1;
+
+    GLenum internalFormat = data[0].getNumComponents() == 4 ? GL_RGBA32F : GL_RGB32F;
+    GLenum format = data[0].getNumComponents() == 4 ? GL_RGBA : GL_RGB;
+
     assert(cubemap.width == cubemap.height);
     unsigned faceSize = cubemap.width;
     glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &cubemap.id);
     glTextureStorage2D(
         cubemap.id,
         1,
-        GL_RGBA32F,
+        internalFormat,
         faceSize,
         faceSize
     );
 
     for(int i = 0; i < 6; ++i){
-        const void* sourceImage = data[i].getData();
         glTextureSubImage3D(
             cubemap.id, 
             0,       // layer
             0, 0, i, // x,y,z
-            data[0].getWidth(), data[0].getHeight(), // 2D image dimensions
-            1,          // depth
-            GL_RGBA,    // format
-            GL_FLOAT,   // data type
-            sourceImage
+            cubemap.width, cubemap.height, // 2D image dimensions
+            1,       // depth
+            format,  // format
+            GL_FLOAT,// data type
+            data[i].getData()
         );
+        
     }
 
     return cubemap;

@@ -87,29 +87,7 @@ int main(int argc, char **argv) {
     {
         auto start = std::chrono::high_resolution_clock::now();
 
-        for(auto e_instance : registry.view<ChangeAnimationsTag, engine::Instance>())
-        {
-            if(glm::mod<float>(glfwGetTime(), 5) < 0.01 && !registry.has<engine::AnimationTransition>(e_instance))
-            {
-                auto const &model = registry.get<engine::Model>(registry.get<engine::Instance>(e_instance).e_model);
-    
-                std::random_device rd;
-                std::mt19937 gen(rd());
-                std::uniform_int_distribution<> distrib(0, model.animations.size() - 1);
-                
-                std::string newAnimation = model.animations.at(distrib(gen)).name;
-                auto const &newAnim = *std::find_if(model.animations.begin(), model.animations.end(), [&](engine::Animation const &animation){ return animation.name == newAnimation; });
-                float duration = 0.5 * newAnim.durationTicks / newAnim.ticksPerSecond;
-    
-                // ENGINE_INFO("transition from {} to {} in {}s", current.name, newAnimation, duration);
-    
-                registry.emplace<engine::AnimationTransition>(e_instance, engine::AnimationTransition{
-                    .to = newAnimation,
-                    .factorPerSecond = 1 / duration,
-                    .easeFunction = engine::ease::inOutCubic,
-                });
-            }
-        }
+        updateScene(registry, deltatime);
 
         engine::input::update(registry);
         controller.update(registry);

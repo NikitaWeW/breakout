@@ -31,6 +31,7 @@ file(GLOB_RECURSE ENGINE_SOURCES "src/engine/*.cpp")
 add_library(engine ${ENGINE_SOURCES})
 target_link_libraries(engine PUBLIC dependencies)
 target_include_directories(engine PRIVATE src)
+target_compile_definitions(engine PUBLIC GLM_ENABLE_EXPERIMENTAL)
 
 target_precompile_headers(engine PRIVATE 
     src/engine/engine.hpp

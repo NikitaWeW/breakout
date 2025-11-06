@@ -49,25 +49,26 @@ static engine::renderer::Material getMaterial(ecs::registry const &reg, ecs::ent
     ENGINE_ASSERT(e_material != 0);
     ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedMaterial>(e_material), "Forgot to call engine::EngineRenderer::processData()?");
 
-    return reg.get<renderer::Material>(reg.get<renderer::ProcessedMaterial>(e_material).data);
+    return reg.get<renderer::Material>(e_material);
 }
 
-void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance)
+void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance) 
 {
     auto const &instance = reg.get<engine::Instance>(e_instance);
-    renderer::Model const &model = reg.get<renderer::Model>(reg.get<renderer::ProcessedModel>(instance.e_model).data);
+    ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedModel>(instance.e_model), "Forgot to call engine::EngineRenderer::processData()?");
+    renderer::Model const &model = reg.get<renderer::Model>(instance.e_model);
     bool animated = model.animated && reg.has<CurrentAnimation>(e_instance);
 
     for(auto const &mesh : model.meshes)
     {
         glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance) : glm::mat4{1.0f};
-        glm::mat4 normalMat = glm::transpose(glm::inverse(modelMat));
+        glm::mat3 normalMat = glm::transpose(glm::inverse(modelMat));
         renderer::Material material = getMaterial(reg, instance.e_material ? instance.e_material : mesh.e_material);
 
         bindTextures(shader, material.textures, data.defaultTexture);
         sendMaterial(shader, material.properties);
         
-        glUniformMatrix4fv(ogl::getUniform(shader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
+        glUniformMatrix3fv(ogl::getUniform(shader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
         glUniformMatrix4fv(ogl::getUniform(shader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
         if(animated)
         {
@@ -83,10 +84,11 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program
 }
 
 void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererData &data)
-{
+{ 
+    // TODO: split render passes and make a system for custom user graphics
     auto const &camera = reg.get<engine::Camera>(m_context.e_camera);
     glm::mat4 viewMat = reg.has<engine::ModelMatrix>(m_context.e_camera) ? reg.get<engine::ModelMatrix>(m_context.e_camera) : glm::mat4{1.0f};
-    
+
     glViewport(0, 0, camera.size.x, camera.size.y);
 
     // For solid and oit transparent passes
@@ -96,6 +98,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glUniformBlockBinding(data.propShader.id, ogl::getUniformBlock(data.propShader, "u_lights"), 0);
     glUniformMatrix4fv(ogl::getUniform(data.propShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
     glUniformMatrix4fv(ogl::getUniform(data.propShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
+    glDisable(GL_POLYGON_OFFSET_FILL);
 
     // ===================
     // SOLID OBJECTS PASS 
@@ -108,10 +111,9 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glCullFace(GL_BACK);
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
-    glDisable(GL_POLYGON_OFFSET_FILL);
 
     glBindFramebuffer(GL_FRAMEBUFFER, data.mainFBO.id);
-    glClearColor(0.1, 0.1, 0.1, 1);
+    glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // draw opaque objects
@@ -133,52 +135,64 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glBlendFunci(2, GL_ZERO, GL_ONE_MINUS_SRC_COLOR); // revealage
     glBlendEquation(GL_FUNC_ADD);
     glCullFace(GL_BACK);
-    glDisable(GL_POLYGON_OFFSET_FILL);
 
     glBindFramebuffer(GL_FRAMEBUFFER, data.oitFBO.id);
     {
-        constexpr glm::vec4 zeroFiller{0};
-        constexpr glm::vec4 oneFiller{1};
-        glClearBufferfv(GL_COLOR, 1, &zeroFiller.r);
-        glClearBufferfv(GL_COLOR, 2, &oneFiller.r);
+        constexpr glm::vec4 accumulationClearColor{0};
+        constexpr glm::vec4 revealageClearColor{1};
+        glClearBufferfv(GL_COLOR, 1, &accumulationClearColor.r);
+        glClearBufferfv(GL_COLOR, 2, &revealageClearColor.r);
     }
 
     // draw transparent objects
-    glUniform1i(       ogl::getUniform(data.propShader, "u_transparent"), true);
+    glUniform1i(ogl::getUniform(data.propShader, "u_transparent"), true);
     for(ecs::entity e_instance : reg.view<Instance, Transparent>()) 
         renderMainInstance(reg, data.propShader, data, e_instance);
 
     // =====================
     // draw skybox
     // =====================
-    // TODO
+    {
+        auto skyboxView = reg.view<Skybox>();
+        if(!skyboxView.empty())
+        {
+            auto const &skybox = reg.get<Skybox>(skyboxView[0]);
+            if(skyboxView.size() > 1)
+            {
+                ENGINE_ASSERT(reg.has<Cubemap>(skybox.e_cubemap));
+                ENGINE_CORE_WARN("Multiple sky boxes found. Drawing the first one: \"{}\"", reg.get<Cubemap>(skybox.e_cubemap).path);
+            }
+            ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedCubemap>(skybox.e_cubemap), "Forgot to call engine::EngineRenderer::processData()?");
+            auto const &cubemap = reg.get<ogl::Cubemap>(skybox.e_cubemap);
 
-    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // glDisable(GL_BLEND);
-    // glCullFace(GL_BACK);
-    // glEnable(GL_DEPTH_TEST);
-    // glDepthMask(GL_FALSE);
-    // glDepthFunc(GL_LEQUAL);
-    // glDisable(GL_CULL_FACE);
-    // glDisable(GL_POLYGON_OFFSET_FILL);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDisable(GL_BLEND);
+            glCullFace(GL_BACK);
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_FALSE);
+            glDepthFunc(GL_LEQUAL);
+            glDisable(GL_CULL_FACE);
+            glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-    // glBindFramebuffer(GL_FRAMEBUFFER, data.mainFBO.id);
-
-    // glUseProgram(data.skyboxShader.id);
-    // glUniformMatrix4fv(ogl::getUniform(data.skyboxShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
-    // glUniformMatrix4fv(ogl::getUniform(data.skyboxShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
-    // for(ecs::entity e : reg.view<Skybox>()) {
-    //     drawSkybox(reg, data.skyboxShader, data, e);
-    // }
+            glBindFramebuffer(GL_FRAMEBUFFER, data.mainFBO.id);
+            glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.id);
+            
+            glUseProgram(data.skyboxShader.id);
+            glUniformMatrix4fv(ogl::getUniform(data.skyboxShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
+            glUniformMatrix4fv(ogl::getUniform(data.skyboxShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
+            
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 14);
+        }
+    }
 
     // ===================
     // OIT COMPOSITE PASS 
     // ===================
 
-    glDisable(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBindFramebuffer(GL_FRAMEBUFFER, data.mainFBO.id);
     glUseProgram(data.oitCompositeShader.id);
@@ -192,7 +206,6 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     // HDR IMAGE / OTHER POSTPROCESSING PASS 
     // ======================================
 
-    glDisable(GL_POLYGON_OFFSET_FILL);
     glDisable(GL_CULL_FACE);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
@@ -200,6 +213,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(data.screenShader.id);
     glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_2D, data.mainFBOColor.id);
+    // glBindTexture(GL_TEXTURE_2D, data.oitRevealageTexture.id);
 
     // draw a quad (hard-coded in VSh)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

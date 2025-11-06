@@ -45,6 +45,13 @@ namespace engine
      * \see Instance
      */
     struct Transparent {};
+    struct Skybox 
+    {
+        ecs::entity e_cubemap;
+    };
+
+    /** Prevent an instance from getting drawn by engine::EngineRenderer */
+    struct EngineRendererExclude {};
 
     class EngineRenderer : public IRenderer
     {

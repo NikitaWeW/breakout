@@ -24,7 +24,7 @@ const vec2 texCoords[4] = vec2[4](
 );
 
 const float gridSize = 50;
-const float gridHeight = -10; // ignore oit and call it a feature. TODO: second OIT try
+const float gridHeight = -10;
 const float gridSpacing = 10;
 const float EPSILON = 1e-5;
 

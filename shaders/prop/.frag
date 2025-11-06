@@ -77,18 +77,16 @@ layout(std140) uniform u_lights {
     SpotLight spotLights[MAX_LIGHTS];
 };
 
-vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
-vec3 calculateLight(DirLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
-vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos);
+// TODO: PBR
+vec3 calculateLight(PointLight light, samplerCube depthMap, vec3 normal, vec3 viewDir, vec2 texCoords);
+vec3 calculateLight(DirLight light, sampler2D depthMap, vec3 normal, vec3 viewDir, vec2 texCoords);
+vec3 calculateLight(SpotLight light, sampler2D depthMap, vec3 normal, vec3 viewDir, vec2 texCoords);
 
 void main() 
 {
     vec2 texCoords = fs_in.texCoords;
-    vec3 viewDir = -u_viewMat[3].xyz - fs_in.fragPos;
+    vec3 viewDir = normalize(-u_viewMat[3].xyz - fs_in.fragPos);
     vec3 normal = fs_in.TBN * normalize(texture(u_material.textures.normal, texCoords).rgb * 2.0 - 1.0);
-    normal = fs_in.TBN[2]; 
-    // FIXME: sus normal mat
-    // FIXME: wrong tangents (normal mat?)
 
     vec4 color = texture(u_material.textures.albedo, texCoords) * u_material.properties.albedo;
 
@@ -97,19 +95,19 @@ void main()
 
     vec3 lightColor = vec3(0);
     for(uint i = 0u; i < numPointLights; ++i) {
-        lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], u_material, normal, viewDir, texCoords, fs_in.fragPos).xyz;
+        lightColor += calculateLight(pointLights[i], u_pointLightSamplers[i], normal, viewDir, texCoords).xyz;
     }
     for(uint i = 0u; i < numDirLights; ++i) {
-        lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], u_material, normal, viewDir, texCoords, fs_in.fragPos).rgb;
+        lightColor += calculateLight(dirLights[i], u_dirLightSamplers[i], normal, viewDir, texCoords).rgb;
     }
     for(uint i = 0u; i < numSpotLights; ++i) {
-        lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], u_material, normal, viewDir, texCoords, fs_in.fragPos).xyz;
+        lightColor += calculateLight(spotLights[i], u_spotLightSamplers[i], normal, viewDir, texCoords).xyz;
     }
 
-    // color *= vec4(lightColor, 1);
-    // color.xyz = fs_in.TBN[0];
+    color.rgb *= lightColor;
 
     if(u_transparent) {
+        // float weight = max(min(1.0, max(max(color.r, color.g), color.b) * color.a), color.a) * clamp(0.03 / (1e-5 + pow(gl_FragCoord.z / 200, 4.0)), 1e-2, 3e3);
         float weight = clamp(pow(min(1.0, color.a * 10.0) + 0.01, 3.0) * 1e8 * pow(1.0 - gl_FragCoord.z * 0.9, 3.0), 1e-2, 3e3);
         o_accumulation = vec4(color.rgb * color.a, color.a) * weight;
         o_revealage = color.a;
@@ -118,16 +116,16 @@ void main()
     }
 }
 
-vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 normal, vec3 viewDir);
-vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 fragPos, vec3 normal, vec3 viewDir);
-vec3 calculateShadow(SpotLight light, sampler2D depthMap, vec3 fragPos, vec3 normal, vec3 viewDir);
+vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 normal, vec3 viewDir);
+vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 normal, vec3 viewDir);
+vec3 calculateShadow(SpotLight light, sampler2D depthMap, vec3 normal, vec3 viewDir);
 
-vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos) 
+vec3 calculateLight(PointLight light, samplerCube depthMap, vec3 normal, vec3 viewDir, vec2 texCoords) 
 {
-    vec3 lightDir = normalize(light.position - fragPos);
+    vec3 lightDir = normalize(light.position - fs_in.fragPos);
     normal = normalize(normal);
 
-    float distanceLightFragment = length(light.position - fragPos);
+    float distanceLightFragment = length(light.position - fs_in.fragPos);
     float attenuation = 1.0 / (light.attenuation * distanceLightFragment * distanceLightFragment);
 
     vec3 ambient = light.color * ambientKoeffitient * attenuation;
@@ -135,35 +133,26 @@ vec3 calculateLight(PointLight light, samplerCube depthMap, Material material, v
         light.color * 
         attenuation *
         vec3(max(dot(normal, lightDir), 0.0));
-    vec3 specular = 
-        light.color * 
-        attenuation *
-        pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.properties.shininess) *
-        vec3(1 - texture(material.textures.roughness, texCoords));
-    vec3 shadow = calculateShadow(light, depthMap, fragPos, normal, viewDir);
+    vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
+    vec3 shadow = calculateShadow(light, depthMap, normal, viewDir);
 
     return vec3(ambient + (1 - shadow) * (diffuse + specular));
 }
-vec3 calculateLight(DirLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos) 
+vec3 calculateLight(DirLight light, sampler2D depthMap, vec3 normal, vec3 viewDir, vec2 texCoords) 
 {
-    vec3 lightDir = normalize(-light.direction);
-
     vec3 ambient = light.color * ambientKoeffitient;
     vec3 diffuse = 
         light.color * 
-        vec3(max(dot(normal, lightDir), 0.0));
-    vec3 specular = 
-        light.color * 
-        pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.properties.shininess) * 
-        vec3(1 - texture(material.textures.roughness, texCoords));
-    vec3 shadow = calculateShadow(light, depthMap, fragPos, normal, viewDir);
+        vec3(max(dot(normal, -light.direction), 0.0));
+    vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
+    vec3 shadow = calculateShadow(light, depthMap, normal, viewDir);
 
     return ambient + (1 - shadow) * (diffuse + specular);
 }
-vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3 normal, vec3 viewDir, vec2 texCoords, vec3 fragPos)
+vec3 calculateLight(SpotLight light, sampler2D depthMap, vec3 normal, vec3 viewDir, vec2 texCoords)
 {
-    vec3 lightDir = normalize(light.position - fragPos);
-    float distanceLightFragment = length(light.position - fragPos);
+    vec3 lightDir = normalize(light.position - fs_in.fragPos);
+    float distanceLightFragment = length(light.position - fs_in.fragPos);
     float attenuation = 1.0 / (light.attenuation * distanceLightFragment * distanceLightFragment);
 
     float theta = dot(lightDir, normalize(-light.direction));
@@ -177,13 +166,8 @@ vec3 calculateLight(SpotLight light, sampler2D depthMap, Material material, vec3
             intensity *
             attenuation *
             vec3(max(dot(normal, lightDir), 0.0));
-        vec3 specular = 
-            light.color *
-            intensity * 
-            attenuation *
-            pow(max(dot(normal, normalize(lightDir + viewDir)), 0.0), u_material.properties.shininess) * 
-            vec3(1 - texture(material.textures.roughness, texCoords));
-        vec3 shadow = calculateShadow(light, depthMap, fragPos, normal, viewDir);
+        vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
+        vec3 shadow = calculateShadow(light, depthMap, normal, viewDir);
 
         return ambient + (1 - shadow) * (diffuse + specular);
     } else {
@@ -201,10 +185,10 @@ const vec3 gridSamplingDisk[20] = vec3[]
    vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
-vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 normal, vec3 viewDir)
+vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 normal, vec3 viewDir)
 {
     return vec3(0);
-    vec3 lightToFrag = fragPos - light.position;
+    vec3 lightToFrag = fs_in.fragPos - light.position;
     float currentDepth = length(lightToFrag) / light.farPlane;
 
     float shadow = 0.0;
@@ -220,10 +204,10 @@ vec3 calculateShadow(PointLight light, samplerCube depthMap, vec3 fragPos, vec3 
 
     return vec3(shadow);
 }
-vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 fragPos, vec3 normal, vec3 viewDir)
+vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 normal, vec3 viewDir)
 {
     return vec3(0);
-    vec4 fragPosLightSpace = light.viewProj * vec4(fragPos, 1);
+    vec4 fragPosLightSpace = light.viewProj * vec4(fs_in.fragPos, 1);
     vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projectedCoords = projectedCoords * 0.5 + 0.5;
     if(
@@ -251,10 +235,10 @@ vec3 calculateShadow(DirLight light, sampler2D depthMap, vec3 fragPos, vec3 norm
         
     return vec3(shadow);
 }
-vec3 calculateShadow(SpotLight light, sampler2D depthMap, vec3 fragPos, vec3 normal, vec3 viewDir)
+vec3 calculateShadow(SpotLight light, sampler2D depthMap, vec3 normal, vec3 viewDir)
 {
     return vec3(0);
-    vec4 fragPosLightSpace = light.viewProj * vec4(fragPos, 1);
+    vec4 fragPosLightSpace = light.viewProj * vec4(fs_in.fragPos, 1);
     vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projectedCoords = projectedCoords * 0.5 + 0.5;
     if(

@@ -5,14 +5,10 @@
 
 namespace engine::renderer
 {
-    struct Processed 
-    {
-        ecs::entity data;
-    };
-
-    struct ProcessedModel : public Processed {};
-    struct ProcessedTexture : public Processed {};
-    struct ProcessedMaterial : public Processed {};
+    struct ProcessedModel {};
+    struct ProcessedTexture {};
+    struct ProcessedCubemap {};
+    struct ProcessedMaterial {};
 
     struct VertexBuffers
     {

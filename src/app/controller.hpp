@@ -13,6 +13,7 @@ public:
         // contains engine::Window component
         float fov = 45;
         float speed = 1;
+        float boost = 10;
         float sensitivity = 1;
         float znear = 0.01;
         float zfar = 1000;

@@ -1,5 +1,4 @@
 #include "controller.hpp"
-#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/io.hpp"
 
 #define CAMERA_COMPONENTS engine::Camera, engine::ModelMatrix, engine::ModelMatrixAssemblerExclude, Controller::ControllableCamera, engine::Velocity, engine::Position, engine::Orientation, engine::input::InputListener
@@ -46,7 +45,7 @@ void Controller::update(ecs::registry &reg)
         }
         if(velocity != glm::vec3{0})
             velocity = {glm::normalize(velocity)};
-        velocity *= controllable.speed;
+        velocity *= controllable.speed * (glfwGetKey(window.glfwWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? controllable.boost : 1);
 
         for(; !listener.keyEvents.empty(); listener.keyEvents.pop())
         {

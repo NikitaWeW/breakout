@@ -259,8 +259,7 @@ namespace engine::eqr
     inline std::array<Bitmap<T>, NUM_CUBEMAP_FACES> toCubemap(Bitmap<T> const &equirectangularImage)
     {
         std::array<Bitmap<T>, NUM_CUBEMAP_FACES> cubemapBitmaps;
-        // unsigned faceSize = glm::ceil(equirectangularImage.getWidth() / 4.0f);
-        unsigned faceSize = glm::ceil(equirectangularImage.getHeight() / 2.0f);
+        unsigned faceSize = glm::ceil(equirectangularImage.getWidth() / 4.0f);
 
         for (unsigned i = 0; i < NUM_CUBEMAP_FACES; i++) {
             cubemapBitmaps[i] = Bitmap{faceSize, faceSize, equirectangularImage.getNumComponents()};
