@@ -44,7 +44,7 @@ void engine::EngineRenderer::draw(ecs::registry &reg)
 {
     ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
     renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
-    auto &camera = reg.get<engine::Camera>(m_context.e_camera);
+    auto &camera = reg.get<engine::Camera>(data.context.e_camera);
 
     if(camera.size == glm::uvec2{0, 0})
         return;

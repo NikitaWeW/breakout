@@ -86,8 +86,8 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program
 void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererData &data)
 { 
     // TODO: split render passes and make a system for custom user graphics
-    auto const &camera = reg.get<engine::Camera>(m_context.e_camera);
-    glm::mat4 viewMat = reg.has<engine::ModelMatrix>(m_context.e_camera) ? reg.get<engine::ModelMatrix>(m_context.e_camera) : glm::mat4{1.0f};
+    auto const &camera = reg.get<engine::Camera>(data.context.e_camera);
+    glm::mat4 viewMat = reg.has<engine::ModelMatrix>(data.context.e_camera) ? reg.get<engine::ModelMatrix>(data.context.e_camera) : glm::mat4{1.0f};
 
     glViewport(0, 0, camera.size.x, camera.size.y);
 

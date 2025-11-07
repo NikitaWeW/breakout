@@ -109,7 +109,6 @@ static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity
 }
 static void setupOpengl(ecs::registry &reg)
 {
-    ENGINE_PROFILE();
     using namespace engine;
 
     gladLoadGL((GLADloadfunc) glfwGetProcAddress); // hope it works
@@ -131,7 +130,6 @@ static void setupOpengl(ecs::registry &reg)
 }
 void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
 {
-    ENGINE_PROFILE();
     using namespace engine;
     renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
     
@@ -160,13 +158,20 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
 
 engine::EngineRenderer::EngineRenderer(Context const &context)
 {
-    m_context = context;
+    this->context() = context;
 }
 void engine::EngineRenderer::setup(ecs::registry &reg)
 {
-    ENGINE_PROFILE();
-    if(reg.view<renderer::RendererData>().empty())
-        reg.create<renderer::RendererData>();
+    auto view = reg.view<renderer::RendererData>();
+    if(!view.empty())
+    {
+        ENGINE_ASSERT_MSG(view.size() <= 1, "multiple instances of EngineRenderer in registry!");
+        for(auto e : view)
+            reg.destroy(e);
+    }
+    reg.create(renderer::RendererData{
+        .context = context()
+    });
     setupOpengl(reg);
     setupPipeline(reg);
 }

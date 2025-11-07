@@ -5,7 +5,6 @@
 #include "GLFW/glfw3.h"
 #include "engine/engine.hpp"
 #include "controller.hpp"
-#include "boneDebugRenderer.hpp"
 #include "cooload.hpp"
 #include <thread>
 #include <random>

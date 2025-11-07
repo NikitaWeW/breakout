@@ -50,8 +50,11 @@ namespace engine
         ecs::entity e_cubemap;
     };
 
-    /** Prevent an instance from getting drawn by engine::EngineRenderer */
-    struct EngineRendererExclude {};
+    /** Prevent an instance from getting drawn by renderer. */
+    struct RendererExclude {};
+
+    /** Tag to exclude this object from shadow mapping pass. Can be added to lights and instances. */
+    struct NoShadow {};
 
     class EngineRenderer : public IRenderer
     {
@@ -81,6 +84,13 @@ namespace engine
     public:
         EngineRenderer() = default;
         EngineRenderer(Context const &context);
+
+        /**
+         * Access the context that is used to setup registries. 
+         * Doesent affect registries that are already set up.
+         */
+        inline Context const &context() const { return m_context; }
+        inline Context &context() { return m_context; }
 
         void setup(ecs::registry &reg) override;
         void processData(ecs::registry &reg) override;

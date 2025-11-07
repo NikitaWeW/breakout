@@ -111,5 +111,7 @@ namespace engine::renderer
             std::array<SpotLight, MAX_STORAGE_LIGHTS> spotLights;
         } lightStorage;
         ogl::UBO lightUBO; 
+
+        EngineRenderer::Context context;
     }; 
 } // namespace engine::renderer

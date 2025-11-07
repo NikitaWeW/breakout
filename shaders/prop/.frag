@@ -28,7 +28,7 @@ struct Material
 };
 
 // TODO: atlas
-layout( binding = 5) uniform samplerCube u_pointLightSamplers[MAX_LIGHTS];
+layout( binding = 5)  uniform samplerCube u_pointLightSamplers[MAX_LIGHTS];
 layout( binding = 10) uniform sampler2D   u_dirLightSamplers  [MAX_LIGHTS];
 layout( binding = 15) uniform sampler2D   u_spotLightSamplers [MAX_LIGHTS];
 
@@ -63,7 +63,7 @@ struct SpotLight
 in VS_OUT {
     vec2 texCoords;
     vec3 fragPos;
-    flat mat3 TBN;
+    mat3 TBN;
 } fs_in;
 
 uniform mat4 u_viewMat;
