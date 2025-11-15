@@ -189,15 +189,15 @@ void createScene(ecs::registry &reg)
     {
         engine::Material material = reg.get<engine::Material>(reg.get<engine::Model>(cube).meshes.at(0).e_material);
 
-        material.properties.albedo = {1, 0, 0, 1};
+        material.properties.albedo = {1, 0, 0, 0.5};
         reg.create(
             engine::Instance{
                 .e_model = cube,
                 .e_material = reg.create(material) // copy transparent material and override the model material
             },
             engine::Position{{4, 1, 4}},
-            engine::Scale{glm::vec3{0, 2, 2}}
-            // engine::Transparent{}
+            engine::Scale{glm::vec3{0, 2, 2}},
+            engine::Transparent{}
         );
         material.properties.albedo = {0, 1, 0, 0.5};
         reg.create(
@@ -243,24 +243,70 @@ void createScene(ecs::registry &reg)
             SunTag{},
             engine::DynamicLight{},
             engine::DirectionalLight{
-                .color = glm::vec3{1}
+                .color = glm::vec3{1, 0.9, 0.8} * 1.0f
+            },
+            engine::ShadowLight{
+                .shadowMapSize = 1024
             },
             engine::Orientation{glm::quatLookAt(
                 glm::normalize(glm::vec3{0, -1, 0}),
                 glm::vec3{1,0, 0}
-            )},
-
-            engine::Instance{
-                .e_model = arrow
-            },
-            engine::Position{{0, 2, 0}}
+            )}
         );
 
         reg.create(
-            engine::Skybox{
-                .e_cubemap = loader.load(engine::DataType::CUBEMAP, "res/textures/citrus_orchard_road_puresky_2k.hdr")
-            }
+            engine::DynamicLight{},
+            engine::SpotLight{
+                .color = glm::vec3{0.1, 0.5, 0.9} * 10.0f
+            },
+            engine::ShadowLight{
+                .shadowMapSize = 1024
+            },
+            engine::Orientation{glm::quatLookAt(
+                glm::normalize(glm::vec3{0, 0, 0} - glm::vec3{3, 2, 2}),
+                glm::vec3{1,0,0}
+            )},
+            engine::Position{{3, 2, 2}}
         );
+        reg.create(
+            engine::DynamicLight{},
+            engine::SpotLight{
+                .color = glm::vec3{0.9, 0.6, 0.3} * 10.0f
+            },
+            engine::ShadowLight{
+                .shadowMapSize = 1024
+            },
+            engine::Orientation{glm::quatLookAt(
+                glm::normalize(glm::vec3{4, 1, 4} - glm::vec3{3, 2, 6}),
+                glm::vec3{1,0,0}
+            )},
+            engine::Position{{3, 2, 6}}
+        );
+
+        reg.create(
+            engine::DynamicLight{},
+            engine::PointLight{
+                .color = glm::vec3{0.9, 0.4, 0.9} * 10.0f
+            },
+            engine::ShadowLight{
+                .shadowMapSize = 1024
+            },
+            engine::Position{{-3, 2, -2}}
+        );
+        reg.create(
+            engine::DynamicLight{},
+            engine::PointLight{
+                .color = glm::vec3{0.2, 0.9, 0.9} * 10.0f
+            },
+            engine::ShadowLight{
+                .shadowMapSize = 1024
+            },
+            engine::Position{{2, 2, 1}}
+        );
+
+        reg.create<engine::Skybox>({
+            loader.load(engine::DataType::CUBEMAP, "res/textures/citrus_orchard_road_puresky_2k.hdr")
+        });
     }
 
     Controller::createCamera(reg, {0, 3, 0});
@@ -302,6 +348,6 @@ void updateScene(ecs::registry &reg, float deltatime)
     {
         glm::quat &orientation = reg.get<engine::Orientation>(e);
 
-        orientation = glm::rotate(orientation, deltatime, glm::normalize(glm::vec3{0, 0, 1}));
+        orientation = glm::rotate(orientation, deltatime * 0.05f, glm::normalize(glm::vec3{0, 0, 1}));
     }
 }

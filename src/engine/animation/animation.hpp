@@ -38,9 +38,7 @@ namespace engine
         void update(ecs::registry &registry, float deltatime);
     };
 
-    /**
-     * \brief Creates retargeted animations in the destModel and changes its skeleton.
-     */
+    // /// \brief Creates retargeted animations in the destModel and changes its skeleton.
     // void retargetSkeleton(Model &destModel, Model const &srcModel);
 
 

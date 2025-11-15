@@ -166,8 +166,9 @@ static ecs::entity getDefaultMaterial(ecs::registry &registry)
                 .albedo        = {0.8f, 0.8f, 0.8f, 1.0f},
                 .specular      = {0.5f, 0.5f, 0.5f},
                 .emission      = {0.0f, 0.0f, 0.0f},
-        
+                
                 .shininess = 32.0f,
+                .metallic = 0.0f,
                 .ior       = 1.5f
             }
         });

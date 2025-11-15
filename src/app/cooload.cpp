@@ -28,7 +28,7 @@ static void calculateForSurface(cooload::SpinningCube &cube, glm::vec3 pos, char
     p.x = (p.x * 0.5 + 0.5) * cube.viewport.size.x + cube.viewport.position.x;
     p.y = (p.y * 0.5 + 0.5) * cube.viewport.size.y + cube.viewport.position.y;
     
-    size_t idx = static_cast<int>(p.x) + static_cast<int>(p.y) * cube.imageSize.x;
+    int idx = static_cast<int>(p.x) + static_cast<int>(p.y) * cube.imageSize.x;
     if (idx >= 0 && idx < cube.imageSize.x * cube.imageSize.y) {
         if (p.z < cube.zbuffer[idx]) {
             cube.zbuffer[idx] = p.z;

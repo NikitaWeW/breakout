@@ -47,7 +47,42 @@ namespace engine::renderer
         bool animated = false;
     };
 
-    constexpr unsigned MAX_STORAGE_LIGHTS = 5u;
+    struct PointLight
+    {
+        glm::vec3 color;
+        float _pad0;
+        glm::vec3 position;
+        float _pad1;
+        glm::vec2 depthMapPos;
+        float depthMapSize;
+        float farPlane;
+    };
+    struct DirLight
+    {
+        glm::vec3 color;
+        float _pad0;
+        glm::vec3 direction;
+        float _pad1;
+        glm::vec2 depthMapPos;
+        float depthMapSize;
+        float _pad2;
+        glm::vec4 _pad3;
+        glm::mat4 viewProj;
+    };
+    struct SpotLight
+    {
+        glm::vec3 color;     
+        float _pad0;
+        glm::vec3 position;  
+        float _pad1;
+        glm::vec3 direction; 
+        float depthMapSize;
+        glm::vec2 depthMapPos;
+        float innerConeAngle;
+        float outerConeAngle;
+        glm::mat4 viewProj;
+    };
+
     struct RendererData
     {
         ogl::Framebuffer oitFBO;
@@ -70,47 +105,12 @@ namespace engine::renderer
         // The model loader should handle the default textures. This is for edge cases.
         ogl::Texture defaultTexture;
 
-        struct LightsUBOStorage
-        {
-            struct PointLight
-            {
-                glm::vec3 color;
-                float attenuation;
-                glm::vec3 position;
-                float farPlane;
-            }; // 64 bytes
-            struct DirLight
-            {
-                glm::vec3 direction;
-                float _pad0;
-                glm::vec3 color;
-                float _pad1;
-                glm::mat4 viewProj;
-            }; // 96 bytes
-            struct SpotLight
-            {
-                glm::vec3 position;
-                float innerConeAngle;
-                glm::vec3 direction;
-                float outerConeAngle;
-                glm::vec3 _pad0;
-                float attenuation;
-                glm::vec3 color;
-                float _pad1;
-                glm::mat4 viewProj;
-            }; // 128 bytes
-
-            uint32_t numPointLights;
-            glm::vec3 _pad0;
-            std::array<PointLight, MAX_STORAGE_LIGHTS> pointLights;
-            uint32_t numDirLights;
-            glm::vec3 _pad1;
-            std::array<DirLight, MAX_STORAGE_LIGHTS> dirLights;
-            uint32_t numSpotLights;
-            glm::vec3 _pad2;
-            std::array<SpotLight, MAX_STORAGE_LIGHTS> spotLights;
-        } lightStorage;
-        ogl::UBO lightUBO; 
+        std::vector<renderer::PointLight> pointLights;
+        std::vector<renderer::DirLight>   dirLights;
+        std::vector<renderer::SpotLight>  spotLights;
+        ogl::SSBO pointLightsSSBO; 
+        ogl::SSBO dirLightsSSBO; 
+        ogl::SSBO spotLightsSSBO; 
 
         EngineRenderer::Context context;
     }; 

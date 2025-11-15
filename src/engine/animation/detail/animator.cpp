@@ -20,7 +20,7 @@ static float getDurationSeconds(engine::Animation const &animation)
     return animationDurationSeconds;
 }
 
-static bool updateAnimation(engine::Model const &model, engine::CurrentAnimation &current, engine::Animation const &animation, float deltatime)
+static bool updateAnimation(engine::CurrentAnimation &current, engine::Animation const &animation, float deltatime)
 {
     current.time += (deltatime * current.speed) / getDurationSeconds(animation);
 
@@ -165,7 +165,7 @@ void engine::Animator::animate(ecs::registry &registry, ecs::entity entity, floa
         return;
     }
 
-    if(updateAnimation(model, current, *animation, deltatime))
+    if(updateAnimation(current, *animation, deltatime))
     {
         registry.remove<CurrentAnimation>(entity);
         return;

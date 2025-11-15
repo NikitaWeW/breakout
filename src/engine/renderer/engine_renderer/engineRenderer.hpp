@@ -12,6 +12,14 @@ namespace engine::renderer
 namespace engine
 {
     struct DynamicLight {};
+    struct ShadowLight 
+    {
+        unsigned shadowMapSize = 1024;
+
+        // These get overriden if the light is DirectionalLight
+        float nearPlane = 0.1;
+        float farPlane = 100;
+    };
     struct PointLight 
     {
         glm::vec3 color = {1, 1, 1};
@@ -33,43 +41,37 @@ namespace engine
         glm::vec3 color = {1, 1, 1};
         float intensity = 1;
         glm::vec2 size = {1, 1};
-        enum class Type
+        enum class Shape
         {
             RECTANGULAR, CIRCULAR
-        } type = Type::RECTANGULAR;
+        } shape = Shape::RECTANGULAR;
     };
 
-    /** 
-     * \brief Tag to render Instance as transparent. 
-     * Dont forget to add it to transparent objects or else they wont render.
-     * \see Instance
-     */
+    /// \brief Tag to render Instance as transparent. 
+    /// Dont forget to add it to transparent objects or else they wont render.
+    /// \see Instance
     struct Transparent {};
     struct Skybox 
     {
         ecs::entity e_cubemap;
     };
 
-    /** Prevent an instance from getting drawn by renderer. */
+    /// Prevent an instance from getting drawn by renderer.
     struct RendererExclude {};
 
-    /** Tag to exclude this object from shadow mapping pass. Can be added to lights and instances. */
+    /// Tag to exclude this object from shadow mapping pass. Can be added to lights and instances.
     struct NoShadow {};
 
     class EngineRenderer : public IRenderer
     {
     public:
-        /** \brief The renderer settings. */
+        /// \brief The renderer settings.
         struct Context
         {
             // contains the engine::Camera component
             ecs::entity e_camera = 0;
-            size_t shadowMapSize = 1024;
-            float shadowMapNearPlane = 0.01f;
-            float shadowMapFarPlane = 100;
-            float shadowMapDirLightRange = 25;
         };
-    // expose some of the implementation to be able to override it in the derivatives.
+    // expose some of the implementation to be able to override it in the derivatives. TODO: pimpl
     protected: 
         Context m_context;
         virtual void renderMainInstance(ecs::registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
@@ -85,10 +87,8 @@ namespace engine
         EngineRenderer() = default;
         EngineRenderer(Context const &context);
 
-        /**
-         * Access the context that is used to setup registries. 
-         * Doesent affect registries that are already set up.
-         */
+        /// Access the context that is used to setup registries. 
+        /// Doesent affect registries that are already set up.
         inline Context const &context() const { return m_context; }
         inline Context &context() { return m_context; }
 

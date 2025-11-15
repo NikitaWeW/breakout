@@ -22,18 +22,14 @@ namespace engine
         public:
             ILoader() = default;
             virtual ~ILoader() = default;
-            /**
-             * \brief Load from file into the ecs::registry.
-             */
-            virtual inline ecs::entity load(ecs::registry &reg, std::string_view path, LoadingFlags flags) 
+            /// \brief Load from file into the ecs::registry.
+            virtual inline ecs::entity load(ecs::registry &, std::string_view, LoadingFlags) 
             { 
                 ENGINE_CORE_ERROR("Calling undefined ILoader function: {}", "load(ecs::registry &reg, std::string_view path, LoadingFlags flags)"); 
                 return 0;
             }
-            /**
-             * \brief Load from file into the ecs::registry.
-             */
-            virtual inline ecs::entity load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags) 
+            /// \copydoc load
+            virtual inline ecs::entity load(ecs::registry &, std::size_t, void const *, LoadingFlags) 
             { 
                 ENGINE_CORE_ERROR("Calling undefined ILoader function: {}", "load(ecs::registry &reg, void const *data, std::size_t size, LoadingFlags flags)"); 
                 return 0;

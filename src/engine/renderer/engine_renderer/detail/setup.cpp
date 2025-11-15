@@ -4,7 +4,7 @@
 
 namespace ogl = engine::renderer::ogl;
 
-static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
+static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar *message, const void *) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
     struct OpenGlError {
         GLuint id;
@@ -104,10 +104,18 @@ static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity
 
     while(error.message.back() == '\n')
         error.message.pop_back();
-    ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.id, error.severity, error.type, error.source, error.message);
-    ENGINE_ASSERT_MSG(severity != GL_DEBUG_SEVERITY_HIGH, "high severity error in the opengl renderer!");
+
+    if(severity == GL_DEBUG_SEVERITY_HIGH)
+    {
+        ENGINE_CORE_ERROR("{}: opengl {} severity {}, raised from {}: \n\t {}", error.id, error.severity, error.type, error.source, error.message);
+        ENGINE_ASSERT_MSG(false, "high severity error in the opengl renderer!");
+    }
+    else
+    {
+        ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.id, error.severity, error.type, error.source, error.message);
+    }
 }
-static void setupOpengl(ecs::registry &reg)
+static void setupOpengl(ecs::registry &)
 {
     using namespace engine;
 
@@ -152,8 +160,9 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
         1, 1, 1
     }.data()}, false);
 
-    glCreateBuffers(1, &data.lightUBO.id);
-    glNamedBufferData(data.lightUBO.id, sizeof(renderer::RendererData::LightsUBOStorage), nullptr, GL_DYNAMIC_DRAW);
+    glCreateBuffers(1, &data.pointLightsSSBO.id);
+    glCreateBuffers(1, &data.dirLightsSSBO.id);
+    glCreateBuffers(1, &data.spotLightsSSBO.id);
 }
 
 engine::EngineRenderer::EngineRenderer(Context const &context)
@@ -170,7 +179,7 @@ void engine::EngineRenderer::setup(ecs::registry &reg)
             reg.destroy(e);
     }
     reg.create(renderer::RendererData{
-        .context = context()
+        .context = context(),
     });
     setupOpengl(reg);
     setupPipeline(reg);

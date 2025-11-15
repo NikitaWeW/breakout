@@ -1,6 +1,6 @@
 #pragma once
 /*
-   .+------+ cooload -- a very small library to spice up console loading screens.
+   .+------+ cooload -- a very small library to spice up console loading screens. *why is it even a library??*
  .' |    .'| Copyright (c) 2025 Nikita Martynau
 +---+--+'  | https://opensource.org/license/mit
 |   |  |   | thanks to https://github.com/tarantino07/cube.c for inspiration.

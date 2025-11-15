@@ -7,9 +7,7 @@
 
 namespace engine::renderer::ogl
 {
-    /**
-     * \brief An opengl object. Id 0 is invalid.
-     */
+    /// \brief An opengl object. Id 0 is invalid. Duh.
     struct Object
     {
         GLuint id = 0;
@@ -72,9 +70,7 @@ namespace engine::renderer::ogl
     Texture makeTexture(Bitmap<float> const &data, bool srgb);
     Cubemap makeCubemap(std::array<Bitmap<float>, 6> const &data);
 
-    /**
-     * Does not create buffer object if size is 0.
-     */
+    /// Does not create buffer object if size is 0.
     template<typename Buffer_t>
     inline Buffer_t makeBuffer(std::size_t size, void const *data = nullptr, GLenum usage = GL_DYNAMIC_DRAW)
     {
@@ -90,7 +86,7 @@ namespace engine::renderer::ogl
         return buff;
     }
 
-    /** \copydoc makeBuffer */
+    /// \copydoc makeBuffer.
     template<typename Buffer_t, typename T>
     inline Buffer_t makeBuffer(std::vector<T> const &data, GLenum usage = GL_DYNAMIC_DRAW)
     {

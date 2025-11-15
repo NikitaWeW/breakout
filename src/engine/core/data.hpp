@@ -34,9 +34,7 @@ namespace engine
     };
     struct Material
     {
-        /**
-         * Contains entities with the Texture component, 0 if not present.
-         */
+        /// Contains entities with the Texture component, 0 if not present.
         struct Textures
         {
             ecs::entity albedo = 0;
@@ -142,9 +140,6 @@ namespace engine
     struct Scale : glm::vec3 {};
 
     // TODO: move it somewhere or do it better.
-    /**
-     * \brief The window representation. 
-     */
     struct Window
     {
         GLFWwindow *glfwWindow;
@@ -154,7 +149,7 @@ namespace engine
     struct Instance
     {
         ecs::entity e_model = 0;
-        /** Overrides the material contained in the Model of the e_material if not 0. contains engine::Material component. */ 
+        /// Overrides the material contained in the Model of the e_material if not 0. contains engine::Material component.
         ecs::entity e_material = 0;
     };
 } // namespace engine

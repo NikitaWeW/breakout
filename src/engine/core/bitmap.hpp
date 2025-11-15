@@ -5,11 +5,9 @@
 
 namespace engine
 {
-    /**
-     * \brief A bitmap class, representing a 2d texture with the n number of components.
-     * \tparam Format_t The underlying type.
-     * \tparam components The number of glm::vec components used in the setPixel and getPixel operations.
-     */
+    /// \brief A bitmap class, representing a 2d image with the n number of components.
+    /// \tparam Format_t The underlying type.
+    /// \tparam components The number of glm::vec components used in the setPixel and getPixel operations. Does not affect the number of components in the image. 
     template <typename Format_t = float>
     class Bitmap
     {
@@ -19,61 +17,37 @@ namespace engine
 
         inline std::size_t getOffsetOf(unsigned x, unsigned y) const { return m_numComponents * (y * m_width + x); }
     public:
-        /**
-         * \brief Default constructor.
-         */
         Bitmap() = default;
-        /**
-         * \brief Construct a valid bitmap.
-         * \param width, height Dimensions of the bitmap
-         * \param numComponents The number of channels / Format_t's per pixel
-         * \param data The optional data. If not provided, the bitmap is filled with default values.
-         */
+
+        /// \brief Construct a valid bitmap.
+        /// \param width, height Dimensions of the bitmap
+        /// \param numComponents The number of channels / Format_t's per pixel
+        /// \param data The optional data. If not provided, the bitmap is filled with default values.
         Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *data = nullptr);
 
-        /**
-         * \brief Sets the pixel at the (x; y) absolute coordinates to a specified value.
-         * \param x The x coordinate in range of [0; width).
-         * \param y The y coordinate in range of [0; height).
-         * \param value The 4-component value. Only first numComponents will be set.
-         */
+        /// \brief Sets the pixel at the (x; y) absolute coordinates to a specified value.
+        /// \param x The x coordinate in range of [0; width).
+        /// \param value The 4-component value. Only first numComponents will be set.
+        /// \param y The y coordinate in range of [0; height).
         void setPixel(unsigned x, unsigned y, glm::vec<4, Format_t> const &value);
-        /**
-         * \brief Gets the pixel at (x, y).
-         * \param x The x coordinate in range of [0; width).
-         * \param y The y coordinate in range of [0; height).
-         * \return The value at the (x; y) absolute coordinates. Only first numComponents will be filled, the rest will be filled with 0.
-         */
+
+        /// \brief Gets the pixel at (x, y).
+        /// \param x The x coordinate in range of [0; width).
+        /// \param y The y coordinate in range of [0; height).
+        /// \return The value at the (x; y) absolute coordinates. Only first numComponents will be filled, the rest will be filled with 0.
         glm::vec<4, Format_t> getPixel(unsigned x, unsigned y) const;
 
-        /**
-         * \return The width of the bitmap.
-         */
         unsigned getWidth() const;
-        /**
-         * \return The height of the bitmap.
-         */
         unsigned getHeight() const;
-        /**
-         * \return The number of components in the bitmap.
-         */
         unsigned getNumComponents() const;
-        /**
-         * \return glm::vec2{width, height}.
-         */
+        /// \return glm::vec2{width, height}.
         glm::vec2 getDimensions() const;
-        /**
-         * \return The data of the bitmap.
-         */
         Format_t const *getData() const;
-        /**
-         * \copydoc getData.
-         */
         Format_t *getData();
     };
 } // namespace engine
 
-/*! \cond Doxygen_Suppress */
+/// \cond Doxygen_Suppress 
 template <typename Format_t>
 inline engine::Bitmap<Format_t>::Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *src) : m_width(width), m_height(height), m_numComponents(numComponents)
 {
@@ -145,4 +119,4 @@ inline Format_t *engine::Bitmap<Format_t>::getData()
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return m_data.data(); 
 }
-/*! \endcond */
+/// \endcond

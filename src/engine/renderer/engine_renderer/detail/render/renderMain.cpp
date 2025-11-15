@@ -34,14 +34,14 @@ static void bindTextures(ogl::Program const &program, engine::renderer::Material
 }
 static void sendMaterial(ogl::Program const &program, engine::Material::Properties const &material)
 {
-    glUniform3fv(ogl::getUniform(program, "u_material.properties.ambient"), 1, glm::value_ptr(material.ambient));
-    glUniform3fv(ogl::getUniform(program, "u_material.properties.specular"), 1, glm::value_ptr(material.specular));
-    glUniform3fv(ogl::getUniform(program, "u_material.properties.emission"), 1, glm::value_ptr(material.emission));
+    // glUniform3fv(ogl::getUniform(program, "u_material.properties.ambient"), 1, glm::value_ptr(material.ambient));
+    // glUniform3fv(ogl::getUniform(program, "u_material.properties.specular"), 1, glm::value_ptr(material.specular));
+    // glUniform3fv(ogl::getUniform(program, "u_material.properties.emission"), 1, glm::value_ptr(material.emission));
     glUniform4fv(ogl::getUniform(program, "u_material.properties.albedo"), 1, glm::value_ptr(material.albedo));
 
-    glUniform1f(ogl::getUniform(program, "u_material.properties.shininess"), material.shininess);
-    glUniform1f(ogl::getUniform(program, "u_material.properties.metallic"), material.metallic);
-    glUniform1f(ogl::getUniform(program, "u_material.properties.ior"), material.ior);
+    // glUniform1f(ogl::getUniform(program, "u_material.properties.shininess"), material.shininess);
+    // glUniform1f(ogl::getUniform(program, "u_material.properties.metallic"), material.metallic);
+    // glUniform1f(ogl::getUniform(program, "u_material.properties.ior"), material.ior);
 }
 static engine::renderer::Material getMaterial(ecs::registry const &reg, ecs::entity e_material)
 {
@@ -67,7 +67,7 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program
 
         bindTextures(shader, material.textures, data.defaultTexture);
         sendMaterial(shader, material.properties);
-        
+
         glUniformMatrix3fv(ogl::getUniform(shader, "u_normalMat"), 1, false, glm::value_ptr(normalMat));
         glUniformMatrix4fv(ogl::getUniform(shader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
         if(animated)
@@ -91,13 +91,17 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
 
     glViewport(0, 0, camera.size.x, camera.size.y);
 
-    // For solid and oit transparent passes
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, data.lightUBO.id);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, data.pointLightsSSBO.id);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, data.dirLightsSSBO.id  );
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, data.spotLightsSSBO.id );
     
+    // For solid and oit transparent passes
     glUseProgram(data.propShader.id);
-    glUniformBlockBinding(data.propShader.id, ogl::getUniformBlock(data.propShader, "u_lights"), 0);
     glUniformMatrix4fv(ogl::getUniform(data.propShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
     glUniformMatrix4fv(ogl::getUniform(data.propShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
+    glUniform1ui(      ogl::getUniform(data.propShader, "u_numPointLights"), data.pointLights.size());
+    glUniform1ui(      ogl::getUniform(data.propShader, "u_numDirLights"),   data.dirLights.size());
+    glUniform1ui(      ogl::getUniform(data.propShader, "u_numSpotLights"),  data.spotLights.size());
     glDisable(GL_POLYGON_OFFSET_FILL);
 
     // ===================

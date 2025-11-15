@@ -13,7 +13,7 @@ static constexpr glm::vec3 noZero3(glm::vec3 const &v)
 
 void engine::ModelMatrixAssembler::update(ecs::registry &registry)
 {
-    for(auto e : registry.view_any_of<engine::Position, engine::Orientation, engine::OrientationEulerXYZ, engine::Scale>(ecs::exclude_t<engine::ModelMatrix, ModelMatrixAssemblerExclude>{}))
+    for(auto e : registry.viewAny<engine::Position, engine::Orientation, engine::OrientationEulerXYZ, engine::Scale>(ecs::exclude_t<engine::ModelMatrix, ModelMatrixAssemblerExclude>{}))
         registry.emplace<engine::ModelMatrix>(e, 1.0f);
 
     for(auto e : registry.view<engine::ModelMatrix>(ecs::exclude_t<ModelMatrixAssemblerExclude>{}))

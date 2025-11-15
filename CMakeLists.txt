@@ -8,12 +8,10 @@ project(breakout C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(cmake/cpm.cmake)
-if(NOT CPM_USE_LOCAL_PACKAGES)
-    set(CPM_USE_LOCAL_PACKAGES, ON)
-endif()
 
+set(ASSIMP_WARNINGS_AS_ERRORS OFF)
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/nicecs@1.5.2")
+CPMAddPackage("gh:nikitawew/nicecs@1.5.3")
 CPMAddPackage("gh:gabime/spdlog@1.16.0")
 CPMAddPackage("gh:assimp/assimp@6.0.2")
 CPMAddPackage("gh:g-truc/glm#1.0.2")
@@ -37,26 +35,23 @@ target_precompile_headers(engine PRIVATE
     src/engine/engine.hpp
 )
 
+install(DIRECTORY DESTINATION engine)
+install(DIRECTORY DESTINATION engine/lib)
+install(DIRECTORY DESTINATION engine/include)
+install(DIRECTORY src/engine DESTINATION engine/include FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+install(TARGETS engine DESTINATION engine/lib)
+
 ######################################################################
 
 file(GLOB_RECURSE SOURCES "src/app/*.cpp")
 
-add_executable(main ${SOURCES})
-target_include_directories(main PRIVATE src)
-target_link_libraries(main PRIVATE engine)
+add_executable(app ${SOURCES})
+target_include_directories(app PRIVATE src)
+target_link_libraries(app PRIVATE engine)
 
-find_package(Gperftools)
-if(GPERFTOOLS_FOUND)
-    target_link_libraries(main PRIVATE ${GPERFTOOLS_LIBRARIES})
-endif()
-set_property(TARGET main APPEND_STRING PROPERTY LINK_OPTIONS "-lprofiler")
-
-install(DIRECTORY res DESTINATION .)
-install(DIRECTORY shaders DESTINATION .)
-install(TARGETS main DESTINATION .)
+install(DIRECTORY DESTINATION app)
+install(DIRECTORY res DESTINATION app)
+install(DIRECTORY shaders DESTINATION app)
+install(TARGETS app DESTINATION app)
 
 ######################################################################
-
-if(BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
