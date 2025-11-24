@@ -35,8 +35,8 @@ struct PointLight
     float _pad0;
     vec3 position;
     float _pad1;
-    vec2 depthMapPos;
-    float depthMapSize;
+    uvec2 depthMapPos;
+    uint depthMapSize;
     float farPlane;
 };
 struct DirLight
@@ -45,8 +45,8 @@ struct DirLight
     float _pad0;
     vec3 direction;
     float _pad1;
-    vec2 depthMapPos;
-    float depthMapSize;
+    uvec2 depthMapPos;
+    uint depthMapSize;
     float _pad2;
     vec4 _pad3;
     mat4 viewProj;
@@ -58,8 +58,8 @@ struct SpotLight
     vec3 position;  
     float _pad1;
     vec3 direction; 
-    float depthMapSize;
-    vec2 depthMapPos;
+    uint depthMapSize;
+    uvec2 depthMapPos;
     float innerConeAngle;
     float outerConeAngle;
     mat4 viewProj;
@@ -74,6 +74,8 @@ layout(std430, binding = 1) buffer DirLightsSSBO {
 layout(std430, binding = 2) buffer SpotLightsSSBO {
     SpotLight spotLights[];
 };
+
+layout(binding = 0) uniform sampler2D u_atlas;
 
 // No idea why pointLights.length() doesn't work.
 uniform uint u_numPointLights;

@@ -623,7 +623,7 @@ ecs::entity engine::loader::ModelLoader::load()
         currentModel->animations.emplace_back(std::move(processAnimation(currentScene->mAnimations[i])));
     }
 
-    // TODO: morph targets
+    /// TODO: morph targets
 
     return currentRegistry->create(std::move(*currentModel));
 }

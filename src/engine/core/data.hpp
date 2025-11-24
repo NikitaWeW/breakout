@@ -11,7 +11,7 @@
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 
-// TODO: sort this mess
+/// TODO: sort this data.hpp mess
 
 namespace engine
 {

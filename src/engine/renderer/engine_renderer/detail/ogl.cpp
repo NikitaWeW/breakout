@@ -268,3 +268,40 @@ ogl::Cubemap ogl::makeCubemap(std::array<Bitmap<float>, 6> const &data)
 
     return cubemap;
 }
+
+void ogl::resizeAttachment(ogl::Framebuffer &fbo, ogl::Texture &texture, glm::uvec2 size, GLenum attachment, GLenum format)
+{
+    if(texture.id != 0)
+    {
+        glDeleteTextures(1, &texture.id);
+        texture.id = 0;
+    }
+    glCreateTextures(GL_TEXTURE_2D, 1, &texture.id);
+
+    if(texture.numSamples == 1)
+        glTextureStorage2D(texture.id, 1, format, size.x, size.y);
+    else
+        glTextureStorage2DMultisample(texture.id, texture.numSamples, format, size.x, size.y, true);
+
+    ENGINE_ASSERT_MSG(fbo.id != 0, "invalid fbo");
+    glNamedFramebufferTexture(fbo.id, attachment, texture.id, 0);
+    ENGINE_ASSERT_MSG(ogl::isComplete(fbo), "");
+}
+void ogl::resizeAttachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm::uvec2 size, GLenum attachment, GLenum format)
+{
+    if(rbo.id != 0)
+    {
+        glDeleteRenderbuffers(1, &rbo.id);
+        rbo.id = 0;
+    }
+    glCreateRenderbuffers(1, &rbo.id);
+
+    if(rbo.numSamples == 1)
+        glNamedRenderbufferStorage(rbo.id, GL_DEPTH24_STENCIL8, size.x, size.y);
+    else
+        glNamedRenderbufferStorageMultisample(rbo.id, rbo.numSamples, GL_DEPTH24_STENCIL8, size.x, size.y);
+
+    ENGINE_ASSERT_MSG(fbo.id != 0, "invalid fbo");
+    glNamedFramebufferRenderbuffer(fbo.id, attachment, GL_RENDERBUFFER, rbo.id);
+    ENGINE_ASSERT_MSG(ogl::isComplete(fbo), "");
+}

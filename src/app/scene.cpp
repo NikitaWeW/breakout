@@ -348,6 +348,6 @@ void updateScene(ecs::registry &reg, float deltatime)
     {
         glm::quat &orientation = reg.get<engine::Orientation>(e);
 
-        orientation = glm::rotate(orientation, deltatime * 0.05f, glm::normalize(glm::vec3{0, 0, 1}));
+        orientation = glm::rotate(orientation, deltatime * 0.1f, glm::normalize(glm::vec3{0, 0, 1}));
     }
 }

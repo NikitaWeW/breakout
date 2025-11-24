@@ -149,12 +149,17 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
 
     glCreateFramebuffers(1, &data.mainFBO.id);
 
-    data.screenShader                  = ogl::compileShader("shaders/hdrImage");
-    data.propShader                    = ogl::compileShader("shaders/prop");
-    data.oitCompositeShader            = ogl::compileShader("shaders/oitComposite");
-    data.skyboxShader                  = ogl::compileShader("shaders/skybox");
-    data.depthMapShader                = ogl::compileShader("shaders/depthMapOpaque");
-    data.depthMapOmnidirectionalShader = ogl::compileShader("shaders/depthMapOmnidirectionalOpaque");
+    glCreateFramebuffers(1, &data.SMAtlas.fbo.id);
+    {
+        std::array<GLenum, 1> const drawbuffers = { GL_NONE };
+        glNamedFramebufferDrawBuffers(data.SMAtlas.fbo.id, drawbuffers.size(), drawbuffers.data());
+    }
+
+    data.shaders.screenShader                  = ogl::compileShader("shaders/hdrImage");
+    data.shaders.propShader                    = ogl::compileShader("shaders/prop");
+    data.shaders.oitCompositeShader            = ogl::compileShader("shaders/oitComposite");
+    data.shaders.skyboxShader                  = ogl::compileShader("shaders/skybox");
+    data.shaders.depthMapShader                = ogl::compileShader("shaders/depthMapOpaque");
 
     data.defaultTexture = ogl::makeTexture(engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
         1, 1, 1
@@ -163,6 +168,8 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
     glCreateBuffers(1, &data.pointLightsSSBO.id);
     glCreateBuffers(1, &data.dirLightsSSBO.id);
     glCreateBuffers(1, &data.spotLightsSSBO.id);
+    glCreateBuffers(1, &data.drawLightsSSBO.id);
+    glCreateBuffers(1, &data.drawLightsOmnidirectionalSSBO.id);
 }
 
 engine::EngineRenderer::EngineRenderer(Context const &context)

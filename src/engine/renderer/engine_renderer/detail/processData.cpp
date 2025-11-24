@@ -1,6 +1,10 @@
 #include "engine/renderer/engine_renderer/engineRenderer.hpp"
 #include "detail.hpp"
 #include "ogl.hpp"
+#include "stb_rect_pack.h"
+
+/// TODO: versioning system:
+/// Only update / add objects if the versions mismatch.
 
 namespace ogl = engine::renderer::ogl;
 
@@ -127,46 +131,187 @@ void engine::EngineRenderer::processTextures(ecs::registry &reg)
 static void processPointLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::PointLight>(e_light);
-    data.pointLights.emplace_back(engine::renderer::PointLight{
+    engine::renderer::PointLight newLight{
         .color = light.color,
         .position = reg.has<engine::ModelMatrix>(e_light) ? reg.get<engine::ModelMatrix>(e_light)[3] : glm::vec3{0},
-        .depthMapPos = glm::vec2{0},
-        .depthMapSize = 0.0f,
         .farPlane = 0.0f,
-    });
+    };
+
+    if(reg.has<engine::ShadowLight>(e_light))
+    {
+        auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
+        data.SMAtlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
+            .type = engine::renderer::ShadowMapAtlas::Light::POINT,
+            .drawLightIndex = data.drawLightsOmnidirectional.size(),
+            .lightIndex = data.pointLights.size(),
+            .size = shadowLight.shadowMapSize
+        });
+        data.drawLightsOmnidirectional.emplace_back(engine::renderer::LightDraw{
+            .view = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f},
+            .proj = glm::perspective(glm::radians(90.0f), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
+        });
+    }
+    data.pointLights.emplace_back(std::move(newLight));
 }
 static void processDirLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::DirectionalLight>(e_light);
     glm::mat4 const &modelMat = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f};
-    data.dirLights.emplace_back(engine::renderer::DirLight{
+    engine::renderer::DirLight newLight{
         .color = light.color,
-        .direction = -glm::normalize(glm::vec3(modelMat[2])),
-        .depthMapPos = glm::vec2{0},
-        .depthMapSize = 0.0f,
-        .viewProj = modelMat
-    });
+        .direction = -glm::normalize(glm::vec3(modelMat[2]))
+    };
+    
+    if(reg.has<engine::ShadowLight>(e_light))
+    {
+        auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
+        data.SMAtlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
+            .type = engine::renderer::ShadowMapAtlas::Light::DIR,
+            .drawLightIndex = data.drawLights.size(),
+            .lightIndex = data.dirLights.size(),
+            .size = shadowLight.shadowMapSize
+        });
+        // TODO: cascade SM
+        data.drawLights.emplace_back(engine::renderer::LightDraw{
+            .view = modelMat,
+            .proj = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
+        });
+    }
+    data.dirLights.emplace_back(std::move(newLight));
 }
 static void processSpotLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::SpotLight>(e_light);
     glm::mat4 const &modelMat = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f};
-    data.spotLights.emplace_back(engine::renderer::SpotLight{
+
+    engine::renderer::SpotLight newLight{
         .color = light.color,
         .position = modelMat[3],
         .direction = -glm::normalize(glm::vec3(modelMat[2])),
-        .depthMapSize = 0.0f,
-        .depthMapPos = glm::vec2{0},
         .innerConeAngle = light.innerConeAngle,
-        .outerConeAngle = light.outerConeAngle,
-        .viewProj = modelMat,
-    });
+        .outerConeAngle = light.outerConeAngle
+    };
+
+    if(reg.has<engine::ShadowLight>(e_light))
+    {
+        auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
+        data.SMAtlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
+            .type = engine::renderer::ShadowMapAtlas::Light::SPOT,
+            .drawLightIndex = data.drawLights.size(),
+            .lightIndex = data.spotLights.size(),
+            .size = shadowLight.shadowMapSize
+        });
+        data.drawLights.emplace_back(engine::renderer::LightDraw{
+            .view = modelMat,
+            .proj = glm::perspective(newLight.outerConeAngle, 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
+        });
+    }
+    data.spotLights.emplace_back(std::move(newLight));
+}
+static void makeAtlas(engine::renderer::RendererData &data)
+{
+    auto &atlas = data.SMAtlas;
+
+    std::vector<stbrp_rect> rects;
+    rects.reserve(atlas.lights.size());
+
+    for(size_t i = 0; i < atlas.lights.size(); ++i)
+    {
+        auto const &light = atlas.lights[i];
+        rects.emplace_back(stbrp_rect{
+            .w = static_cast<int>(light.size) * (light.type == engine::renderer::ShadowMapAtlas::Light::POINT ? 6 : 1),
+            .h = static_cast<int>(light.size),
+            .x = 0,
+            .y = 0,
+        });
+    }
+
+    unsigned maxWidth = std::max_element(rects.begin(), rects.end(), [](auto const &a, auto const &b){ return a.w < b.w; })->w;
+    std::vector<stbrp_node> nodes(maxWidth);
+    stbrp_context context;
+    stbrp_init_target(&context, maxWidth, std::numeric_limits<int>::max(), nodes.data(), nodes.size());
+    stbrp_setup_allow_out_of_mem(&context, true);
+    stbrp_pack_rects(&context, rects.data(), rects.size());
+
+    atlas.size = {0, 0};
+    for(size_t i = 0; i < rects.size(); ++i)
+    {
+        auto const &light = atlas.lights[i];
+        auto const &rect  = rects[i];
+        
+        atlas.size = glm::max(atlas.size, {rect.x + rect.w, rect.y + rect.h});
+
+        engine::renderer::ShadowMapAtlas::Location location{
+            .pos = { rect.x, rect.y },
+            .size = static_cast<unsigned>(rect.h)
+        };
+
+        switch(light.type)
+        {
+            case light.POINT:
+            data.pointLights.at(light.lightIndex).atlasPos = location;
+            data.drawLightsOmnidirectional.at(light.drawLightIndex).atlasPos = location;
+            break;
+            case light.DIR:
+            data.dirLights.at(light.lightIndex).atlasPos = location;
+            data.drawLights.at(light.drawLightIndex).atlasPos = location;
+            break;
+            case light.SPOT:
+            data.spotLights.at(light.lightIndex).atlasPos = location;
+            data.drawLights.at(light.drawLightIndex).atlasPos = location;
+            break;
+        }
+    }
+
+    // for(auto const &rect : rectangles)
+    // {
+    //     auto &light = atlas.lights[rect.index];
+    //     light.posAtlas = { rect.get_rect().x, rect.get_rect().y };
+    //     switch(light.type)
+    //     {
+    //         case light.POINT:
+    //         {
+    //             auto &shaderLight = data.pointLights.at(light.lightIndex);
+    //             shaderLight.depthMapPos  = light.posAtlas;
+    //             shaderLight.depthMapSize = light.sizeAtlas;
+    //             break;
+    //         }
+    //         case light.DIR:
+    //         {
+    //             auto &shaderLight = data.dirLights.at(light.lightIndex);
+    //             shaderLight.depthMapPos  = light.posAtlas;
+    //             shaderLight.depthMapSize = light.sizeAtlas;
+    //             break;
+    //         }
+    //         case light.SPOT:
+    //         {
+    //             auto &shaderLight = data.spotLights.at(light.lightIndex);
+    //             shaderLight.depthMapPos  = light.posAtlas;
+    //             shaderLight.depthMapSize = light.sizeAtlas;
+    //             break;
+    //         }
+    //         default:
+    //         ENGINE_ASSERT_MSG(false, "unknown light type");
+    //     }
+    // }
+
+    ENGINE_CORE_TRACE("Made {}x{} atlas", atlas.size.x, atlas.size.y);
+    for(auto const &light : data.pointLights)
+        ENGINE_CORE_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.atlasPos.pos.x, light.atlasPos.pos.y, light.atlasPos.size);
+    for(auto const &light : data.dirLights)
+        ENGINE_CORE_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.atlasPos.pos.x, light.atlasPos.pos.y, light.atlasPos.size);
+    for(auto const &light : data.spotLights)
+        ENGINE_CORE_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.atlasPos.pos.x, light.atlasPos.pos.y, light.atlasPos.size);
+    ENGINE_CORE_TRACE("================");
+
+    ogl::resizeAttachment(atlas.fbo, atlas.texture, atlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
 }
 void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::RendererData &data)
 {
     data.pointLights.clear();
     data.dirLights.clear();
     data.spotLights.clear();
+    data.SMAtlas.lights.clear();
     for(ecs::entity e_light : reg.view<DynamicLight>())
     {
         if(reg.has<PointLight>(e_light))
@@ -178,6 +323,8 @@ void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::R
         if(reg.has<AreaLight>(e_light))
             ENGINE_ASSERT_MSG(false, "Area lights not implemented yet!");
     } 
+
+    makeAtlas(data);
 
     glNamedBufferData(data.pointLightsSSBO.id, data.pointLights.size() * sizeof(renderer::PointLight), data.pointLights.data(), GL_STATIC_DRAW);
     glNamedBufferData(data.dirLightsSSBO.id,   data.dirLights.size()   * sizeof(renderer::DirLight),   data.dirLights.data(),   GL_STATIC_DRAW);

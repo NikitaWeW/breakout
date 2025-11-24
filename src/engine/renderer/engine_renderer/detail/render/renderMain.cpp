@@ -26,7 +26,7 @@ static void bindTexture(int location, ogl::Texture texture, ogl::Texture default
 }
 static void bindTextures(ogl::Program const &program, engine::renderer::Material::Textures const &textures, ogl::Texture defaultTexture)
 {
-    unsigned slot = 0;
+    unsigned slot = 5;
     bindTexture(ogl::getUniform(program, "u_material.textures.albedo"), textures.albedo, defaultTexture, slot);
     bindTexture(ogl::getUniform(program, "u_material.textures.metallic"), textures.metallic, defaultTexture, slot);
     bindTexture(ogl::getUniform(program, "u_material.textures.roughness"), textures.roughness, defaultTexture, slot);
@@ -85,7 +85,7 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program
 
 void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererData &data)
 { 
-    // TODO: split render passes and make a system for custom user graphics
+    /// TODO: split render passes and make a system for custom user graphics (render graph?)`
     auto const &camera = reg.get<engine::Camera>(data.context.e_camera);
     glm::mat4 viewMat = reg.has<engine::ModelMatrix>(data.context.e_camera) ? reg.get<engine::ModelMatrix>(data.context.e_camera) : glm::mat4{1.0f};
 
@@ -96,12 +96,12 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, data.spotLightsSSBO.id );
     
     // For solid and oit transparent passes
-    glUseProgram(data.propShader.id);
-    glUniformMatrix4fv(ogl::getUniform(data.propShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
-    glUniformMatrix4fv(ogl::getUniform(data.propShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
-    glUniform1ui(      ogl::getUniform(data.propShader, "u_numPointLights"), data.pointLights.size());
-    glUniform1ui(      ogl::getUniform(data.propShader, "u_numDirLights"),   data.dirLights.size());
-    glUniform1ui(      ogl::getUniform(data.propShader, "u_numSpotLights"),  data.spotLights.size());
+    glUseProgram(data.shaders.propShader.id);
+    glUniformMatrix4fv(ogl::getUniform(data.shaders.propShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
+    glUniformMatrix4fv(ogl::getUniform(data.shaders.propShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
+    glUniform1ui(      ogl::getUniform(data.shaders.propShader, "u_numPointLights"), data.pointLights.size());
+    glUniform1ui(      ogl::getUniform(data.shaders.propShader, "u_numDirLights"),   data.dirLights.size());
+    glUniform1ui(      ogl::getUniform(data.shaders.propShader, "u_numSpotLights"),  data.spotLights.size());
     glDisable(GL_POLYGON_OFFSET_FILL);
 
     // ===================
@@ -121,9 +121,9 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // draw opaque objects
-    glUniform1i(ogl::getUniform(data.propShader, "u_transparent"), false);
+    glUniform1i(ogl::getUniform(data.shaders.propShader, "u_transparent"), false);
     for(ecs::entity e_instance : reg.view<Instance>(ecs::exclude_t<Transparent>{}))
-        renderMainInstance(reg, data.propShader, data, e_instance);
+        renderMainInstance(reg, data.shaders.propShader, data, e_instance);
 
     // =====================
     // OIT TRANSPARENT PASS 
@@ -149,9 +149,9 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     }
 
     // draw transparent objects
-    glUniform1i(ogl::getUniform(data.propShader, "u_transparent"), true);
+    glUniform1i(ogl::getUniform(data.shaders.propShader, "u_transparent"), true);
     for(ecs::entity e_instance : reg.view<Instance, Transparent>()) 
-        renderMainInstance(reg, data.propShader, data, e_instance);
+        renderMainInstance(reg, data.shaders.propShader, data, e_instance);
 
     // =====================
     // draw skybox
@@ -181,9 +181,9 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
             glBindFramebuffer(GL_FRAMEBUFFER, data.mainFBO.id);
             glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.id);
             
-            glUseProgram(data.skyboxShader.id);
-            glUniformMatrix4fv(ogl::getUniform(data.skyboxShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
-            glUniformMatrix4fv(ogl::getUniform(data.skyboxShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
+            glUseProgram(data.shaders.skyboxShader.id);
+            glUniformMatrix4fv(ogl::getUniform(data.shaders.skyboxShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
+            glUniformMatrix4fv(ogl::getUniform(data.shaders.skyboxShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
             
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 14);
         }
@@ -199,7 +199,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBindFramebuffer(GL_FRAMEBUFFER, data.mainFBO.id);
-    glUseProgram(data.oitCompositeShader.id);
+    glUseProgram(data.shaders.oitCompositeShader.id);
     glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_2D, data.oitAccumTexture.id);
     glActiveTexture(GL_TEXTURE0 + 1); glBindTexture(GL_TEXTURE_2D, data.oitRevealageTexture.id);
 
@@ -215,7 +215,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glUseProgram(data.screenShader.id);
+    glUseProgram(data.shaders   .screenShader.id);
     glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_2D, data.mainFBOColor.id);
     // glBindTexture(GL_TEXTURE_2D, data.oitRevealageTexture.id);
 

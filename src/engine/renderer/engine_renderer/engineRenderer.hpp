@@ -1,5 +1,8 @@
 #pragma once
 #include "engine/renderer/renderer.hpp"
+
+/// TODO: redo this renderer mess, make a better architecture/structure
+
 namespace engine::renderer
 {
     namespace ogl
@@ -16,7 +19,6 @@ namespace engine
     {
         unsigned shadowMapSize = 1024;
 
-        // These get overriden if the light is DirectionalLight
         float nearPlane = 0.1;
         float farPlane = 100;
     };
@@ -71,11 +73,14 @@ namespace engine
             // contains the engine::Camera component
             ecs::entity e_camera = 0;
         };
-    // expose some of the implementation to be able to override it in the derivatives. TODO: pimpl
+    // expose some of the implementation to be able to override it in the derivatives.
+    /// TODO: pimpl
     protected: 
         Context m_context;
         virtual void renderMainInstance(ecs::registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
         virtual void renderMain(ecs::registry &reg, renderer::RendererData &data);
+
+        virtual void renderShadowMaps(ecs::registry &reg, renderer::RendererData &data);
         
         virtual void setupPipeline(ecs::registry &reg);
 

@@ -92,4 +92,8 @@ namespace engine::renderer::ogl
     {
         return makeBuffer<Buffer_t>(data.size() * sizeof(T), data.data(), usage);
     }
+
+
+    void resizeAttachment(ogl::Framebuffer &fbo, ogl::Texture &texture, glm::uvec2 size, GLenum attachment = GL_COLOR_ATTACHMENT0, GLenum format = GL_RGBA32F);
+    void resizeAttachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm::uvec2 size, GLenum attachment = GL_DEPTH_STENCIL_ATTACHMENT, GLenum format = GL_DEPTH24_STENCIL8);
 } // namespace engine::renderer::ogl
