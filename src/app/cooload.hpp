@@ -1,12 +1,12 @@
 #pragma once
 /*
-   .+------+ cooload -- a very small library to spice up console loading screens. *why is it even a library??*
+   .+------+ 
  .' |    .'| Copyright (c) 2025 Nikita Martynau
 +---+--+'  | https://opensource.org/license/mit
-|   |  |   | thanks to https://github.com/tarantino07/cube.c for inspiration.
-|  ,+--+---+ - rendering ascii cube to the terminal. 
-|.'    | .'  - rendering ascii loading bars to the terminal.
-+------+'    Spinning cube depends on glm for now.
+|   |  |   | - rendering ascii cube to the terminal. 
+|  ,+--+---+ - rendering ascii loading bars to the terminal.
+|.'    | .'  - depends on https://github.com/g-truc/glm and https://github.com/jupyter-xeus/cpp-terminal
++------+'    
 [ ===============================================| ] 99%
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -80,52 +80,40 @@ namespace cooload
         bool printPercentage;
     };
 
-    /**
-     * \brief Resize the cube (buffers, projection, etc.)
-     * \param cube The cube to process.
-     * Should be called when the imageSize is changed.
-     */
+    /// \brief Resize the cube (buffers, projection, etc.)
+    /// \param cube The cube to process.
+    /// Should be called when the imageSize is changed.
     void resizeCube(SpinningCube &cube);
 
-    /**
-     * \brief Rotate the cube.
-     * \param cube The cube to process.
-     * \param time The animation time.
-     * Updates the cube model matrix.
-     */
+    /// \brief Rotate the cube.
+    /// \param cube The cube to process.
+    /// \param time The animation time.
+    /// Updates the cube model matrix.
     void animateCube(SpinningCube &cube, float time = 0);
 
-    /**
-     * \brief Draws a cube to its buffer.
-     * \param cube The cube to process.
-     * Assumes the cube is resized, might segfault if not.
-     */
+    /// \brief Draws a cube to its buffer.
+    /// \param cube The cube to process.
+    /// Assumes the cube is resized, might segfault if not.
     void draw(SpinningCube &cube);
 
-    /**
-     * \brief Gets the {columns, rows} console size.
-     */
+    /// \brief Gets the {columns, rows} console size.
     glm::uvec2 getConsoleSize();
 
-    /**
-     * \brief Guess what it does.
-     */
+    /// \brief Guess what it does.
     void clearConsole();
 
-    /**
-     * \brief Change the console cursor position.
-     */
+    /// \brief Change the console cursor position.
     void gotoxy(glm::uvec2 pos);
 
-    /**
-     * \brief Draws a cube to its stringstream.
-     * \param bar The bar to process.
-     */
+    /// \brief Draws a cube to its stringstream.
+    /// \param bar The bar to process.
     void draw(Bar &bar);
 
-    /**
-     * \brief Some cool loading screen / example. 
-     * Run in a separate thread.
-     */
+    /// \brief Some cool loading screen / example. 
+    /// Run in a separate thread.
+    // TODO: make it work nicer with logging
     void loadingScreen(float const *progress);
+
+    /// \brief Get the console cursor position.
+    glm::uvec2 getxy();
 } // namespace cooload

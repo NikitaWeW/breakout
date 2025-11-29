@@ -5,7 +5,7 @@
 #include "engine/core/ecs.hpp"
 #include <queue>
 
-/// TODO: better event and window system
+// TODO: better event and window system
 
 namespace engine::input
 {

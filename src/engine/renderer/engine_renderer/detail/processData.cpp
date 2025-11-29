@@ -3,8 +3,7 @@
 #include "ogl.hpp"
 #include "stb_rect_pack.h"
 
-/// TODO: versioning system:
-/// Only update / add objects if the versions mismatch.
+// TODO: versioning system: Only update / add objects if the versions mismatch.
 
 namespace ogl = engine::renderer::ogl;
 
@@ -16,32 +15,6 @@ static ogl::Texture getTexture(ecs::registry const &reg, ecs::entity e_texture)
     ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedTexture>(e_texture), "Forgot to call engine::EngineRenderer::processData?");
 
     return reg.get<ogl::Texture>(e_texture);
-}
-static void addVertexBuffer(ogl::VAO &vao, ogl::Buffer &buff, std::size_t count, GLenum type)
-{
-    using namespace engine;
-    if(buff.id == 0) 
-    {
-        ++vao.numVertexBuffers;
-        return;
-    }
-    unsigned attrib = vao.numVertexBuffers;
-    glVertexArrayVertexBuffer(vao.id, vao.numVertexBuffers, buff.id, 0, count * ogl::getSizeOfGLType(type));
-    glEnableVertexArrayAttrib(vao.id, attrib);
-    switch(type)
-    {
-    case GL_INT:
-        glVertexArrayAttribIFormat(vao.id, attrib, count, type, 0);
-        break;
-    case GL_UNSIGNED_INT:
-        glVertexArrayAttribIFormat(vao.id, attrib, count, type, 0);
-        break;
-    default:
-        glVertexArrayAttribFormat(vao.id, attrib, count, type, GL_FALSE, 0);
-        break;
-    }
-    glVertexArrayAttribBinding(vao.id, attrib, vao.numVertexBuffers);
-    ++vao.numVertexBuffers;
 }
 void engine::EngineRenderer::processModels(ecs::registry &reg)
 {
@@ -61,23 +34,15 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
             newMesh.count = mesh.geometry.indices.size();
     
             newMesh.e_material = mesh.e_material;
-            newMesh.buffers = {
-                .positions = ogl::makeBuffer<ogl::VBO>(mesh.geometry.positions),
-                .texCoords = ogl::makeBuffer<ogl::VBO>(mesh.geometry.texCoords),
-                .normals   = ogl::makeBuffer<ogl::VBO>(mesh.geometry.normals),
-                .tangents  = ogl::makeBuffer<ogl::VBO>(mesh.geometry.tangents),
-                .boneIDs   = ogl::makeBuffer<ogl::VBO>(mesh.geometry.boneIDs),
-                .weights   = ogl::makeBuffer<ogl::VBO>(mesh.geometry.weights) 
-            };
     
             glCreateVertexArrays(1, &newMesh.vao.id);
             
-            addVertexBuffer(newMesh.vao, newMesh.buffers.positions, 4, GL_FLOAT);
-            addVertexBuffer(newMesh.vao, newMesh.buffers.texCoords, 2, GL_FLOAT);
-            addVertexBuffer(newMesh.vao, newMesh.buffers.normals,   4, GL_FLOAT);
-            addVertexBuffer(newMesh.vao, newMesh.buffers.tangents,  4, GL_FLOAT);
-            addVertexBuffer(newMesh.vao, newMesh.buffers.boneIDs,   4, GL_FLOAT);
-            addVertexBuffer(newMesh.vao, newMesh.buffers.weights,   4, GL_FLOAT);
+            ogl::pushVertexBuffer(newMesh.vao, ogl::makeBuffer<ogl::VBO>(mesh.geometry.positions), 4, GL_FLOAT);
+            ogl::pushVertexBuffer(newMesh.vao, ogl::makeBuffer<ogl::VBO>(mesh.geometry.texCoords), 2, GL_FLOAT);
+            ogl::pushVertexBuffer(newMesh.vao, ogl::makeBuffer<ogl::VBO>(mesh.geometry.normals),   4, GL_FLOAT);
+            ogl::pushVertexBuffer(newMesh.vao, ogl::makeBuffer<ogl::VBO>(mesh.geometry.tangents),  4, GL_FLOAT);
+            ogl::pushVertexBuffer(newMesh.vao, ogl::makeBuffer<ogl::VBO>(mesh.geometry.boneIDs),   4, GL_FLOAT);
+            ogl::pushVertexBuffer(newMesh.vao, ogl::makeBuffer<ogl::VBO>(mesh.geometry.weights),   4, GL_FLOAT);
             
             newMesh.ibo = ogl::makeBuffer<ogl::IBO>(mesh.geometry.indices);
             glVertexArrayElementBuffer(newMesh.vao.id, newMesh.ibo.id);
@@ -128,6 +93,8 @@ void engine::EngineRenderer::processTextures(ecs::registry &reg)
     }
 }
 
+// TODO: refactor this mess
+
 static void processPointLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::PointLight>(e_light);
@@ -142,14 +109,26 @@ static void processPointLight(engine::renderer::RendererData &data, ecs::registr
         auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
         data.SMAtlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
             .type = engine::renderer::ShadowMapAtlas::Light::POINT,
-            .drawLightIndex = data.drawLightsOmnidirectional.size(),
+            .drawLightIndex = data.drawLights.size(),
             .lightIndex = data.pointLights.size(),
             .size = shadowLight.shadowMapSize
         });
-        data.drawLightsOmnidirectional.emplace_back(engine::renderer::LightDraw{
-            .view = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f},
-            .proj = glm::perspective(glm::radians(90.0f), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
-        });
+
+        constexpr std::array<glm::mat4, 6> POINT_CUBE_FACE_MATRICES = {
+            glm::mat4{ { 0 ,0,-1, 0 }, { 0,-1, 0, 0 }, {-1, 0, 0,0 }, {0, 0, 0, 1} },
+            glm::mat4{ { 0 ,0, 1, 0 }, { 0,-1, 0, 0 }, { 1, 0, 0,0 }, {0, 0, 0, 1} },
+            glm::mat4{ { 1 ,0, 0, 0 }, { 0, 0, 1, 0 }, { 0,-1, 0,0 }, {0, 0, 0, 1} },
+            glm::mat4{ { 1 ,0, 0, 0 }, { 0, 0,-1, 0 }, { 0, 1, 0,0 }, {0, 0, 0, 1} },
+            glm::mat4{ { 1 ,0, 0, 0 }, { 0,-1, 0, 0 }, { 0, 0,-1,0 }, {0, 0, 0, 1} },
+            glm::mat4{ {-1 ,0, 0, 0 }, { 0,-1, 0, 0 }, { 0, 0, 1,0 }, {0, 0, 0, 1} } 
+        };
+        for(unsigned i = 0; i < 6; ++i)
+        {
+            data.drawLights.emplace_back(engine::renderer::DrawLight{
+                .viewMat = POINT_CUBE_FACE_MATRICES[i] * (reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f}),
+                .projMat = glm::perspective(glm::radians(90.0f), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
+            });
+        }
     }
     data.pointLights.emplace_back(std::move(newLight));
 }
@@ -172,9 +151,9 @@ static void processDirLight(engine::renderer::RendererData &data, ecs::registry 
             .size = shadowLight.shadowMapSize
         });
         // TODO: cascade SM
-        data.drawLights.emplace_back(engine::renderer::LightDraw{
-            .view = modelMat,
-            .proj = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
+        data.drawLights.emplace_back(engine::renderer::DrawLight{
+            .viewMat = glm::translate(glm::mat4{1.0f}, -newLight.direction * 10.0f) * modelMat,
+            .projMat = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
         });
     }
     data.dirLights.emplace_back(std::move(newLight));
@@ -201,9 +180,9 @@ static void processSpotLight(engine::renderer::RendererData &data, ecs::registry
             .lightIndex = data.spotLights.size(),
             .size = shadowLight.shadowMapSize
         });
-        data.drawLights.emplace_back(engine::renderer::LightDraw{
-            .view = modelMat,
-            .proj = glm::perspective(newLight.outerConeAngle, 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
+        data.drawLights.emplace_back(engine::renderer::DrawLight{
+            .viewMat = modelMat,
+            .projMat = glm::perspective(newLight.outerConeAngle, 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         });
     }
     data.spotLights.emplace_back(std::move(newLight));
@@ -246,70 +225,43 @@ static void makeAtlas(engine::renderer::RendererData &data)
             .size = static_cast<unsigned>(rect.h)
         };
 
+        auto &drawLight = data.drawLights.at(light.drawLightIndex);
+        drawLight.location = location;
         switch(light.type)
         {
             case light.POINT:
-            data.pointLights.at(light.lightIndex).atlasPos = location;
-            data.drawLightsOmnidirectional.at(light.drawLightIndex).atlasPos = location;
+            data.pointLights.at(light.lightIndex).location = location;
+            for(size_t i = light.drawLightIndex + 1; i < light.drawLightIndex + 6; ++i)
+            {
+                location.pos.x += location.size;
+                data.drawLights.at(i).location = location;
+            }
             break;
             case light.DIR:
-            data.dirLights.at(light.lightIndex).atlasPos = location;
-            data.drawLights.at(light.drawLightIndex).atlasPos = location;
+            data.dirLights.at(light.lightIndex).location = location;
             break;
             case light.SPOT:
-            data.spotLights.at(light.lightIndex).atlasPos = location;
-            data.drawLights.at(light.drawLightIndex).atlasPos = location;
+            data.spotLights.at(light.lightIndex).location = location;
             break;
         }
     }
 
-    // for(auto const &rect : rectangles)
-    // {
-    //     auto &light = atlas.lights[rect.index];
-    //     light.posAtlas = { rect.get_rect().x, rect.get_rect().y };
-    //     switch(light.type)
-    //     {
-    //         case light.POINT:
-    //         {
-    //             auto &shaderLight = data.pointLights.at(light.lightIndex);
-    //             shaderLight.depthMapPos  = light.posAtlas;
-    //             shaderLight.depthMapSize = light.sizeAtlas;
-    //             break;
-    //         }
-    //         case light.DIR:
-    //         {
-    //             auto &shaderLight = data.dirLights.at(light.lightIndex);
-    //             shaderLight.depthMapPos  = light.posAtlas;
-    //             shaderLight.depthMapSize = light.sizeAtlas;
-    //             break;
-    //         }
-    //         case light.SPOT:
-    //         {
-    //             auto &shaderLight = data.spotLights.at(light.lightIndex);
-    //             shaderLight.depthMapPos  = light.posAtlas;
-    //             shaderLight.depthMapSize = light.sizeAtlas;
-    //             break;
-    //         }
-    //         default:
-    //         ENGINE_ASSERT_MSG(false, "unknown light type");
-    //     }
-    // }
+    // ENGINE_CORE_TRACE("Made {}x{} atlas", atlas.size.x, atlas.size.y);
+    // for(auto const &light : data.pointLights)
+    //     ENGINE_CORE_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    // for(auto const &light : data.dirLights)
+    //     ENGINE_CORE_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    // for(auto const &light : data.spotLights)
+    //     ENGINE_CORE_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    // ENGINE_CORE_TRACE("================");
 
-    ENGINE_CORE_TRACE("Made {}x{} atlas", atlas.size.x, atlas.size.y);
-    for(auto const &light : data.pointLights)
-        ENGINE_CORE_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.atlasPos.pos.x, light.atlasPos.pos.y, light.atlasPos.size);
-    for(auto const &light : data.dirLights)
-        ENGINE_CORE_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.atlasPos.pos.x, light.atlasPos.pos.y, light.atlasPos.size);
-    for(auto const &light : data.spotLights)
-        ENGINE_CORE_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.atlasPos.pos.x, light.atlasPos.pos.y, light.atlasPos.size);
-    ENGINE_CORE_TRACE("================");
-
-    ogl::resizeAttachment(atlas.fbo, atlas.texture, atlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
+    ogl::attachment(atlas.fbo, atlas.texture, atlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
 }
 void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::RendererData &data)
 {
     data.pointLights.clear();
     data.dirLights.clear();
+    data.drawLights.clear();
     data.spotLights.clear();
     data.SMAtlas.lights.clear();
     for(ecs::entity e_light : reg.view<DynamicLight>())
@@ -329,8 +281,10 @@ void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::R
     glNamedBufferData(data.pointLightsSSBO.id, data.pointLights.size() * sizeof(renderer::PointLight), data.pointLights.data(), GL_STATIC_DRAW);
     glNamedBufferData(data.dirLightsSSBO.id,   data.dirLights.size()   * sizeof(renderer::DirLight),   data.dirLights.data(),   GL_STATIC_DRAW);
     glNamedBufferData(data.spotLightsSSBO.id,  data.spotLights.size()  * sizeof(renderer::SpotLight),  data.spotLights.data(),  GL_STATIC_DRAW);
+    glNamedBufferData(data.drawLightsSSBO.id,  data.drawLights.size()  * sizeof(renderer::DrawLight),  data.drawLights.data(),  GL_STATIC_DRAW);
 }
 
+// TODO: process data automatically based on the versioning system.
 void engine::EngineRenderer::processData(ecs::registry &reg)
 {
     processTextures(reg);

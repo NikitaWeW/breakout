@@ -14,12 +14,15 @@
 // The engine pipeline, game loop and other stuff will be abstracted 
 // into the engine::Engine class one the engine becomes mature enough.
 
+
 int main(int argc, char **argv) {
     constexpr unsigned toLoad = 3 + 1;
     float progress = 0; // will be easier once i'll implement some kind of asset manager.
     
-    std::thread loadingScreenThread{cooload::loadingScreen, nullptr}; // disable loading screen
-    // std::thread loadingScreenThread{cooload::loadingScreen, &progress};
+    // TODO: make loading screen work nicer with logging
+    bool loadingScreen = false;
+
+    std::thread loadingScreenThread{cooload::loadingScreen, loadingScreen ? &progress : nullptr};
 
     GLFWwindow* window;
     
@@ -85,6 +88,7 @@ int main(int argc, char **argv) {
     while(!glfwWindowShouldClose(window))
     {
         auto start = std::chrono::high_resolution_clock::now();
+        glfwPollEvents();
 
         updateScene(registry, deltatime);
 
@@ -96,10 +100,12 @@ int main(int argc, char **argv) {
         renderer->draw(registry);
         
         glfwSwapBuffers(window);
-        glfwPollEvents();
 
         deltatime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1e-9f;
         glfwSetWindowTitle(window, (std::to_string(deltatime * 1e3) + "ms | " + std::to_string(1/deltatime) + "fps").c_str());
+        std::cout << "\033[s";
+        ENGINE_INFO("dt: {}ms;\t fps: {}", deltatime * 1e-3, 1.0f / deltatime);
+        std::cout << "\033[u";
     }
 
     ENGINE_INFO("Exiting...");

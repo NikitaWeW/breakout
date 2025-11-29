@@ -85,7 +85,7 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program
 
 void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererData &data)
 { 
-    /// TODO: split render passes and make a system for custom user graphics (render graph?)`
+    // TODO: split render passes and make a system for custom user graphics (render graph?)`
     auto const &camera = reg.get<engine::Camera>(data.context.e_camera);
     glm::mat4 viewMat = reg.has<engine::ModelMatrix>(data.context.e_camera) ? reg.get<engine::ModelMatrix>(data.context.e_camera) : glm::mat4{1.0f};
 
@@ -103,6 +103,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glUniform1ui(      ogl::getUniform(data.shaders.propShader, "u_numDirLights"),   data.dirLights.size());
     glUniform1ui(      ogl::getUniform(data.shaders.propShader, "u_numSpotLights"),  data.spotLights.size());
     glDisable(GL_POLYGON_OFFSET_FILL);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
     // ===================
     // SOLID OBJECTS PASS 
@@ -217,7 +218,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(data.shaders   .screenShader.id);
     glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_2D, data.mainFBOColor.id);
-    // glBindTexture(GL_TEXTURE_2D, data.oitRevealageTexture.id);
+    glBindTexture(GL_TEXTURE_2D, data.SMAtlas.texture.id);
 
     // draw a quad (hard-coded in VSh)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

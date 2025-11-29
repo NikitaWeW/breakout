@@ -98,21 +98,68 @@ static ogl::Program collectShaders(std::string_view dirpath)
     return program;
 }
 
-
 std::size_t ogl::getSizeOfGLType(GLenum type)
 {
     switch (type) {
-        case GL_BYTE:            return sizeof(GLbyte);
-        case GL_UNSIGNED_BYTE:   return sizeof(GLubyte);
-        case GL_SHORT:           return sizeof(GLshort);
-        case GL_UNSIGNED_SHORT:  return sizeof(GLushort);
-        case GL_INT:             return sizeof(GLint);
-        case GL_UNSIGNED_INT:    return sizeof(GLuint);
-        case GL_FLOAT:           return sizeof(GLfloat);
-        case GL_DOUBLE:          return sizeof(GLdouble);
-        default: 
-            ENGINE_ASSERT_MSG(false, "unknown opengl type");
-            return 0;
+    case GL_BYTE:              return sizeof(GLbyte);
+    case GL_UNSIGNED_BYTE:     return sizeof(GLubyte);
+    case GL_SHORT:             return sizeof(GLshort);
+    case GL_UNSIGNED_SHORT:    return sizeof(GLushort);
+    case GL_INT:               return sizeof(GLint);
+    case GL_UNSIGNED_INT:      return sizeof(GLuint);
+    case GL_FLOAT:             return sizeof(GLfloat);
+    case GL_DOUBLE:            return sizeof(GLdouble);
+    case GL_BOOL:              return sizeof(GLboolean);
+
+    case GL_HALF_FLOAT:        return 2;
+    case GL_FIXED:             return 4;
+
+    case GL_FLOAT_VEC2:        return sizeof(GLfloat) * 2;
+    case GL_FLOAT_VEC3:        return sizeof(GLfloat) * 3;
+    case GL_FLOAT_VEC4:        return sizeof(GLfloat) * 4;
+    case GL_INT_VEC2:          return sizeof(GLint) * 2;
+    case GL_INT_VEC3:          return sizeof(GLint) * 3;
+    case GL_INT_VEC4:          return sizeof(GLint) * 4;
+    case GL_UNSIGNED_INT_VEC2: return sizeof(GLuint) * 2;
+    case GL_UNSIGNED_INT_VEC3: return sizeof(GLuint) * 3;
+    case GL_UNSIGNED_INT_VEC4: return sizeof(GLuint) * 4;
+    case GL_BOOL_VEC2:         return sizeof(GLboolean) * 2;
+    case GL_BOOL_VEC3:         return sizeof(GLboolean) * 3;
+    case GL_BOOL_VEC4:         return sizeof(GLboolean) * 4;
+
+    case GL_FLOAT_MAT2:        return sizeof(GLfloat) * 2 * 2;
+    case GL_FLOAT_MAT3:        return sizeof(GLfloat) * 3 * 3;
+    case GL_FLOAT_MAT4:        return sizeof(GLfloat) * 4 * 4;
+    case GL_FLOAT_MAT2x3:      return sizeof(GLfloat) * 2 * 3;
+    case GL_FLOAT_MAT2x4:      return sizeof(GLfloat) * 2 * 4;
+    case GL_FLOAT_MAT3x2:      return sizeof(GLfloat) * 3 * 2;
+    case GL_FLOAT_MAT3x4:      return sizeof(GLfloat) * 3 * 4;
+    case GL_FLOAT_MAT4x2:      return sizeof(GLfloat) * 4 * 2;
+    case GL_FLOAT_MAT4x3:      return sizeof(GLfloat) * 4 * 3;
+
+    case GL_DOUBLE_MAT2:       return sizeof(GLdouble) * 2 * 2;
+    case GL_DOUBLE_MAT3:       return sizeof(GLdouble) * 3 * 3;
+    case GL_DOUBLE_MAT4:       return sizeof(GLdouble) * 4 * 4;
+    case GL_DOUBLE_MAT2x3:     return sizeof(GLdouble) * 2 * 3;
+    case GL_DOUBLE_MAT2x4:     return sizeof(GLdouble) * 2 * 4;
+    case GL_DOUBLE_MAT3x2:     return sizeof(GLdouble) * 3 * 2;
+    case GL_DOUBLE_MAT3x4:     return sizeof(GLdouble) * 3 * 4;
+    case GL_DOUBLE_MAT4x2:     return sizeof(GLdouble) * 4 * 2;
+    case GL_DOUBLE_MAT4x3:     return sizeof(GLdouble) * 4 * 3;
+
+    case GL_UNSIGNED_INT_2_10_10_10_REV:  return 4;
+    case GL_INT_2_10_10_10_REV:           return 4;
+    case GL_UNSIGNED_INT_10F_11F_11F_REV: return 4;
+
+    case GL_SAMPLER_2D:
+    case GL_SAMPLER_CUBE:
+    case GL_IMAGE_2D:
+    case GL_ATOMIC_COUNTER_BUFFER:
+        ENGINE_ASSERT_MSG(false, "opaque/sampler type has no raw byte size");
+        return 0;
+    default: 
+        ENGINE_ASSERT_MSG(false, "unknown opengl type");
+        return 0;
     }
 }
 ogl::Program ogl::compileShader(std::string_view dirpath)
@@ -269,7 +316,7 @@ ogl::Cubemap ogl::makeCubemap(std::array<Bitmap<float>, 6> const &data)
     return cubemap;
 }
 
-void ogl::resizeAttachment(ogl::Framebuffer &fbo, ogl::Texture &texture, glm::uvec2 size, GLenum attachment, GLenum format)
+void ogl::attachment(ogl::Framebuffer &fbo, ogl::Texture &texture, glm::uvec2 size, GLenum attachment, GLenum format)
 {
     if(texture.id != 0)
     {
@@ -287,7 +334,7 @@ void ogl::resizeAttachment(ogl::Framebuffer &fbo, ogl::Texture &texture, glm::uv
     glNamedFramebufferTexture(fbo.id, attachment, texture.id, 0);
     ENGINE_ASSERT_MSG(ogl::isComplete(fbo), "");
 }
-void ogl::resizeAttachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm::uvec2 size, GLenum attachment, GLenum format)
+void ogl::attachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm::uvec2 size, GLenum attachment, GLenum format)
 {
     if(rbo.id != 0)
     {
@@ -304,4 +351,43 @@ void ogl::resizeAttachment(ogl::Framebuffer &fbo, ogl::Renderbuffer &rbo, glm::u
     ENGINE_ASSERT_MSG(fbo.id != 0, "invalid fbo");
     glNamedFramebufferRenderbuffer(fbo.id, attachment, GL_RENDERBUFFER, rbo.id);
     ENGINE_ASSERT_MSG(ogl::isComplete(fbo), "");
+}
+void ogl::pushVertexBuffer(ogl::VAO &vao, ogl::Buffer &&buff, std::size_t count, GLenum type, bool instanced)
+{
+    if(buff.id == 0) 
+    {
+        vao.buffers.emplace_back(std::move(buff));
+        return;
+    }
+    unsigned attrib = vao.buffers.size();
+    unsigned binding = vao.buffers.size();
+    glVertexArrayVertexBuffer(vao.id, binding, buff.id, 0, count * ogl::getSizeOfGLType(type));
+    glEnableVertexArrayAttrib(vao.id, attrib);
+    switch(type)
+    {
+    case GL_BYTE:
+    case GL_UNSIGNED_BYTE:
+    case GL_SHORT:
+    case GL_UNSIGNED_SHORT:
+    case GL_INT:
+    case GL_UNSIGNED_INT:
+        glVertexArrayAttribIFormat(vao.id, attrib, count, type, 0);
+        break;
+    default:
+        glVertexArrayAttribFormat(vao.id, attrib, count, type, GL_FALSE, 0);
+        break;
+    }
+    glVertexArrayAttribBinding(vao.id, attrib, binding);
+    if(instanced)
+        glVertexArrayBindingDivisor(vao.id, binding, 1);
+    vao.buffers.emplace_back(std::move(buff));
+}
+
+void ogl::popVertexBuffer(ogl::VAO &vao)
+{
+    vao.buffers.pop_back();
+    unsigned attrib = vao.buffers.size();
+    unsigned binding = vao.buffers.size();
+    glDisableVertexArrayAttrib(vao.id, attrib);
+    glVertexArrayVertexBuffer(vao.id, binding, 0, 0, 0);
 }

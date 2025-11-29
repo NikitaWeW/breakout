@@ -623,10 +623,24 @@ ecs::entity engine::loader::ModelLoader::load()
         currentModel->animations.emplace_back(std::move(processAnimation(currentScene->mAnimations[i])));
     }
 
-    /// TODO: morph targets
+    // TODO: morph targets
 
     return currentRegistry->create(std::move(*currentModel));
 }
+
+constexpr unsigned ASSIMP_FLAGS = 
+    aiProcess_SplitLargeMeshes      |
+    aiProcess_GenNormals            |
+    aiProcess_GenUVCoords           |
+    aiProcess_FindInvalidData       |
+    aiProcess_CalcTangentSpace      |
+    aiProcess_Triangulate           |
+    aiProcess_JoinIdenticalVertices |
+    aiProcess_SortByPType           |
+    aiProcess_OptimizeGraph         |
+    aiProcess_OptimizeMeshes        |
+    aiProcess_ValidateDataStructure |
+    aiProcess_LimitBoneWeights;
 
 ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
 {
@@ -636,18 +650,7 @@ ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::string_vi
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
     aiScene const *scene = importer.ReadFile(std::string{path}, 
-        aiProcess_SplitLargeMeshes      |
-        aiProcess_GenNormals            |
-        aiProcess_GenUVCoords           |
-        aiProcess_FindInvalidData       |
-        aiProcess_CalcTangentSpace      |
-        aiProcess_Triangulate           |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_SortByPType           |
-        aiProcess_OptimizeGraph         |
-        aiProcess_OptimizeMeshes        |
-        aiProcess_ValidateDataStructure |
-        aiProcess_LimitBoneWeights      |
+        ASSIMP_FLAGS |
         (bool(flags & LoadingFlags::MODEL_FLIP_WINDING_ORDER) ? aiProcess_FlipWindingOrder : 0) |
         (bool(flags & LoadingFlags::MODEL_FLIP_TEXTURES)      ? aiProcess_FlipUVs : 0)
     );
@@ -678,18 +681,7 @@ ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::size_t si
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
     aiScene const *scene = importer.ReadFileFromMemory(data, size, 
-        aiProcess_SplitLargeMeshes      |
-        aiProcess_GenNormals            |
-        aiProcess_GenUVCoords           |
-        aiProcess_FindInvalidData       |
-        aiProcess_CalcTangentSpace      |
-        aiProcess_Triangulate           |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_SortByPType           |
-        aiProcess_OptimizeGraph         |
-        aiProcess_OptimizeMeshes        |
-        aiProcess_ValidateDataStructure |
-        aiProcess_LimitBoneWeights      |
+        ASSIMP_FLAGS |
         (bool(flags & LoadingFlags::MODEL_FLIP_WINDING_ORDER) ? aiProcess_FlipWindingOrder : 0) |
         (bool(flags & LoadingFlags::MODEL_FLIP_TEXTURES)      ? aiProcess_FlipUVs : 0)
     );

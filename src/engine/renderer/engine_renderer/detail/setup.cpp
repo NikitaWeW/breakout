@@ -169,7 +169,6 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
     glCreateBuffers(1, &data.dirLightsSSBO.id);
     glCreateBuffers(1, &data.spotLightsSSBO.id);
     glCreateBuffers(1, &data.drawLightsSSBO.id);
-    glCreateBuffers(1, &data.drawLightsOmnidirectionalSSBO.id);
 }
 
 engine::EngineRenderer::EngineRenderer(Context const &context)

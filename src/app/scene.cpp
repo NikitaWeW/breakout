@@ -170,7 +170,7 @@ void createScene(ecs::registry &reg)
                 .speed = 1
             }
         );
-        reg.create( // animation test (made myself thus its so bad)
+        reg.create( // animation test (made myself thus it looks so bad)
             engine::Instance{
                 loader.load(engine::DataType::MODEL, "res/models/blob.glb")
             }, 

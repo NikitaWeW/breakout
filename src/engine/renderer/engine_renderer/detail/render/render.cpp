@@ -14,16 +14,17 @@ void engine::EngineRenderer::draw(ecs::registry &reg)
 
     if(data.prevCamSize != camera.size) 
     { // resize or initialize buffers / textures
-        ogl::resizeAttachment(data.mainFBO, data.mainFBOColor,        camera.size, GL_COLOR_ATTACHMENT0, GL_RGBA32F);
-        ogl::resizeAttachment(data.oitFBO,  data.oitAccumTexture,     camera.size, GL_COLOR_ATTACHMENT1, GL_RGBA32F);
-        ogl::resizeAttachment(data.oitFBO,  data.oitRevealageTexture, camera.size, GL_COLOR_ATTACHMENT2, GL_R16    );
+        ogl::attachment(data.mainFBO, data.mainFBOColor,        camera.size, GL_COLOR_ATTACHMENT0, GL_RGBA32F);
+        ogl::attachment(data.oitFBO,  data.oitAccumTexture,     camera.size, GL_COLOR_ATTACHMENT1, GL_RGBA32F);
+        ogl::attachment(data.oitFBO,  data.oitRevealageTexture, camera.size, GL_COLOR_ATTACHMENT2, GL_R16    );
 
-        ogl::resizeAttachment(data.mainFBO, data.mainFBORBO, camera.size);
+        ogl::attachment(data.mainFBO, data.mainFBORBO, camera.size);
         glNamedFramebufferRenderbuffer(data.oitFBO.id, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, data.mainFBORBO.id);
     }
 
     processLights(reg, data);
 
+    renderShadowMaps(reg, data);
     renderMain(reg, data);
 
     data.prevCamSize = camera.size;

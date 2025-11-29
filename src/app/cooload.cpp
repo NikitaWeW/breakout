@@ -8,6 +8,7 @@
 #include <sys/ioctl.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <termios.h>
 #endif
 
 void cooload::resizeCube(SpinningCube &cube)
@@ -29,7 +30,7 @@ static void calculateForSurface(cooload::SpinningCube &cube, glm::vec3 pos, char
     p.y = (p.y * 0.5 + 0.5) * cube.viewport.size.y + cube.viewport.position.y;
     
     int idx = static_cast<int>(p.x) + static_cast<int>(p.y) * cube.imageSize.x;
-    if (idx >= 0 && idx < cube.imageSize.x * cube.imageSize.y) {
+    if (idx >= 0 && idx < static_cast<int>(cube.imageSize.x * cube.imageSize.y)) {
         if (p.z < cube.zbuffer[idx]) {
             cube.zbuffer[idx] = p.z;
             cube.buffer[idx] = ch;
@@ -128,9 +129,9 @@ void cooload::draw(Bar &bar)
 }
 void cooload::clearConsole()
 {
-#ifdef _WIN32 // Check if compiling on Windows
+#ifdef _WIN32
     system("cls");
-#else // Assume Unix-based system otherwise
+#else
     system("clear");
 #endif
     std::cout.flush();
@@ -194,3 +195,19 @@ void cooload::loadingScreen(float const *progress)
     while(progressBar.percentage < 1);
     std::cout << "\x1B[?25h";
 }
+
+#ifdef _WIN32
+glm::uvec2 cooload::getCursorPos()
+{
+    HANDLE hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if(GetConsoleScreenBufferInfo(hConsoleOutput, &csbi)) 
+        return { csbi.dwCursorPosition.X, csbi.dwCursorPosition.Y };
+    return {};
+}
+#else
+glm::uvec2 cooload::getxy()
+{
+    assert(false && "FIXME");
+}
+#endif

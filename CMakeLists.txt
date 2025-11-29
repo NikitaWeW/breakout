@@ -46,7 +46,7 @@ install(TARGETS engine DESTINATION engine/lib)
 file(GLOB_RECURSE SOURCES "src/app/*.cpp")
 
 add_executable(app ${SOURCES})
-target_include_directories(app PRIVATE src)
+target_include_directories(app PRIVATE src src/app)
 target_link_libraries(app PRIVATE engine)
 
 install(DIRECTORY DESTINATION app)

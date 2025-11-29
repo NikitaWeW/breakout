@@ -10,15 +10,6 @@ namespace engine::renderer
     struct ProcessedCubemap {};
     struct ProcessedMaterial {};
 
-    struct VertexBuffers
-    {
-        ogl::VBO positions;
-        ogl::VBO texCoords;
-        ogl::VBO normals;
-        ogl::VBO tangents;
-        ogl::VBO boneIDs;
-        ogl::VBO weights;
-    };
     struct Material
     {
         engine::Material::Properties properties;
@@ -33,7 +24,6 @@ namespace engine::renderer
     struct Mesh
     {
         ecs::entity e_material;
-        VertexBuffers buffers;
         ogl::VAO vao;
         ogl::IBO ibo;
         GLenum mode = GL_TRIANGLES;
@@ -63,12 +53,10 @@ namespace engine::renderer
             /// The type of the light, used to determine which light's location to update.
             enum { POINT, DIR, SPOT } type;
             /// An index of the draw light.
-            /// Based on the Light::type indexes the RendererData::drawLights 
-            /// or RendererData::drawLightsOmnidirectional.
+            /// Indexes ShadowMapAtlas::projMatrices and ShadowMapAtlas::viewMatrices
             size_t drawLightIndex;
             /// An index of the light used in the shading stage.
-            /// Based on the Light::type indexes the RendererData::pointLights, 
-            /// RendererData::dirLights, RendererData::spotLights.
+            /// Indexes the RendererData::pointLights, RendererData::dirLights, RendererData::spotLights.
             size_t lightIndex;
             /// In pixels. Used to set the size of the lights and stuff.
             unsigned size;
@@ -78,7 +66,10 @@ namespace engine::renderer
         ogl::Texture texture;
         ogl::Framebuffer fbo;
 
+        // TODO: distribute shadow map draws in a few frames.
         std::vector<Light> lights;
+        std::vector<glm::mat4> viewMatrices;
+        std::vector<glm::mat4> projMatrices;
     };
     struct PointLight
     {
@@ -86,7 +77,7 @@ namespace engine::renderer
         float _pad0;
         glm::vec3 position;
         float _pad1;
-        ShadowMapAtlas::Location atlasPos;
+        ShadowMapAtlas::Location location;
         float farPlane;
     };
     struct DirLight
@@ -95,7 +86,7 @@ namespace engine::renderer
         float _pad0;
         glm::vec3 direction;
         float _pad1;
-        ShadowMapAtlas::Location atlasPos;
+        ShadowMapAtlas::Location location;
         float _pad2;
         glm::vec4 _pad3;
         glm::mat4 viewProj;
@@ -108,16 +99,15 @@ namespace engine::renderer
         float _pad1;
         glm::vec3 direction; 
         float innerConeAngle;
-        ShadowMapAtlas::Location atlasPos;
+        ShadowMapAtlas::Location location;
         float outerConeAngle;
         glm::mat4 viewProj;
     };
-
-    struct LightDraw
+    struct DrawLight
     {
-        glm::mat4 view;
-        glm::mat4 proj;
-        ShadowMapAtlas::Location atlasPos;
+        glm::mat4 viewMat;
+        glm::mat4 projMat;
+        ShadowMapAtlas::Location location;
         float _pad0;
         glm::vec4 _pad1;
         glm::vec4 _pad2;
@@ -151,13 +141,11 @@ namespace engine::renderer
         std::vector<renderer::PointLight> pointLights;
         std::vector<renderer::DirLight>   dirLights;
         std::vector<renderer::SpotLight>  spotLights;
-        std::vector<renderer::LightDraw>  drawLights;
-        std::vector<renderer::LightDraw>  drawLightsOmnidirectional;
-        ogl::SSBO pointLightsSSBO; 
-        ogl::SSBO dirLightsSSBO; 
-        ogl::SSBO spotLightsSSBO; 
-        ogl::SSBO drawLightsSSBO; 
-        ogl::SSBO drawLightsOmnidirectionalSSBO; 
+        std::vector<renderer::DrawLight>  drawLights;
+        ogl::SSBO pointLightsSSBO;
+        ogl::SSBO dirLightsSSBO;
+        ogl::SSBO spotLightsSSBO;
+        ogl::SSBO drawLightsSSBO;
 
         EngineRenderer::Context context;
         ShadowMapAtlas SMAtlas;

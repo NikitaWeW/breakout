@@ -19,6 +19,7 @@ uniform mat3 u_normalMat;
 uniform mat4 u_viewMat;
 uniform mat4 u_projMat;
 
+// TODO: move bones to ssbo
 uniform mat4 u_boneMatrices[MAX_BONES];
 uniform bool u_animated;
 
