@@ -18,7 +18,6 @@
 #include "animation/animation.hpp"
 
 #include "physics/physics.hpp"
-#include "physics/ModelMatrixAssembler.hpp"
 
 // namespace engine
 // {

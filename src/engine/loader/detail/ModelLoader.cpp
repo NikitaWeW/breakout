@@ -288,6 +288,7 @@ engine::Material engine::loader::ModelLoader::convertMaterial(aiMaterial const *
     return material;
 }
 
+// FIXME: probably wrong.
 static void calculateMissingPrimitives(engine::Mesh &mesh)
 {
     ENGINE_ASSERT(!mesh.geometry.positions.empty());

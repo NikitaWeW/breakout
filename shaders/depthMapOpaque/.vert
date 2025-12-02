@@ -47,12 +47,12 @@ void main() {
     }
 
     DrawLight light = lights[gl_InstanceID];
-    vec4 clip = light.projMat * light.viewMat * u_modelMat * position;
-    clip /= clip.w;
-    clip.xyz = clamp(clip.xyz, vec3(-1), vec3(1));
-    // Transform the clip coordinates into light viewport
-    vec2 size = vec2(light.atlasSize) / vec2(u_atlasSize) ;
-    clip.xy *= size;
-    clip.xy += (2.0 * vec2(light.atlasPos) / vec2(u_atlasSize) + size - 1.0) * clip.w;
-    gl_Position = clip;
+    vec4 pos = light.projMat * light.viewMat * u_modelMat * position;
+    pos /= pos.w;
+    pos.xy = pos.xy * 0.5 + 0.5;
+    pos.xy = clamp(pos.xy, vec2(0), vec2(1));
+    pos.xy *= vec2(light.atlasSize) / vec2(u_atlasSize);
+    pos.xy += vec2(light.atlasPos) / vec2(u_atlasSize);
+    pos.xy = pos.xy * 2 - 1;
+    gl_Position = pos;
 }

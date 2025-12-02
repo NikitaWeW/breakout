@@ -3,7 +3,7 @@
 
 void engine::EnginePhysics::movement(ecs::registry &reg, float deltatime)
 {
-    for(auto e : reg.view<Position, Velocity>())
+    for(auto e : reg.view<engine::Transform, Velocity>())
     {
         auto &velocity = reg.get<Velocity>(e);
         if(reg.has<Acceleration>(e))
@@ -20,7 +20,7 @@ void engine::EnginePhysics::movement(ecs::registry &reg, float deltatime)
         for(auto const &[uid, add] : velocity.values)
             velocity.value += add;
 
-        glm::vec3 &pos = reg.get<Position>(e);
-        pos += velocity.value * deltatime;
+        engine::Transform &transform = reg.get<engine::Transform>(e);
+        transform.position += velocity.value * deltatime;
     }
 }

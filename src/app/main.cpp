@@ -78,8 +78,6 @@ int main(int argc, char **argv) {
     engine::EnginePhysics mainPhysics;
     physics = &mainPhysics;
 
-    engine::ModelMatrixAssembler modelMatrixAssembler;
-
     progress = 1;
     loadingScreenThread.join();
 
@@ -96,7 +94,6 @@ int main(int argc, char **argv) {
         controller.update(registry);
         animator.update(registry, deltatime);
         physics->update(registry, deltatime);
-        modelMatrixAssembler.update(registry);
         renderer->draw(registry);
         
         glfwSwapBuffers(window);
@@ -104,7 +101,7 @@ int main(int argc, char **argv) {
         deltatime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1e-9f;
         glfwSetWindowTitle(window, (std::to_string(deltatime * 1e3) + "ms | " + std::to_string(1/deltatime) + "fps").c_str());
         std::cout << "\033[s";
-        ENGINE_INFO("dt: {}ms;\t fps: {}", deltatime * 1e-3, 1.0f / deltatime);
+        ENGINE_INFO("dt: {:3f}ms;\t {:.3f} fps", deltatime * 1e3, 1.0f / deltatime);
         std::cout << "\033[u";
     }
 

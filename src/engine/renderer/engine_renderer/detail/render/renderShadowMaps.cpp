@@ -44,7 +44,7 @@ void EngineRenderer::renderShadowMaps(ecs::registry &reg, renderer::RendererData
 
         for(auto const &mesh : model.meshes)
         {
-            glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance) : glm::mat4{1.0f};
+            glm::mat4 modelMat = reg.has<engine::Transform>(e_instance) ? reg.get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
 
             glUniformMatrix4fv(ogl::getUniform(data.shaders.depthMapShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
             if(animated)

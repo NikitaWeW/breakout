@@ -61,7 +61,7 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program
 
     for(auto const &mesh : model.meshes)
     {
-        glm::mat4 modelMat = reg.has<engine::ModelMatrix>(e_instance) ? reg.get<engine::ModelMatrix>(e_instance) : glm::mat4{1.0f};
+        glm::mat4 modelMat = reg.has<engine::Transform>(e_instance) ? reg.get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
         glm::mat3 normalMat = glm::transpose(glm::inverse(modelMat));
         renderer::Material material = getMaterial(reg, instance.e_material ? instance.e_material : mesh.e_material);
 
@@ -87,7 +87,6 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
 { 
     // TODO: split render passes and make a system for custom user graphics (render graph?)`
     auto const &camera = reg.get<engine::Camera>(data.context.e_camera);
-    glm::mat4 viewMat = reg.has<engine::ModelMatrix>(data.context.e_camera) ? reg.get<engine::ModelMatrix>(data.context.e_camera) : glm::mat4{1.0f};
 
     glViewport(0, 0, camera.size.x, camera.size.y);
 
@@ -97,7 +96,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     
     // For solid and oit transparent passes
     glUseProgram(data.shaders.propShader.id);
-    glUniformMatrix4fv(ogl::getUniform(data.shaders.propShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
+    glUniformMatrix4fv(ogl::getUniform(data.shaders.propShader, "u_viewMat"), 1, false, glm::value_ptr(camera.viewMat));
     glUniformMatrix4fv(ogl::getUniform(data.shaders.propShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
     glUniform1ui(      ogl::getUniform(data.shaders.propShader, "u_numPointLights"), data.pointLights.size());
     glUniform1ui(      ogl::getUniform(data.shaders.propShader, "u_numDirLights"),   data.dirLights.size());
@@ -183,7 +182,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
             glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.id);
             
             glUseProgram(data.shaders.skyboxShader.id);
-            glUniformMatrix4fv(ogl::getUniform(data.shaders.skyboxShader, "u_viewMat"), 1, false, glm::value_ptr(viewMat));
+            glUniformMatrix4fv(ogl::getUniform(data.shaders.skyboxShader, "u_viewMat"), 1, false, glm::value_ptr(camera.viewMat));
             glUniformMatrix4fv(ogl::getUniform(data.shaders.skyboxShader, "u_projMat"), 1, false, glm::value_ptr(camera.projMat));
             
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 14);

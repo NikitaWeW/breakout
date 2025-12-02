@@ -84,50 +84,55 @@ void createScene(ecs::registry &reg)
     reg.get<engine::Material>(reg.get<engine::Model>(arrow).meshes[0].e_material).properties.albedo = {0.2, 0.3, 0.9, 1};
     
     // === === === === === === === ===
-    // BIG... STUFF... ?? ...
+    // RANDOM STUFF
     // === === === === === === === ===
     { // braces so sections fold nicely in my editor
+        reg.create( // some random cube
+            engine::Instance{cube}, 
+            engine::Transform{
+                .position = {1, 1, -2},
+                .orientation = glm::normalize(glm::angleAxis(1.0f, glm::vec3{-45, 90, 35}))
+            }
+        );
+        reg.create( // some random monkey
+            engine::Instance{suzanne},
+            engine::Transform{
+                .position = {-1, 1, 5},
+                .orientation = glm::normalize(glm::angleAxis(-26.0f, glm::vec3{2, 2, -4})),
+                .scale = glm::vec3{0.5}
+            }
+        );
+        reg.create( // some random sphere
+            engine::Instance{loader.load(engine::DataType::MODEL, "res/models/sphere.obj")}, 
+            engine::Transform{
+                .position = {-2, 1, 4},
+                .scale = {0.5, 0.5, 0.5}
+            }
+        );
+        reg.create(
+            engine::Instance{loader.load(engine::DataType::MODEL, "res/models/lemon.glb")}, 
+            engine::Transform{
+                .position = {4, 0.5, -5},
+                .orientation = glm::normalize(glm::angleAxis(46.0f, glm::vec3{2, 2, -4})),
+            }
+        );
+
+
         reg.create( // plane
             engine::Instance{cube}, 
-            engine::Position{{0, 0, -2}},
-            engine::Scale{glm::vec3{100, 0, 100}}
+            engine::Transform{
+                .position = { 0, 0, -2 },
+                .scale = { 100, 0, 100 }
+            }
         );
         reg.create( // deccer cubes (working flawlessly)
             engine::Instance{
                 loader.load(engine::DataType::MODEL, "res/models/deccer_cubes/SM_Deccer_Cubes_Textured_Complex.glb")
             }, 
-            engine::Position{{-5, 2, 0}},
-            engine::Scale{glm::vec3{0.5}}
-        );
-    }
-
-    // === === === === === === === ===
-    // RANDOM STUFF
-    // === === === === === === === ===
-    {
-        reg.create( // some random cube
-            engine::Instance{cube}, 
-            engine::Position{{1, 1, -2}},
-            engine::OrientationEulerXYZ{{-45, 90, 35}}
-        );
-        reg.create( // some random monkey
-            engine::Instance{suzanne},
-            engine::Position{{-1, 1, 5}},
-            engine::Orientation{glm::normalize(glm::angleAxis(
-                -26.0f,
-                glm::vec3{2, 2, -4}
-            ))},
-            engine::Scale{glm::vec3{0.5}}
-        );
-        reg.create( // some random sphere
-            engine::Instance{loader.load(engine::DataType::MODEL, "res/models/sphere.obj")}, 
-            engine::Position{{-2, 1, 4}},
-            engine::Scale{{0.5, 0.5, 0.5}}
-        );
-        reg.create(
-            engine::Instance{loader.load(engine::DataType::MODEL, "res/models/lemon.glb")}, 
-            engine::Position{{4, 0.5, -5}},
-            engine::OrientationEulerXYZ{{-21, 523, 41}}
+            engine::Transform{
+                .position = {-5, 2, 0},
+                .scale = glm::vec3{0.5}
+            }
         );
     }
 
@@ -140,8 +145,10 @@ void createScene(ecs::registry &reg)
             engine::Instance{
                 loader.load(engine::DataType::MODEL, "res/models/fox.glb")
             }, 
-            engine::Position{{4, 0, -7}},
-            engine::Scale{glm::vec3{0.01}},
+            engine::Transform{
+                .position = {4, 0, -7},
+                .scale = glm::vec3{0.01}
+            },
             engine::CurrentAnimation{
                 .name = "Survey"
             }
@@ -150,8 +157,10 @@ void createScene(ecs::registry &reg)
             engine::Instance{
                 loader.load(engine::DataType::MODEL, "res/models/Silly_Dancing.fbx")
             }, 
-            engine::Position{{0, 0, -7}},
-            engine::Scale{glm::vec3{0.01}},
+            engine::Transform{
+                .position = {0, 0, -7},
+                .scale = glm::vec3{0.01}
+            },
             engine::Acceleration{.values = {{engine::UID{}, {0, 0.001, 0}}}},
             engine::Velocity{},
             engine::CurrentAnimation{
@@ -163,8 +172,10 @@ void createScene(ecs::registry &reg)
             engine::Instance{
                 loader.load(engine::DataType::MODEL, "res/models/Gangnam.fbx")
             }, 
-            engine::Position{{-2, 0, -8}},
-            engine::Scale{glm::vec3{0.01}},
+            engine::Transform{
+                .position = {-2, 0, -8},
+                .scale = glm::vec3{0.01}
+            },
             engine::CurrentAnimation{
                 .name = "mixamo.com",
                 .speed = 1
@@ -174,8 +185,10 @@ void createScene(ecs::registry &reg)
             engine::Instance{
                 loader.load(engine::DataType::MODEL, "res/models/blob.glb")
             }, 
-            engine::Position{{5, 0, -3}},
-            engine::Scale{glm::vec3{0.5}},
+            engine::Transform{
+                .position = {5, 0, -3},
+                .scale = glm::vec3{0.5}
+            },
             engine::CurrentAnimation{
                 .name = "ArmatureAction",
                 .speed = 1
@@ -195,8 +208,10 @@ void createScene(ecs::registry &reg)
                 .e_model = cube,
                 .e_material = reg.create(material) // copy transparent material and override the model material
             },
-            engine::Position{{4, 1, 4}},
-            engine::Scale{glm::vec3{0, 2, 2}},
+            engine::Transform{
+                .position = {4, 1, 4},
+                .scale = {0, 2, 2}
+            },
             engine::Transparent{}
         );
         material.properties.albedo = {0, 1, 0, 0.5};
@@ -205,8 +220,10 @@ void createScene(ecs::registry &reg)
                 .e_model = cube,
                 .e_material = reg.create(material)
             },
-            engine::Position{{5.5, 1, 4}},
-            engine::Scale{glm::vec3{0, 2, 2}},
+            engine::Transform{
+                .position = {5.5, 1, 4},
+                .scale = {0, 2, 2}
+            },
             engine::Transparent{}
         );
         material.properties.albedo = {0, 0, 1, 0.5};
@@ -215,8 +232,10 @@ void createScene(ecs::registry &reg)
                 .e_model = cube,
                 .e_material = reg.create(material)
             },
-            engine::Position{{7, 1, 4}},
-            engine::Scale{glm::vec3{0, 2, 2}},
+            engine::Transform{
+                .position = {7, 1, 4},
+                .scale = {0, 2, 2}
+            },
             engine::Transparent{}
         );
         material.properties.albedo = {0.9, 0.9, 1, 0.5};
@@ -225,12 +244,11 @@ void createScene(ecs::registry &reg)
                 suzanne,
                 .e_material = reg.create(material)
             },
-            engine::Position{{2, 1, 4}},
-            engine::Orientation{glm::normalize(glm::angleAxis(
-                -54.3f,
-                glm::vec3{3.0f, 1, -8}
-            ))},
-            engine::Scale{glm::vec3{0.5}},
+            engine::Transform{
+                .position = {2, 1, 4},
+                .orientation = glm::normalize(glm::angleAxis(-54.3f, glm::vec3{3.0f, 1, -8})),
+                .scale = glm::vec3{0.5}
+            },
             engine::Transparent{}
         );
     }
@@ -246,12 +264,12 @@ void createScene(ecs::registry &reg)
                 .color = glm::vec3{1, 0.9, 0.8} * 1.0f
             },
             engine::ShadowLight{
-                .shadowMapSize = 1024
+                .shadowMapSize = 1024,
+                .farPlane = 500
             },
-            engine::Orientation{glm::quatLookAt(
-                glm::normalize(glm::vec3{0, -1, 0}),
-                glm::vec3{1,0, 0}
-            )}
+            engine::Transform{
+                .orientation = glm::quatLookAt(glm::normalize(glm::vec3{0, -1, 0}), glm::vec3{1,0, 0})
+            }
         );
 
         reg.create(
@@ -262,11 +280,13 @@ void createScene(ecs::registry &reg)
             engine::ShadowLight{
                 .shadowMapSize = 1024
             },
-            engine::Orientation{glm::quatLookAt(
-                glm::normalize(glm::vec3{0, 0, 0} - glm::vec3{3, 2, 2}),
-                glm::vec3{1,0,0}
-            )},
-            engine::Position{{3, 2, 2}}
+            engine::Transform{
+                .position = {3, 2, 2},
+                .orientation = glm::quatLookAt(
+                    glm::normalize(glm::vec3{0, 0, 0} - glm::vec3{3, 2, 2}),
+                    glm::vec3{1,0,0}
+                )
+            }
         );
         reg.create(
             engine::DynamicLight{},
@@ -276,11 +296,13 @@ void createScene(ecs::registry &reg)
             engine::ShadowLight{
                 .shadowMapSize = 1024
             },
-            engine::Orientation{glm::quatLookAt(
-                glm::normalize(glm::vec3{4, 1, 4} - glm::vec3{3, 2, 6}),
-                glm::vec3{1,0,0}
-            )},
-            engine::Position{{3, 2, 6}}
+            engine::Transform{
+                .position = {3, 2, 6},
+                .orientation = glm::quatLookAt(
+                    glm::normalize(glm::vec3{4, 1, 4} - glm::vec3{3, 2, 6}),
+                    glm::vec3{1,0,0}
+                )
+            }
         );
 
         reg.create(
@@ -291,7 +313,9 @@ void createScene(ecs::registry &reg)
             engine::ShadowLight{
                 .shadowMapSize = 1024
             },
-            engine::Position{{-3, 2, -2}}
+            engine::Transform{
+                .position = {-3, 2, -2}
+            }
         );
         reg.create(
             engine::DynamicLight{},
@@ -301,7 +325,9 @@ void createScene(ecs::registry &reg)
             engine::ShadowLight{
                 .shadowMapSize = 1024
             },
-            engine::Position{{2, 2, 1}}
+            engine::Transform{
+                .position = {2, 2, 1}
+            }
         );
 
         reg.create<engine::Skybox>({
@@ -344,9 +370,9 @@ void updateScene(ecs::registry &reg, float deltatime)
     // === === === === === === === ===
     // MOVE SUN
     // === === === === === === === ===
-    for(auto e : reg.view<SunTag, engine::Orientation>())
+    for(auto e : reg.view<SunTag, engine::Transform>())
     {
-        glm::quat &orientation = reg.get<engine::Orientation>(e);
+        glm::quat &orientation = reg.get<engine::Transform>(e).orientation;
 
         orientation = glm::rotate(orientation, deltatime * 0.1f, glm::normalize(glm::vec3{0, 0, 1}));
     }

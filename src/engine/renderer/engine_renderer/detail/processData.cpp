@@ -94,13 +94,22 @@ void engine::EngineRenderer::processTextures(ecs::registry &reg)
 }
 
 // TODO: refactor this mess
+static glm::vec3 getDir(glm::quat q)
+{
+    return glm::rotate(q, {0, 0, -1});
+}
+static glm::vec3 getUp(glm::vec3 dir)
+{
+    return glm::abs(glm::dot(dir, {0,1,0})) >= 0.99 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0};
+}
 
 static void processPointLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::PointLight>(e_light);
+    engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
     engine::renderer::PointLight newLight{
         .color = light.color,
-        .position = reg.has<engine::ModelMatrix>(e_light) ? reg.get<engine::ModelMatrix>(e_light)[3] : glm::vec3{0},
+        .position = transform.position,
         .farPlane = 0.0f,
     };
 
@@ -114,18 +123,20 @@ static void processPointLight(engine::renderer::RendererData &data, ecs::registr
             .size = shadowLight.shadowMapSize
         });
 
-        constexpr std::array<glm::mat4, 6> POINT_CUBE_FACE_MATRICES = {
-            glm::mat4{ { 0 ,0,-1, 0 }, { 0,-1, 0, 0 }, {-1, 0, 0,0 }, {0, 0, 0, 1} },
-            glm::mat4{ { 0 ,0, 1, 0 }, { 0,-1, 0, 0 }, { 1, 0, 0,0 }, {0, 0, 0, 1} },
-            glm::mat4{ { 1 ,0, 0, 0 }, { 0, 0, 1, 0 }, { 0,-1, 0,0 }, {0, 0, 0, 1} },
-            glm::mat4{ { 1 ,0, 0, 0 }, { 0, 0,-1, 0 }, { 0, 1, 0,0 }, {0, 0, 0, 1} },
-            glm::mat4{ { 1 ,0, 0, 0 }, { 0,-1, 0, 0 }, { 0, 0,-1,0 }, {0, 0, 0, 1} },
-            glm::mat4{ {-1 ,0, 0, 0 }, { 0,-1, 0, 0 }, { 0, 0, 1,0 }, {0, 0, 0, 1} } 
+        // No idea if this is correct...
+        constexpr std::array<glm::mat4, 6> CUBE_FACE_MATRICES = {
+            glm::mat4{ { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +X
+            glm::mat4{ { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -X
+            glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Y
+            glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -Y
+            glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Z
+            glm::mat4{ {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }  // -Z
         };
+
         for(unsigned i = 0; i < 6; ++i)
         {
             data.drawLights.emplace_back(engine::renderer::DrawLight{
-                .viewMat = POINT_CUBE_FACE_MATRICES[i] * (reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f}),
+                .viewMat = CUBE_FACE_MATRICES[i] * glm::translate({1.0f}, -transform.position),
                 .projMat = glm::perspective(glm::radians(90.0f), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
             });
         }
@@ -135,10 +146,10 @@ static void processPointLight(engine::renderer::RendererData &data, ecs::registr
 static void processDirLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::DirectionalLight>(e_light);
-    glm::mat4 const &modelMat = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f};
+    engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
     engine::renderer::DirLight newLight{
         .color = light.color,
-        .direction = -glm::normalize(glm::vec3(modelMat[2]))
+        .direction = getDir(transform.orientation)
     };
     
     if(reg.has<engine::ShadowLight>(e_light))
@@ -152,7 +163,7 @@ static void processDirLight(engine::renderer::RendererData &data, ecs::registry 
         });
         // TODO: cascade SM
         data.drawLights.emplace_back(engine::renderer::DrawLight{
-            .viewMat = glm::translate(glm::mat4{1.0f}, -newLight.direction * 10.0f) * modelMat,
+            .viewMat = glm::lookAt(glm::vec3{0} - (newLight.direction * 10.0f), glm::vec3{0}, getUp(newLight.direction)),
             .projMat = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
         });
     }
@@ -161,12 +172,12 @@ static void processDirLight(engine::renderer::RendererData &data, ecs::registry 
 static void processSpotLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::SpotLight>(e_light);
-    glm::mat4 const &modelMat = reg.has<engine::ModelMatrix>(e_light) ? static_cast<glm::mat4 const &>(reg.get<engine::ModelMatrix>(e_light)) : glm::mat4{1.0f};
+    engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
 
     engine::renderer::SpotLight newLight{
         .color = light.color,
-        .position = modelMat[3],
-        .direction = -glm::normalize(glm::vec3(modelMat[2])),
+        .position = transform.position,
+        .direction = getDir(transform.orientation),
         .innerConeAngle = light.innerConeAngle,
         .outerConeAngle = light.outerConeAngle
     };
@@ -181,8 +192,8 @@ static void processSpotLight(engine::renderer::RendererData &data, ecs::registry
             .size = shadowLight.shadowMapSize
         });
         data.drawLights.emplace_back(engine::renderer::DrawLight{
-            .viewMat = modelMat,
-            .projMat = glm::perspective(newLight.outerConeAngle, 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
+            .viewMat = glm::lookAt(newLight.position, newLight.position + newLight.direction, getUp(newLight.direction)),
+            .projMat = glm::perspective(glm::radians(newLight.outerConeAngle), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         });
     }
     data.spotLights.emplace_back(std::move(newLight));
@@ -246,14 +257,14 @@ static void makeAtlas(engine::renderer::RendererData &data)
         }
     }
 
-    // ENGINE_CORE_TRACE("Made {}x{} atlas", atlas.size.x, atlas.size.y);
-    // for(auto const &light : data.pointLights)
-    //     ENGINE_CORE_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
-    // for(auto const &light : data.dirLights)
-    //     ENGINE_CORE_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
-    // for(auto const &light : data.spotLights)
-    //     ENGINE_CORE_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
-    // ENGINE_CORE_TRACE("================");
+    ENGINE_CORE_TRACE("Made {}x{} atlas", atlas.size.x, atlas.size.y);
+    for(auto const &light : data.pointLights)
+        ENGINE_CORE_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    for(auto const &light : data.dirLights)
+        ENGINE_CORE_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    for(auto const &light : data.spotLights)
+        ENGINE_CORE_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    ENGINE_CORE_TRACE("================");
 
     ogl::attachment(atlas.fbo, atlas.texture, atlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
 }

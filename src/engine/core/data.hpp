@@ -124,6 +124,7 @@ namespace engine
     {
         glm::uvec2 size{0};
         glm::mat4 projMat{1.0f};
+        glm::mat4 viewMat{1.0f};
     };
 
     struct Cubemap
@@ -132,12 +133,15 @@ namespace engine
         std::string path;
     };
 
-    struct ModelMatrix : glm::mat4 {};
-
-    struct Position : glm::vec3 {};
-    struct Orientation : glm::quat {};
-    struct OrientationEulerXYZ : glm::vec3 {};
-    struct Scale : glm::vec3 {};
+    struct Transform
+    {
+        glm::vec3 position{0};
+        glm::quat orientation{1, 0, 0, 0};
+        glm::vec3 scale{1};
+        inline glm::mat4 getMat() const {
+            return glm::translate(glm::mat4{1.0f}, position) * glm::mat4_cast(orientation) * glm::scale(glm::mat4{1.0f}, scale);
+        };
+    };
 
     // TODO: move it somewhere or do it better.
     struct Window
@@ -150,6 +154,7 @@ namespace engine
     {
         ecs::entity e_model = 0;
         /// Overrides the material contained in the Model of the e_material if not 0. contains engine::Material component.
+        // TODO: dont store materials in entities, store them directly
         ecs::entity e_material = 0;
     };
 } // namespace engine
