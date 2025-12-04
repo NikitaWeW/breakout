@@ -1,4 +1,8 @@
 #version 430 core
+#extension GL_ARB_shader_viewport_layer_array : enable
+#extension GL_AMD_vertex_shader_layer : enable
+#extension GL_NV_viewport_array2 : enable
+#define HAS_VERTEX_LAYERED_RENDERING (GL_ARB_shader_viewport_layer_array || GL_AMD_vertex_shader_layer || GL_NV_viewport_array2)
 layout(location = 0) in vec4 a_position;
 layout(location = 4) in vec4 a_boneIDs;
 layout(location = 5) in vec4 a_weights;
@@ -13,16 +17,12 @@ uniform mat4 u_modelMat;
 uniform mat4 u_boneMatrices[MAX_BONES];
 uniform bool u_animated;
 
+uniform uint u_first;
+
 struct DrawLight
 {
     mat4 viewMat;
     mat4 projMat;
-    uvec2 atlasPos;
-    uint atlasSize;
-    float _pad0;
-    vec4 _pad1;
-    vec4 _pad2;
-    vec4 _pad3;
 };
 
 layout(std430, binding = 0) buffer Lights
@@ -46,13 +46,7 @@ void main() {
         position = a_position;
     }
 
-    DrawLight light = lights[gl_InstanceID];
-    vec4 pos = light.projMat * light.viewMat * u_modelMat * position;
-    pos /= pos.w;
-    pos.xy = pos.xy * 0.5 + 0.5;
-    pos.xy = clamp(pos.xy, vec2(0), vec2(1));
-    pos.xy *= vec2(light.atlasSize) / vec2(u_atlasSize);
-    pos.xy += vec2(light.atlasPos) / vec2(u_atlasSize);
-    pos.xy = pos.xy * 2 - 1;
-    gl_Position = pos;
+    gl_ViewportIndex = gl_InstanceID;
+    DrawLight light = lights[gl_InstanceID + u_first];
+    gl_Position = light.projMat * light.viewMat * u_modelMat * position;
 }

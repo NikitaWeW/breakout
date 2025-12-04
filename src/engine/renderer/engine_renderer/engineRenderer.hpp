@@ -1,7 +1,7 @@
 #pragma once
 #include "engine/renderer/renderer.hpp"
 
-// TODO: redo this renderer mess, make a better architecture/structure
+// FIXME: redo this renderer mess, make a better architecture/structure
 
 namespace engine::renderer
 {
@@ -70,24 +70,29 @@ namespace engine
         /// \brief The renderer settings.
         struct Context
         {
-            // contains the engine::Camera component
+            /// contains the engine::Camera component
             ecs::entity e_camera = 0;
+
+            /// @brief Controls the number of frames given to redraw the entire shadow map atlas. 
+            /// More frames increase performance, but the shadows might lag behind.
+            unsigned MAX_SHADOW_MAP_FRAMES = 4;
         };
-    // expose some of the implementation to be able to override it in the derivatives.
+    // expose some of the implementation to be able to override it in the derivatives. 
+    // FIXME: dont
     // TODO: pimpl
     protected: 
         Context m_context;
-        virtual void renderMainInstance(ecs::registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
-        virtual void renderMain(ecs::registry &reg, renderer::RendererData &data);
+        void renderMainInstance(ecs::registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
+        void renderMain(ecs::registry &reg, renderer::RendererData &data);
 
-        virtual void renderShadowMaps(ecs::registry &reg, renderer::RendererData &data);
+        void renderShadowMaps(ecs::registry &reg, renderer::RendererData &data, unsigned toDraw);
         
-        virtual void setupPipeline(ecs::registry &reg);
+        void setupPipeline(ecs::registry &reg);
 
-        virtual void processModels(ecs::registry &reg);
-        virtual void processMaterials(ecs::registry &reg);
-        virtual void processTextures(ecs::registry &reg);
-        virtual void processLights(ecs::registry const &reg, renderer::RendererData &data);
+        void processModels(ecs::registry &reg);
+        void processMaterials(ecs::registry &reg);
+        void processTextures(ecs::registry &reg);
+        void processLights(ecs::registry const &reg, renderer::RendererData &data);
     public:
         EngineRenderer() = default;
         EngineRenderer(Context const &context);

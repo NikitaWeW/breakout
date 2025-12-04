@@ -3,6 +3,10 @@
 #include "ogl.hpp"
 #include "engine/animation/animation.hpp"
 
+// FIXME: horrible mess
+
+#define RENDERER_TRACE ENGINE_CORE_TRACE
+
 namespace engine::renderer
 {
     struct ProcessedModel {};
@@ -107,13 +111,14 @@ namespace engine::renderer
     {
         glm::mat4 viewMat;
         glm::mat4 projMat;
-        ShadowMapAtlas::Location location;
-        float _pad0;
-        glm::vec4 _pad1;
-        glm::vec4 _pad2;
-        glm::vec4 _pad3;
+    };
+    struct DrawLightViewport
+    {
+        glm::vec2 pos;
+        glm::vec2 size;
     };
 
+    // FIXME: why
     struct RendererData
     {
         ogl::Framebuffer oitFBO;
@@ -141,13 +146,20 @@ namespace engine::renderer
         std::vector<renderer::PointLight> pointLights;
         std::vector<renderer::DirLight>   dirLights;
         std::vector<renderer::SpotLight>  spotLights;
-        std::vector<renderer::DrawLight>  drawLights;
         ogl::SSBO pointLightsSSBO;
         ogl::SSBO dirLightsSSBO;
         ogl::SSBO spotLightsSSBO;
-        ogl::SSBO drawLightsSSBO;
+        
+        struct {
+            std::vector<renderer::DrawLight> lights;
+            ogl::SSBO lightsSSBO;
+            std::vector<renderer::DrawLightViewport> viewports;
+            ShadowMapAtlas atlas;
+            size_t framesDrawn = 0;
+            bool refresh = true;
+        } SM;
+
 
         EngineRenderer::Context context;
-        ShadowMapAtlas SMAtlas;
-    }; 
+    };
 } // namespace engine::renderer

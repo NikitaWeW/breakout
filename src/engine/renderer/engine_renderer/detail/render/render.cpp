@@ -22,9 +22,14 @@ void engine::EngineRenderer::draw(ecs::registry &reg)
         glNamedFramebufferRenderbuffer(data.oitFBO.id, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, data.mainFBORBO.id);
     }
 
-    processLights(reg, data);
-
-    renderShadowMaps(reg, data);
+    unsigned toDraw = glm::min<unsigned>(data.SM.lights.size() - data.SM.framesDrawn, glm::max<unsigned>(glm::ceil(data.SM.lights.size() / static_cast<float>(m_context.MAX_SHADOW_MAP_FRAMES)), 1));
+    if(data.SM.refresh)
+    {
+        data.SM.framesDrawn = 0;
+        toDraw = data.SM.lights.size();
+        data.SM.refresh = false;
+    }
+    renderShadowMaps(reg, data, toDraw);
     renderMain(reg, data);
 
     data.prevCamSize = camera.size;

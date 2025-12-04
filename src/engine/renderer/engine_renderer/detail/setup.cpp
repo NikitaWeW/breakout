@@ -149,10 +149,10 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
 
     glCreateFramebuffers(1, &data.mainFBO.id);
 
-    glCreateFramebuffers(1, &data.SMAtlas.fbo.id);
+    glCreateFramebuffers(1, &data.SM.atlas.fbo.id);
     {
         std::array<GLenum, 1> const drawbuffers = { GL_NONE };
-        glNamedFramebufferDrawBuffers(data.SMAtlas.fbo.id, drawbuffers.size(), drawbuffers.data());
+        glNamedFramebufferDrawBuffers(data.SM.atlas.fbo.id, drawbuffers.size(), drawbuffers.data());
     }
 
     data.shaders.screenShader                  = ogl::compileShader("shaders/hdrImage");
@@ -168,7 +168,7 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
     glCreateBuffers(1, &data.pointLightsSSBO.id);
     glCreateBuffers(1, &data.dirLightsSSBO.id);
     glCreateBuffers(1, &data.spotLightsSSBO.id);
-    glCreateBuffers(1, &data.drawLightsSSBO.id);
+    glCreateBuffers(1, &data.SM.lightsSSBO.id);
 }
 
 engine::EngineRenderer::EngineRenderer(Context const &context)

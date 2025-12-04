@@ -217,7 +217,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(data.shaders   .screenShader.id);
     glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_2D, data.mainFBOColor.id);
-    glBindTexture(GL_TEXTURE_2D, data.SMAtlas.texture.id);
+    glBindTexture(GL_TEXTURE_2D, data.SM.atlas.texture.id);
 
     // draw a quad (hard-coded in VSh)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

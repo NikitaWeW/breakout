@@ -5,35 +5,19 @@
 namespace ogl = engine::renderer::ogl;
 using namespace engine;
 
-void EngineRenderer::renderShadowMaps(ecs::registry &reg, renderer::RendererData &data)
+static void drawSM(ecs::registry const &reg, renderer::RendererData const &data, size_t first, size_t count)
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, data.SMAtlas.fbo.id);
-    glViewport(0, 0, data.SMAtlas.size.x, data.SMAtlas.size.y);
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
-    glViewport(0, 0, data.SMAtlas.size.x, data.SMAtlas.size.y);
+    glViewportArrayv(0, count, reinterpret_cast<float const *>(&data.SM.viewports.at(first)));
+    
+    glEnable(GL_SCISSOR_TEST);
+    for(size_t i = first; i < first + count; ++i)
+    {
+        auto viewport = data.SM.viewports[i];
+        glScissor(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
+        glClear(GL_DEPTH_BUFFER_BIT);
+    }
     glDisable(GL_SCISSOR_TEST);
 
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    glDepthMask(GL_TRUE);
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.0f, 1.0f);
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, data.drawLightsSSBO.id);
-    glUseProgram(data.shaders.depthMapShader.id);
-    glUniform2uiv(ogl::getUniform(data.shaders.depthMapShader, "u_atlasSize"), 1, glm::value_ptr(data.SMAtlas.size));
-    
     // TODO: transparent object shadows
     for(ecs::entity e_instance : reg.view<Instance>(ecs::exclude_t</**Transparent, **/NoShadow>{}))
     {
@@ -55,8 +39,57 @@ void EngineRenderer::renderShadowMaps(ecs::registry &reg, renderer::RendererData
             }
             glUniform1i(ogl::getUniform(data.shaders.depthMapShader, "u_animated"), animated);
 
+            glUniform1ui(ogl::getUniform(data.shaders.depthMapShader, "u_first"), first);
+
             glBindVertexArray(mesh.vao.id);
-            glDrawElementsInstanced(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr, data.drawLights.size());
+            glDrawElementsInstanced(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr, count);
         }
     }
+}
+static unsigned getMaxViewports()
+{
+    int res;
+    glGetIntegerv(GL_MAX_VIEWPORTS, &res);
+    return static_cast<unsigned>(res);
+}
+
+void EngineRenderer::renderShadowMaps(ecs::registry &reg, renderer::RendererData &data, unsigned toDraw)
+{
+    RENDERER_TRACE("Drawing {} / {} shadow maps", toDraw, data.SM.lights.size());
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, data.SM.atlas.fbo.id);
+
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+    glDisable(GL_SCISSOR_TEST);
+
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDepthMask(GL_TRUE);
+
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0f, 1.0f);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, data.SM.lightsSSBO.id);
+    glUseProgram(data.shaders.depthMapShader.id);
+    glUniform2uiv(ogl::getUniform(data.shaders.depthMapShader, "u_atlasSize"), 1, glm::value_ptr(data.SM.atlas.size));
+
+    // Annoyingly this approach is limited by GL_MAX_VIEWPORTS, so the rendering is done in batches.
+    unsigned maxDraw = getMaxViewports();
+
+    for(unsigned batch = 0; batch <= toDraw / maxDraw; ++batch)
+    {
+        unsigned thisDraw = glm::min(toDraw - maxDraw * batch, maxDraw);
+        drawSM(reg, data, data.SM.framesDrawn, thisDraw);
+        data.SM.framesDrawn += thisDraw;
+    }
+
+    if(data.SM.framesDrawn >= data.SM.lights.size())
+        data.SM.framesDrawn = 0;
 }
