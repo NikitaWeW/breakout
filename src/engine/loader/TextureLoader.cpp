@@ -1,6 +1,6 @@
 #include "Loaders.hpp"
 #include "stb_image.h"
-#include "engine/core/equirect.hpp"
+#include "engine/Header/equirect.hpp"
 
 static std::optional<engine::Texture> loadTexture(std::string_view path, engine::LoadingFlags flags)
 {

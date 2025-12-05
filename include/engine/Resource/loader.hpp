@@ -1,7 +1,7 @@
 #pragma once
-#include "engine/core/ecs.hpp"
-#include "engine/core/data.hpp"
-#include "engine/core/logging.hpp"
+#include "engine/Header/ecs.hpp"
+#include "engine/Header/data.hpp"
+#include "engine/Logging/logging.hpp"
 
 namespace engine
 {

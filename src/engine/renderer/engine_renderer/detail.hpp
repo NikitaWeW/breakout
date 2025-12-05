@@ -1,7 +1,7 @@
 #pragma once
-#include "engine/renderer/engine_renderer/engineRenderer.hpp"
+#include "engine/Renderer/engineRenderer.hpp"
 #include "ogl.hpp"
-#include "engine/animation/animation.hpp"
+#include "engine/Animation/animation.hpp"
 
 // FIXME: horrible mess
 
@@ -160,6 +160,6 @@ namespace engine::renderer
         } SM;
 
 
-        EngineRenderer::Context context;
+        EngineRenderer::Config context;
     };
 } // namespace engine::renderer

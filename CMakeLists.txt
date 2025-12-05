@@ -28,17 +28,15 @@ file(GLOB_RECURSE ENGINE_SOURCES "src/engine/*.cpp")
 
 add_library(engine ${ENGINE_SOURCES})
 target_link_libraries(engine PUBLIC dependencies)
-target_include_directories(engine PRIVATE src)
+target_include_directories(engine PUBLIC include)
 target_compile_definitions(engine PUBLIC GLM_ENABLE_EXPERIMENTAL)
 
 target_precompile_headers(engine PRIVATE 
-    src/engine/engine.hpp
+    include/engine/engine.hpp
 )
 
 install(DIRECTORY DESTINATION engine)
-install(DIRECTORY DESTINATION engine/lib)
-install(DIRECTORY DESTINATION engine/include)
-install(DIRECTORY src/engine DESTINATION engine/include FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+install(DIRECTORY include DESTINATION engine/include)
 install(TARGETS engine DESTINATION engine/lib)
 
 ######################################################################

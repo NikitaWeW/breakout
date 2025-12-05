@@ -1,9 +1,9 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "engine/core/ecs.hpp"
-#include "engine/core/ease_functions.hpp"
-#include "engine/core/data.hpp"
+#include "engine/Header/ecs.hpp"
+#include "engine/Header/ease_functions.hpp"
+#include "engine/Header/data.hpp"
 
 namespace engine
 {

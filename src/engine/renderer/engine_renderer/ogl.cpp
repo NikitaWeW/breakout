@@ -1,5 +1,5 @@
 #include "ogl.hpp"
-#include "engine/core/logging.hpp"
+#include "engine/Logging/logging.hpp"
 #include <filesystem>
 #include <fstream>
 

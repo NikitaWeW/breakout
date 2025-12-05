@@ -1,5 +1,5 @@
-#include "engine/renderer/engine_renderer/engineRenderer.hpp"
-#include "engine/core/logging.hpp"
+#include "engine/Renderer/engineRenderer.hpp"
+#include "engine/Logging/logging.hpp"
 #include "detail.hpp"
 
 namespace ogl = engine::renderer::ogl;

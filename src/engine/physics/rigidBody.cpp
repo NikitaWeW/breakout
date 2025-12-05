@@ -1,5 +1,5 @@
-#include "engine/physics/physics.hpp"
-#include "engine/core/logging.hpp"
+#include "engine/Physics/physics.hpp"
+#include "engine/Logging/logging.hpp"
 
 void engine::EnginePhysics::movement(ecs::registry &reg, float deltatime)
 {

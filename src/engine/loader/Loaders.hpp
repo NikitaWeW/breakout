@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/loader/loader.hpp"
+#include "engine/Resource/loader.hpp"
 #include "assimp/scene.h"
 #include <optional>
 

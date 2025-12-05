@@ -1,7 +1,7 @@
 #pragma once
-#include "engine/core/data.hpp"
-#include "engine/core/ecs.hpp"
-#include "engine/core/uid.hpp"
+#include "engine/Header/data.hpp"
+#include "engine/Header/ecs.hpp"
+#include "engine/Header/uid.hpp"
 #include "glm/glm.hpp"
 #include <unordered_map>
 

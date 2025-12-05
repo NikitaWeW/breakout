@@ -1,5 +1,5 @@
-#include "engine/renderer/engine_renderer/engineRenderer.hpp"
-#include "engine/renderer/engine_renderer/detail/detail.hpp"
+#include "engine/Renderer/engineRenderer.hpp"
+#include "../detail.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 namespace ogl = engine::renderer::ogl;

@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/renderer/renderer.hpp"
+#include "engine/Renderer/renderer.hpp"
 
 // FIXME: redo this renderer mess, make a better architecture/structure
 
@@ -68,7 +68,7 @@ namespace engine
     {
     public:
         /// \brief The renderer settings.
-        struct Context
+        struct Config
         {
             /// contains the engine::Camera component
             ecs::entity e_camera = 0;
@@ -81,7 +81,7 @@ namespace engine
     // FIXME: dont
     // TODO: pimpl
     protected: 
-        Context m_context;
+        Config m_context;
         void renderMainInstance(ecs::registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
         void renderMain(ecs::registry &reg, renderer::RendererData &data);
 
@@ -95,15 +95,15 @@ namespace engine
         void processLights(ecs::registry const &reg, renderer::RendererData &data);
     public:
         EngineRenderer() = default;
+        EngineRenderer(Config const &context);
 
         /// Access the context that is used to setup registries. 
         /// Doesent affect registries that are already set up.
-        inline Context const &context() const { return m_context; }
-        inline Context &context() { return m_context; }
+        inline Config const &context() const { return m_context; }
+        inline Config &context() { return m_context; }
 
         void setup(ecs::registry &reg) override;
         void processData(ecs::registry &reg) override;
         void draw(ecs::registry &reg) override;
-        void makeAtlas(ecs::registry &reg);
     };
 } // namespace engine

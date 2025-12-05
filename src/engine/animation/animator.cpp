@@ -1,6 +1,6 @@
-#include "engine/animation/animation.hpp"
-#include "engine/core/logging.hpp"
-#include "engine/core/data.hpp"
+#include "engine/Animation/animation.hpp"
+#include "engine/Logging/logging.hpp"
+#include "engine/Header/data.hpp"
 #include <algorithm>
 #include <optional>
 
