@@ -93,6 +93,7 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, data.pointLightsSSBO.id);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, data.dirLightsSSBO.id  );
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, data.spotLightsSSBO.id );
+    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, data.SM.atlas.texture.id);
     
     // For solid and oit transparent passes
     glUseProgram(data.shaders.propShader.id);
@@ -217,7 +218,6 @@ void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererDa
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(data.shaders   .screenShader.id);
     glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_2D, data.mainFBOColor.id);
-    glBindTexture(GL_TEXTURE_2D, data.SM.atlas.texture.id);
 
     // draw a quad (hard-coded in VSh)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

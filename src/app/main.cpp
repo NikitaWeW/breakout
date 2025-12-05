@@ -63,9 +63,11 @@ int main(int argc, char **argv) {
     camera.speed = 4;
     camera.sensitivity = 0.125;
 
-    engine::EngineRenderer mainRenderer{{
-        .e_camera = e_camera
-    }};
+    engine::EngineRenderer mainRenderer{};
+    mainRenderer.context() = {
+        .e_camera = e_camera,
+        .MAX_SHADOW_MAP_FRAMES = 5
+    };
 
     engine::IRenderer *renderer = &mainRenderer;
     renderer->setup(registry); 

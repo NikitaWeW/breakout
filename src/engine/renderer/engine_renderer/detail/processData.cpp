@@ -116,6 +116,7 @@ static void processPointLight(engine::renderer::RendererData &data, ecs::registr
     if(reg.has<engine::ShadowLight>(e_light))
     {
         auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
+        newLight.farPlane = shadowLight.farPlane;
         data.SM.atlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
             .type = engine::renderer::ShadowMapAtlas::Light::POINT,
             .drawLightIndex = data.SM.lights.size(),
@@ -167,6 +168,7 @@ static void processDirLight(engine::renderer::RendererData &data, ecs::registry 
             .viewMat = glm::lookAt(glm::vec3{0} - (newLight.direction * 10.0f), glm::vec3{0}, getUp(newLight.direction)),
             .projMat = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
         });
+        newLight.viewProj = data.SM.lights.back().projMat * data.SM.lights.back().viewMat;
         data.SM.viewports.emplace_back();
     }
     data.dirLights.emplace_back(std::move(newLight));
@@ -197,6 +199,7 @@ static void processSpotLight(engine::renderer::RendererData &data, ecs::registry
             .viewMat = glm::lookAt(newLight.position, newLight.position + newLight.direction, getUp(newLight.direction)),
             .projMat = glm::perspective(glm::radians(newLight.outerConeAngle), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         });
+        newLight.viewProj = data.SM.lights.back().projMat * data.SM.lights.back().viewMat;
         data.SM.viewports.emplace_back();
     }
     data.spotLights.emplace_back(std::move(newLight));

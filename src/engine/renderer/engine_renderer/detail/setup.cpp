@@ -171,10 +171,6 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
     glCreateBuffers(1, &data.SM.lightsSSBO.id);
 }
 
-engine::EngineRenderer::EngineRenderer(Context const &context)
-{
-    this->context() = context;
-}
 void engine::EngineRenderer::setup(ecs::registry &reg)
 {
     auto view = reg.view<renderer::RendererData>();

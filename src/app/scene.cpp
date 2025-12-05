@@ -264,7 +264,7 @@ void createScene(ecs::registry &reg)
                 .color = glm::vec3{1, 0.9, 0.8} * 1.0f
             },
             engine::ShadowLight{
-                .shadowMapSize = 1024,
+                .shadowMapSize = 2048,
                 .farPlane = 500
             },
             engine::Transform{
@@ -294,7 +294,7 @@ void createScene(ecs::registry &reg)
                 .color = glm::vec3{0.9, 0.6, 0.3} * 10.0f
             },
             engine::ShadowLight{
-                .shadowMapSize = 1024
+                .shadowMapSize = 512
             },
             engine::Transform{
                 .position = {3, 2, 6},
@@ -311,7 +311,7 @@ void createScene(ecs::registry &reg)
                 .color = glm::vec3{0.9, 0.4, 0.9} * 10.0f
             },
             engine::ShadowLight{
-                .shadowMapSize = 1024
+                .shadowMapSize = 512
             },
             engine::Transform{
                 .position = {-3, 2, -2}

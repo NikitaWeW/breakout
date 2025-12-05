@@ -55,7 +55,7 @@ static unsigned getMaxViewports()
 
 void EngineRenderer::renderShadowMaps(ecs::registry &reg, renderer::RendererData &data, unsigned toDraw)
 {
-    RENDERER_TRACE("Drawing {} / {} shadow maps", toDraw, data.SM.lights.size());
+    // RENDERER_TRACE("Drawing {} / {} shadow maps", toDraw, data.SM.lights.size());
     
     glBindFramebuffer(GL_FRAMEBUFFER, data.SM.atlas.fbo.id);
 
@@ -78,7 +78,6 @@ void EngineRenderer::renderShadowMaps(ecs::registry &reg, renderer::RendererData
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, data.SM.lightsSSBO.id);
     glUseProgram(data.shaders.depthMapShader.id);
-    glUniform2uiv(ogl::getUniform(data.shaders.depthMapShader, "u_atlasSize"), 1, glm::value_ptr(data.SM.atlas.size));
 
     // Annoyingly this approach is limited by GL_MAX_VIEWPORTS, so the rendering is done in batches.
     unsigned maxDraw = getMaxViewports();

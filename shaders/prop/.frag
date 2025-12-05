@@ -91,6 +91,63 @@ in VS_OUT {
 uniform mat4 u_viewMat;
 uniform Material u_material;
 
+vec4 sampleAtlas(sampler2D atlas, vec2 texcoords, uvec2 pos, uint size)
+{
+    return texelFetch(atlas, ivec2(texcoords * size + pos), 0);
+}
+vec3 dirToUV(vec3 dir) 
+{
+    vec3 adir = abs(dir);
+    float axis;
+    vec2 uv;
+    float offset;
+
+    if(adir.x >= adir.y && adir.x >= adir.z) 
+    {
+        axis = adir.x;
+        uv = vec2(-dir.z, -dir.y);
+        if(dir.x < 0.0) 
+        {
+            uv.x *= -1.0;
+            offset = 1;
+        } else {
+            offset = 0;
+        }
+    } else if(adir.y >= adir.x && adir.y >= adir.z) 
+    {
+        axis = adir.y;
+        uv = vec2(dir.x, dir.z);
+        if(dir.y < 0.0) 
+        {
+            uv.y *= -1.0;
+            offset = 3;
+        } else {
+            offset = 2;
+        }
+    } else 
+    {
+        axis = adir.z;
+        uv = vec2(dir.x, -dir.y);
+        if(dir.z < 0.0) 
+        {
+            uv.x *= -1.0;
+            offset = 5;
+        } else {
+            offset = 4;
+        }
+    }
+
+    uv /= axis;
+    uv = uv * 0.5 + 0.5;
+
+    return vec3(uv, offset);
+}
+vec4 sampleAtlas(sampler2D atlas, vec3 dir, uvec2 pos, uint size)
+{
+    vec3 uvLayer = dirToUV(dir);
+
+    return sampleAtlas(atlas, uvLayer.xy, uvec2(pos.x + uvLayer.z * size, pos.y), size);
+}
 
 // float linearizeDepth(float depth, float near_plane, float far_plane) { return (2.0 * near_plane * far_plane) / (far_plane + near_plane - (depth * 2.0 - 1.0) * (far_plane - near_plane)); }
 
@@ -103,86 +160,86 @@ const vec3 gridSamplingDisk[20] = vec3[]
    vec3(1, 0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1, 0, -1),
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
+
 vec3 calculateShadow(PointLight light, vec3 normal, vec3 viewDir)
 {
-    return vec3(0);
-    // vec3 lightToFrag = fs_in.fragPos - light.position;
-    // float currentDepth = length(lightToFrag) / light.farPlane;
+    vec3 lightToFrag = fs_in.fragPos - light.position;
+    float currentDepth = length(lightToFrag) / light.farPlane;
 
-    // float shadow = 0.0;
-    // float bias = max(0.05 * (1.0 - dot(normal, normalize(-lightToFrag))), 0.005);
-    // float diskRadius = (1.0 + currentDepth) * 0.005;
+    float shadow = 0.0;
+    float bias = max(0.05 * (1.0 - dot(normal, normalize(-lightToFrag))), 0.005);
+    float diskRadius = (1.0 + currentDepth) * 0.005;
 
-    // for(int i = 0; i < gridSamplingDisk.length(); ++i)
-    // {
-    //     float closestDepth = texture(depthMap, normalize(lightToFrag) + normalize(gridSamplingDisk[i]) * diskRadius).r;
-    //     shadow += float(currentDepth - bias > closestDepth);
-    // }
-    // shadow /= float(gridSamplingDisk.length());
+    for(int i = 0; i < gridSamplingDisk.length(); ++i)
+    {
+        float closestDepth = sampleAtlas(u_shadowMapAtlas, normalize(lightToFrag) + normalize(gridSamplingDisk[i]) * diskRadius, light.depthMapPos, light.depthMapSize).r;
+        shadow += float(currentDepth - bias > closestDepth);
+    }
+    shadow /= float(gridSamplingDisk.length());
 
-    // return vec3(shadow);
+    return vec3(shadow);
 }
 vec3 calculateShadow(DirLight light, vec3 normal, vec3 viewDir)
 {
-    return vec3(0);
-    // vec4 fragPosLightSpace = light.viewProj * vec4(fs_in.fragPos, 1);
-    // vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // projectedCoords = projectedCoords * 0.5 + 0.5;
-    // if(
-    //     projectedCoords.z > 1.0 ||
-    //     projectedCoords.x < 0.0 || 
-    //     projectedCoords.x > 1.0 ||
-    //     projectedCoords.y < 0.0 || 
-    //     projectedCoords.y > 1.0
-    // ) return vec3(0.0);
+    vec4 fragPosLightSpace = light.viewProj * vec4(fs_in.fragPos, 1);
+    vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projectedCoords = projectedCoords * 0.5 + 0.5;
+    if(
+        projectedCoords.z > 1.0 ||
+        projectedCoords.x < 0.0 || 
+        projectedCoords.x > 1.0 ||
+        projectedCoords.y < 0.0 || 
+        projectedCoords.y > 1.0
+    ) return vec3(0.0);
 
-    // float currentDepth = projectedCoords.z;
-    // // very primitive PCF
-    // float shadow = 0.0;
-    // vec2 texelSize = 1.0 / textureSize(depthMap, 0);
-    // float bias = (1.0 - max(0.0f, dot(normal, normalize(-light.direction)))) * 0.01;
-    // for(int x = -1; x <= 1; ++x)
-    // {
-    //     for(int y = -1; y <= 1; ++y)
-    //     {
-    //         float closestDepth = texture(depthMap, projectedCoords.xy + vec2(x, y) * texelSize).r;
-    //         shadow += float(currentDepth - bias > closestDepth);
-    //     }
-    // }
-    // shadow /= 9.0;
+    return vec3(projectedCoords.xy, 0);
+    float currentDepth = projectedCoords.z;
+    // very primitive PCF
+    float shadow = 0.0;
+    vec2 texelSize = vec2(1.0 / light.depthMapSize);
+    float bias = (1.0 - max(0.0f, dot(normal, normalize(-light.direction)))) * 0.01;
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float closestDepth = sampleAtlas(u_shadowMapAtlas, projectedCoords.xy + vec2(x, y) * texelSize, light.depthMapPos, light.depthMapSize).r;
+            shadow += float(currentDepth - bias > closestDepth);
+        }
+    }
+    shadow /= 9.0;
         
-    // return vec3(shadow);
+    return vec3(shadow);
 }
 vec3 calculateShadow(SpotLight light, vec3 normal, vec3 viewDir)
 {
-    return vec3(0);
-    // vec4 fragPosLightSpace = light.viewProj * vec4(fs_in.fragPos, 1);
-    // vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // projectedCoords = projectedCoords * 0.5 + 0.5;
-    // if(
-    //     projectedCoords.z > 1.0 ||
-    //     projectedCoords.x < 0.0 || 
-    //     projectedCoords.x > 1.0 ||
-    //     projectedCoords.y < 0.0 || 
-    //     projectedCoords.y > 1.0
-    // ) return vec3(0.0);
+    vec4 fragPosLightSpace = light.viewProj * vec4(fs_in.fragPos, 1);
+    vec3 projectedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projectedCoords = projectedCoords * 0.5 + 0.5;
+    if(
+        projectedCoords.z > 1.0 ||
+        projectedCoords.x < 0.0 || 
+        projectedCoords.x > 1.0 ||
+        projectedCoords.y < 0.0 || 
+        projectedCoords.y > 1.0
+    ) return vec3(0.0);
 
-    // float currentDepth = projectedCoords.z;
+    return vec3(projectedCoords.xy, 0);
+    float currentDepth = projectedCoords.z;
 
-    // float shadow = 0.0;
-    // vec2 texelSize = 1.0 / textureSize(depthMap, 0);
-    // float bias = 30 * max(abs(dFdx(projectedCoords.z)), abs(dFdy(projectedCoords.z)));
-    // for(int x = -1; x <= 1; ++x)
-    // {
-    //     for(int y = -1; y <= 1; ++y)
-    //     {
-    //         float closestDepth = texture(depthMap, projectedCoords.xy + vec2(x, y) * texelSize).r;
-    //         shadow += float(currentDepth - bias > closestDepth);
-    //     }    
-    // }
-    // shadow /= 9.0;
+    float shadow = 0.0;
+    vec2 texelSize = vec2(1.0 / light.depthMapSize);
+    float bias = 30 * max(abs(dFdx(projectedCoords.z)), abs(dFdy(projectedCoords.z)));
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float closestDepth = sampleAtlas(u_shadowMapAtlas, projectedCoords.xy + vec2(x, y) * texelSize, light.depthMapPos, light.depthMapSize).r;
+            shadow += float(currentDepth - bias > closestDepth);
+        }    
+    }
+    shadow /= 9.0;
 
-    // return vec3(shadow);
+    return vec3(shadow);
 }
 
 // TODO: PBR
@@ -201,6 +258,7 @@ vec3 calculateLight(PointLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
         vec3(max(dot(normal, lightDir), 0.0));
     vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
     vec3 shadow = calculateShadow(light, normal, viewDir);
+    return shadow;
 
     return vec3(ambient + (1 - shadow) * (diffuse + specular));
 }
@@ -212,6 +270,7 @@ vec3 calculateLight(DirLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
         vec3(max(dot(normal, -light.direction), 0.0));
     vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
     vec3 shadow = calculateShadow(light, normal, viewDir);
+    return shadow;
 
     return ambient + (1 - shadow) * (diffuse + specular);
 }
@@ -234,6 +293,7 @@ vec3 calculateLight(SpotLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
             vec3(max(dot(normal, lightDir), 0.0));
         vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
         vec3 shadow = calculateShadow(light, normal, viewDir);
+    return shadow;
 
         return ambient + (1 - shadow) * (diffuse + specular);
     } else {
@@ -253,17 +313,18 @@ void main()
     if(!u_transparent && color.a < opaqueThreshold) discard;
 
     vec3 lightColor = vec3(0);
-    for(uint i = 0u; i < u_numPointLights; ++i) {
-        lightColor += calculateLight(pointLights[i], normal, viewDir, texCoords).xyz;
-    }
+    // for(uint i = 0u; i < u_numPointLights; ++i) {
+    //     lightColor += calculateLight(pointLights[i], normal, viewDir, texCoords).xyz;
+    // }
     for(uint i = 0u; i < u_numDirLights; ++i) {
         lightColor += calculateLight(dirLights[i], normal, viewDir, texCoords).rgb;
     }
-    for(uint i = 0u; i < u_numSpotLights; ++i) {
-        lightColor += calculateLight(spotLights[i], normal, viewDir, texCoords).xyz;
-    }
+    // for(uint i = 0u; i < u_numSpotLights; ++i) {
+    //     lightColor += calculateLight(spotLights[i], normal, viewDir, texCoords).xyz;
+    // }
 
     color.rgb *= lightColor;
+    color.rgb = lightColor;
 
     if(u_transparent) {
         // float weight = max(min(1.0, max(max(color.r, color.g), color.b) * color.a), color.a) * clamp(0.03 / (1e-5 + pow(gl_FragCoord.z / 200, 4.0)), 1e-2, 3e3);

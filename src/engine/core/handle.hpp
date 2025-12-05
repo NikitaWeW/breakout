@@ -17,7 +17,7 @@ namespace engine
 
         /// @brief two handles are equal if they reference the same object
         /// @return true if both handles are not null and reference the same object.
-        bool operator==(const Handle& other) const { return mObj && other.mObj && (*(uint64_t*)mObj == *(uint64_t*)other.mObj); }
-        bool operator!=(const Handle& other) const { return !operator==(other); }
+        bool operator==(Handle const &other) const { return mObj && other.mObj && (*(uint64_t*)mObj == *(uint64_t*)other.mObj); }
+        bool operator!=(Handle const &other) const { return !operator==(other); }
     };
 } // namespace engine

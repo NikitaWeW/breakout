@@ -95,7 +95,6 @@ namespace engine
         void processLights(ecs::registry const &reg, renderer::RendererData &data);
     public:
         EngineRenderer() = default;
-        EngineRenderer(Context const &context);
 
         /// Access the context that is used to setup registries. 
         /// Doesent affect registries that are already set up.
@@ -105,5 +104,6 @@ namespace engine
         void setup(ecs::registry &reg) override;
         void processData(ecs::registry &reg) override;
         void draw(ecs::registry &reg) override;
+        void makeAtlas(ecs::registry &reg);
     };
 } // namespace engine
