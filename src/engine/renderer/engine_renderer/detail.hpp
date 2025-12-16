@@ -1,7 +1,7 @@
 #pragma once
-#include "engine/Renderer/engineRenderer.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "ogl.hpp"
-#include "engine/Animation/animation.hpp"
+#include "engine/Animation/Animation.hpp"
 
 // FIXME: horrible mess
 
@@ -36,7 +36,7 @@ namespace engine::renderer
     };
     struct Model
     {
-        engine::Skeleton skeleton;
+        Model::Skeleton skeleton;
         std::vector<Mesh> meshes;
         bool animated = false;
     };

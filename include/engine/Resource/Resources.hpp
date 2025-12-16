@@ -1,0 +1,129 @@
+#pragma once
+#include "engine/Resource/ResourceManager.hpp"
+
+#include "glm/glm.hpp"
+#include "engine/DSA/Bitmap.hpp"
+#include "glm/gtc/quaternion.hpp"
+#include <vector>
+#include <string>
+
+namespace engine
+{
+
+/// @brief Its a 2d texture duh.
+struct Texture : public IResource
+{
+    Bitmap<float> data;
+    bool srgb = false;
+};
+struct TextureLoaderOptions : public ILoaderOptions
+{
+    bool flip = false;
+};
+
+struct Material
+{
+    /// @brief Contains entities with the Texture component, invalid if not present.
+    struct Textures
+    {
+        ResourceHandle albedo;
+        ResourceHandle metallic;
+        ResourceHandle roughness;
+        ResourceHandle ambient;
+        ResourceHandle normal;
+        ResourceHandle displacement;
+        ResourceHandle alpha;
+    } textures;
+    struct Properties
+    {
+        glm::vec3 ambient;
+        glm::vec4 albedo;
+        glm::vec3 specular;
+        glm::vec3 emission;
+
+        float shininess;
+        float metallic;
+        float ior;
+    } properties;
+};
+struct Animation
+{
+    struct PositionKey
+    {
+        glm::vec3 value;
+        float timeTicks;
+    };
+    struct OrientationKey
+    {
+        glm::quat value;
+        float timeTicks;
+    };
+    struct ScaleKey
+    {
+        glm::vec3 value;
+        float timeTicks;
+    };
+    struct Keyframes
+    {
+        std::vector<PositionKey   > positions;
+        std::vector<OrientationKey> orientations;
+        std::vector<ScaleKey      > scales;
+    };
+
+    std::vector<Keyframes> bones;
+    std::string name = "";
+    float durationTicks = 0;
+    float ticksPerSecond = 0;
+};
+struct Mesh
+{
+    struct Geometry
+    {
+        // guaranteed
+        std::vector<glm::vec4> positions;
+        std::vector<glm::vec2> texCoords;
+        std::vector<glm::vec4> normals;
+        std::vector<glm::vec4> tangents;
+        std::vector<unsigned> indices;
+
+        // optional
+        // hope 4 bones per vertex would be enough
+        std::vector<glm::vec4> boneIDs;
+        std::vector<glm::vec4> weights;
+    } geometry;
+    
+    Material material;
+};
+struct Model : public IResource
+{
+    std::vector<Mesh> meshes;
+    std::vector<Animation> animations;
+    std::string path;
+
+    struct Skeleton
+    {
+        glm::mat4 globalInverseTransform;
+        std::vector<glm::mat4> bindTransform;
+        std::vector<glm::mat4> nodeTransform;
+        std::vector<int> parents; // -1 if root
+        std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
+    } skeleton;
+};
+struct ModelLoaderOptions : public ILoaderOptions
+{
+    bool flipWindingOrder = false;
+    bool flipUVs = false;
+    TextureLoaderOptions textureOptions;
+};
+
+/// @brief 6 textures make a cube
+struct Cubemap : public IResource
+{
+    std::array<Bitmap<float>, 6> faces;
+    std::string path;
+};
+struct CubemapLoaderOptions : public TextureLoaderOptions {};
+
+/// @brief Register the default loaders to the ResourceManager::instance()
+void addLoadersToResourceManager();
+} // namespace engine

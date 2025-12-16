@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/Renderer/renderer.hpp"
+#include "engine/Renderer/Renderer.hpp"
 
 // FIXME: redo this renderer mess, make a better architecture/structure
 
@@ -49,9 +49,9 @@ namespace engine
         } shape = Shape::RECTANGULAR;
     };
 
-    /// \brief Tag to render Instance as transparent. 
+    /// @brief Tag to render Instance as transparent. 
     /// Dont forget to add it to transparent objects or else they wont render.
-    /// \see Instance
+    /// @see Instance
     struct Transparent {};
     struct Skybox 
     {
@@ -67,7 +67,7 @@ namespace engine
     class EngineRenderer : public IRenderer
     {
     public:
-        /// \brief The renderer settings.
+        /// @brief The renderer settings.
         struct Config
         {
             /// contains the engine::Camera component
@@ -82,17 +82,17 @@ namespace engine
     // TODO: pimpl
     protected: 
         Config m_context;
-        void renderMainInstance(ecs::registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
-        void renderMain(ecs::registry &reg, renderer::RendererData &data);
+        void renderMainInstance(Registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
+        void renderMain(Registry &reg, renderer::RendererData &data);
 
-        void renderShadowMaps(ecs::registry &reg, renderer::RendererData &data, unsigned toDraw);
+        void renderShadowMaps(Registry &reg, renderer::RendererData &data, unsigned toDraw);
         
-        void setupPipeline(ecs::registry &reg);
+        void setupPipeline(Registry &reg);
 
-        void processModels(ecs::registry &reg);
-        void processMaterials(ecs::registry &reg);
-        void processTextures(ecs::registry &reg);
-        void processLights(ecs::registry const &reg, renderer::RendererData &data);
+        void processModels(Registry &reg);
+        void processMaterials(Registry &reg);
+        void processTextures(Registry &reg);
+        void processLights(Registry const &reg, renderer::RendererData &data);
     public:
         EngineRenderer() = default;
         EngineRenderer(Config const &context);
@@ -102,8 +102,8 @@ namespace engine
         inline Config const &context() const { return m_context; }
         inline Config &context() { return m_context; }
 
-        void setup(ecs::registry &reg) override;
-        void processData(ecs::registry &reg) override;
-        void draw(ecs::registry &reg) override;
+        void setup(Registry &reg) override;
+        void processData(Registry &reg) override;
+        void draw(Registry &reg) override;
     };
 } // namespace engine

@@ -1,9 +1,9 @@
-#include "engine/Renderer/engineRenderer.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "../detail.hpp"
 
 namespace ogl = engine::renderer::ogl;
 
-void engine::EngineRenderer::draw(ecs::registry &reg)
+void engine::EngineRenderer::draw(Registry &reg)
 {
     ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
     renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));

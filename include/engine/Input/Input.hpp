@@ -2,7 +2,7 @@
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
-#include "engine/Header/ecs.hpp"
+#include "engine/DSA/ECS.hpp"
 #include <queue>
 
 // TODO: better event and window system
@@ -44,6 +44,6 @@ namespace engine::input
         std::queue<ScrollEvent> scrollEvents;
     };
 
-    void setup(ecs::registry &reg);
-    void update(ecs::registry &reg);
+    void setup(Registry &reg);
+    void update(Registry &reg);
 } // namespace engine::input

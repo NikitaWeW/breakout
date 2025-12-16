@@ -1,6 +1,6 @@
-#include "engine/Physics/physics.hpp"
+#include "engine/Physics/Physics.hpp"
 
-void engine::EnginePhysics::update(ecs::registry &registry, float deltatime)
+void engine::EnginePhysics::update(Registry &registry, float deltatime)
 {
     movement(registry, deltatime);
 }

@@ -1,6 +1,6 @@
-#include "engine/Animation/animation.hpp"
+#include "engine/Animation/Animation.hpp"
 #include "engine/Logging/logging.hpp"
-#include "engine/Header/data.hpp"
+#include "engine/DSA/Data.hpp"
 #include <algorithm>
 #include <optional>
 
@@ -153,7 +153,7 @@ static bool boneHasAnyKeyframes(size_t bone, engine::Animation const &anim)
     auto const &k = anim.bones[bone];
     return !(k.positions.empty() && k.orientations.empty() && k.scales.empty());
 };
-void engine::Animator::animate(ecs::registry &registry, ecs::entity entity, float deltatime)
+void engine::Animator::animate(Registry &registry, ecs::entity entity, float deltatime)
 {
     auto const &model = registry.get<Model>(registry.get<Instance>(entity).e_model);
     auto &current = registry.get<CurrentAnimation>(entity);
@@ -196,7 +196,7 @@ void engine::Animator::animate(ecs::registry &registry, ecs::entity entity, floa
         calculateBoneMatrices(current.boneMatrices, model.skeleton, current.time, *animation);
     }
 }
-void engine::Animator::calculateBoneMatrices(std::vector<glm::mat4> &boneMatrices, Skeleton const &skeleton, float normalizedTime, Animation const &animation, Animation const *secondAnimation, AnimationTransition transition)
+void engine::Animator::calculateBoneMatrices(std::vector<glm::mat4> &boneMatrices, Model::Skeleton const &skeleton, float normalizedTime, Animation const &animation, Animation const *secondAnimation, AnimationTransition transition)
 {
     size_t numBones = animation.bones.size();
     boneMatrices.resize(numBones);
@@ -239,7 +239,7 @@ void engine::Animator::calculateBoneMatrices(std::vector<glm::mat4> &boneMatrice
     }
 }
 
-void engine::Animator::update(ecs::registry &registry, float deltatime)
+void engine::Animator::update(Registry &registry, float deltatime)
 {
     for(ecs::entity entity : registry.view<engine::Instance, engine::CurrentAnimation>())
     {

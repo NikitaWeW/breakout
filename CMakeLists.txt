@@ -11,7 +11,7 @@ include(cmake/cpm.cmake)
 
 set(ASSIMP_WARNINGS_AS_ERRORS OFF)
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/nicecs@1.5.3")
+CPMAddPackage("gh:nikitawew/nicecs@1.5.5")
 CPMAddPackage("gh:gabime/spdlog@1.16.0")
 CPMAddPackage("gh:assimp/assimp@6.0.2")
 CPMAddPackage("gh:g-truc/glm#1.0.2")
@@ -32,7 +32,7 @@ target_include_directories(engine PUBLIC include)
 target_compile_definitions(engine PUBLIC GLM_ENABLE_EXPERIMENTAL)
 
 target_precompile_headers(engine PRIVATE 
-    include/engine/engine.hpp
+    include/engine/Engine.hpp
 )
 
 install(DIRECTORY DESTINATION engine)

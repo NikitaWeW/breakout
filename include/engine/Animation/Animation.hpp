@@ -1,9 +1,9 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "engine/Header/ecs.hpp"
-#include "engine/Header/ease_functions.hpp"
-#include "engine/Header/data.hpp"
+#include "engine/DSA/ECS.hpp"
+#include "engine/DSA/EaseFunctions.hpp"
+#include "engine/DSA/Data.hpp"
 
 namespace engine
 {
@@ -31,14 +31,14 @@ namespace engine
     class Animator
     {
     protected:
-        void animate(ecs::registry &registry, ecs::entity entity, float deltatime);
+        void animate(Registry &registry, ecs::entity entity, float deltatime);
 
     public:
-        void calculateBoneMatrices(std::vector<glm::mat4> &boneMatrices, Skeleton const &skeleton, float normalizedTime, Animation const &animation, Animation const *secondAnimation = nullptr, AnimationTransition transition = {});
-        void update(ecs::registry &registry, float deltatime);
+        void calculateBoneMatrices(std::vector<glm::mat4> &boneMatrices, Model::Skeleton const &skeleton, float normalizedTime, Animation const &animation, Animation const *secondAnimation = nullptr, AnimationTransition transition = {});
+        void update(Registry &registry, float deltatime);
     };
 
-    // /// \brief Creates retargeted animations in the destModel and changes its skeleton.
+    // /// @brief Creates retargeted animations in the destModel and changes its skeleton.
     // void retargetSkeleton(Model &destModel, Model const &srcModel);
 
 

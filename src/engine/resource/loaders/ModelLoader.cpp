@@ -13,6 +13,8 @@
 #define MODEL_LOADER_TRACE(...)
 #endif
 
+using namespace engine;
+
 constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
 {
     glm::mat4 to{};
@@ -23,7 +25,7 @@ constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
     to[0][3] = from.d1; to[1][3] = from.d2; to[2][3] = from.d3; to[3][3] = from.d4;
     return to;
 }
-template<typename aiVector3X> 
+template<typename aiVector3X>
 constexpr glm::vec3 toVec3(aiVector3X const &aivector)
 {
     return glm::vec3{(float) aivector.x, (float) aivector.y, (float) aivector.z};
@@ -32,7 +34,6 @@ constexpr glm::quat toQuat(aiQuaternion const &aiquaternion)
 {
     return glm::quat{aiquaternion.w, aiquaternion.x, aiquaternion.y, aiquaternion.z};
 }
-
 static float u8ToFloat(unsigned char v) { return v / 255.0f; }
 static glm::vec3 getColor(aiMaterial const *material, glm::vec3 defaultColor, const char* key, unsigned int type, unsigned int idx)
 {
@@ -61,124 +62,30 @@ static float getColor(aiMaterial const *material, float defaultColor, const char
 
     return defaultColor;
 }
+
 static void setMissingTextures(engine::Material::Textures &material, engine::Material::Textures const &defaultMaterial)
 {
     if(!material.albedo      ) material.albedo       = defaultMaterial.albedo;
     if(!material.metallic    ) material.metallic     = defaultMaterial.metallic;
-    if(!material.roughness       ) material.roughness        = defaultMaterial.roughness;
+    if(!material.roughness   ) material.roughness    = defaultMaterial.roughness;
     if(!material.ambient     ) material.ambient      = defaultMaterial.ambient;
     if(!material.normal      ) material.normal       = defaultMaterial.normal;
     if(!material.displacement) material.displacement = defaultMaterial.displacement;
     if(!material.alpha       ) material.alpha        = defaultMaterial.alpha;
 }
-
-aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string_view nodeName)
+static aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string_view nodeName)
 {
-    for(unsigned i = 0; i < animation->mNumChannels; ++i) 
+    for(unsigned i = 0; i < animation->mNumChannels; ++i)
     {
         aiNodeAnim const *node = animation->mChannels[i];
-        if(std::string_view{node->mNodeName.C_Str()} == nodeName) 
+        if(std::string_view{node->mNodeName.C_Str()} == nodeName)
             return node;
     }
 
     return nullptr;
 }
-
-static ecs::entity getDefaultMaterial(ecs::registry &registry)
-{
-    ecs::entity white = 0;
-    ecs::entity normal = 0;
-    ecs::entity black = 0;
-    ecs::entity tile = 0;
-
-    for(ecs::entity e_texture : registry.view<engine::Texture>())
-    {
-        auto &texture = registry.get<engine::Texture>(e_texture);
-
-        if(texture.path == "default/white")
-            white = e_texture;
-        if(texture.path == "default/normal")
-            normal = e_texture;
-        if(texture.path == "default/black")
-            black = e_texture;
-        if(texture.path == "default/tile")
-            tile = e_texture;
-    }
-
-    if(!white)
-        white = registry.create(engine::Texture{
-            .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-                1, 1, 1
-            }.data()},
-            // .grayscale = true,
-            .path = "default/white"
-        });
-    if(!normal)
-        normal = registry.create(engine::Texture{
-            .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
-                0.5f, 0.5f, 1.0f
-            }.data()},
-            // .grayscale = true,
-            .path = "default/normal"
-        });
-    if(!black)
-        black = registry.create(engine::Texture{
-            .data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-                0, 0, 0
-            }.data()},
-            // .grayscale = true,
-            .path = "default/black"
-        });
-    if(!tile)
-        tile = registry.create(engine::Texture{
-            .data = engine::Bitmap<float>{8, 8, 3, std::array<float, 8*8*3>{ // checkerboard
-                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
-                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
-                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
-                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
-                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
-                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
-                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
-                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
-            }.data()},
-            // .grayscale = true,
-            .path = "default/tile"
-        });
-
-    struct ModelLoaderDefaultMaterialTag {};
-    auto defaultMaterialView = registry.view<engine::Material, ModelLoaderDefaultMaterialTag>();
-    ENGINE_ASSERT(defaultMaterialView.size() <= 1);
-
-    if(defaultMaterialView.empty())
-    {
-        return registry.create(ModelLoaderDefaultMaterialTag{}, engine::Material{
-            .textures = {
-                .albedo = tile,
-                .metallic = black,
-                .roughness = white,
-                .ambient = white,
-                .normal = normal,
-                .displacement = black,
-                .alpha = white 
-            },
-            .properties = {
-                .ambient       = {0.1f, 0.1f, 0.1f},
-                .albedo        = {0.8f, 0.8f, 0.8f, 1.0f},
-                .specular      = {0.5f, 0.5f, 0.5f},
-                .emission      = {0.0f, 0.0f, 0.0f},
-                
-                .shininess = 32.0f,
-                .metallic = 0.0f,
-                .ior       = 1.5f
-            }
-        });
-    }
-    else 
-    {
-        return defaultMaterialView[0];
-    }
-}
-static ecs::entity fromRawAssimpTexture(ecs::registry &registry, aiTexture const *texture)
+static std::string stringID() { return std::to_string(UID{}.value()); }
+static ResourceHandle fromRawAssimpTexture(aiTexture const *texture)
 {
     ENGINE_ASSERT(texture->mHeight == 0);
     unsigned const width = static_cast<unsigned>(texture->mWidth);
@@ -187,13 +94,14 @@ static ecs::entity fromRawAssimpTexture(ecs::registry &registry, aiTexture const
     if(!texture->pcData)
     {
         ENGINE_CORE_ERROR("aiTexture has no texel data");
-        return 0;
+        return ResourceHandle{};
     }
 
     engine::Texture result;
     result.data = engine::Bitmap<float>{width, height, 4};
+    // result.getPath() = "raw resource " + stringID() + " aiTexture " + texture->mFilename.C_Str();
 
-    for (size_t i = 0; i < width * height; ++i) 
+    for (size_t i = 0; i < width * height; ++i)
     {
         aiTexel const &texel = texture->pcData[i];
         result.data.setPixel(static_cast<unsigned>(i % width), static_cast<unsigned>(i / width), {
@@ -204,88 +112,7 @@ static ecs::entity fromRawAssimpTexture(ecs::registry &registry, aiTexture const
         });
     }
 
-
-    return registry.create(std::move(result));
-}
-void engine::loader::ModelLoader::loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out)
-{
-    static engine::loader::TextureLoader loader;
-
-    if(material->GetTextureCount(type) == 0 || out != 0)
-        return;
-
-    // load the first texture (multiple texture of the same type are not supported)
-    std::string directory = std::filesystem::path{currentModel->path}.parent_path().string();
-    aiString str;
-    if(material->GetTexture(type, 0, &str) != AI_SUCCESS) 
-        return; 
-    bool srgb = type == aiTextureType_DIFFUSE;
-
-    aiTexture const *embedded = currentScene->GetEmbeddedTexture(str.C_Str());
-    if(embedded)
-    {
-        if(embedded->mHeight == 0)
-        {
-            MODEL_LOADER_TRACE("Loading embedded compressed texture \"{}\"", embedded->mFilename.C_Str());
-            out = loader.load(*currentRegistry, embedded->mWidth, embedded->pcData, LoadingFlags::NONE);
-        } else
-        {
-            MODEL_LOADER_TRACE("Loading embedded raw texture \"{}\"", embedded->mFilename.C_Str());
-            out = fromRawAssimpTexture(*currentRegistry, embedded);
-        }
-
-        if(out)
-        {
-            currentRegistry->get<engine::Texture>(out).path = embedded->mFilename.C_Str();
-            currentRegistry->get<engine::Texture>(out).srgb = srgb;
-        }
-        return;
-    }
-
-    std::string filepath = directory + '/' + str.C_Str();
-
-    for(auto e_texture : currentRegistry->view<engine::Texture>()) {
-        auto const &texture = currentRegistry->get<engine::Texture>(e_texture);
-        if(texture.path == filepath) {
-            out = e_texture;
-            return;
-        }
-    }
-
-    MODEL_LOADER_TRACE("Loading file texture \"{}\"", filepath);
-    out = loader.load(*currentRegistry, filepath, LoadingFlags::NONE);
-
-    if(out)
-    {
-        currentRegistry->get<engine::Texture>(out).srgb = srgb;
-    }
-}
-engine::Material engine::loader::ModelLoader::convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties)
-{
-    engine::Material material;
-
-    // https://github.com/assimp/assimp/issues/430
-    loadMaterialTexture(aimaterial, aiTextureType_DIFFUSE,           material.textures.albedo      );
-    loadMaterialTexture(aimaterial, aiTextureType_NORMALS,           material.textures.normal      );
-    loadMaterialTexture(aimaterial, aiTextureType_HEIGHT,            material.textures.normal      ); 
-    loadMaterialTexture(aimaterial, aiTextureType_DISPLACEMENT,      material.textures.displacement);
-    loadMaterialTexture(aimaterial, aiTextureType_AMBIENT_OCCLUSION, material.textures.ambient     );
-    loadMaterialTexture(aimaterial, aiTextureType_DIFFUSE_ROUGHNESS, material.textures.roughness   );
-    loadMaterialTexture(aimaterial, aiTextureType_TRANSMISSION,      material.textures.alpha       );
-    loadMaterialTexture(aimaterial, aiTextureType_METALNESS,         material.textures.metallic    );
-
-    material.properties = {
-        .ambient       = getColor(aimaterial, defaultProperties.ambient,       AI_MATKEY_COLOR_AMBIENT),
-        .albedo        = getColor(aimaterial, defaultProperties.albedo,       AI_MATKEY_COLOR_DIFFUSE),
-        .specular      = getColor(aimaterial, defaultProperties.specular,      AI_MATKEY_COLOR_SPECULAR),
-        .emission      = getColor(aimaterial, defaultProperties.emission,      AI_MATKEY_COLOR_EMISSIVE),
-
-        .shininess     = getColor(aimaterial, defaultProperties.shininess,     AI_MATKEY_SHININESS),
-        .metallic      = getColor(aimaterial, defaultProperties.metallic,      AI_MATKEY_METALLIC_FACTOR),
-        .ior           = getColor(aimaterial, defaultProperties.ior,           AI_MATKEY_REFRACTI)
-    };
-
-    return material;
+    return ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(std::move(result)));
 }
 
 // FIXME: probably wrong.
@@ -345,7 +172,7 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
             glm::vec3 edge1 = mesh.geometry.positions[i1] - mesh.geometry.positions[i0];
             glm::vec3 edge2 = mesh.geometry.positions[i2] - mesh.geometry.positions[i0];
             glm::vec2 deltaUV1 = mesh.geometry.texCoords[i1] - mesh.geometry.texCoords[i0];
-            glm::vec2 deltaUV2 = mesh.geometry.texCoords[i2] - mesh.geometry.texCoords[i0]; 
+            glm::vec2 deltaUV2 = mesh.geometry.texCoords[i2] - mesh.geometry.texCoords[i0];
 
             float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
             glm::vec3 tangent = {
@@ -355,7 +182,7 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
             };
             glm::vec3 normal = mesh.geometry.normals[i0];
             tangent = glm::normalize(tangent - normal * glm::dot(normal, tangent));
-            
+
             mesh.geometry.tangents[i0] = { tangent, 0 };
             mesh.geometry.tangents[i1] = { tangent, 0 };
             mesh.geometry.tangents[i2] = { tangent, 0 };
@@ -373,7 +200,7 @@ static void optimizeMesh(engine::Mesh &mesh)
         meshopt_Stream{oldMesh.geometry.positions.data(), sizeof(glm::vec4), sizeof(glm::vec4)},
         meshopt_Stream{oldMesh.geometry.texCoords.data(), sizeof(glm::vec2), sizeof(glm::vec2)},
         meshopt_Stream{oldMesh.geometry.normals  .data(), sizeof(glm::vec4), sizeof(glm::vec4)},
-        meshopt_Stream{oldMesh.geometry.tangents .data(), sizeof(glm::vec4), sizeof(glm::vec4)} 
+        meshopt_Stream{oldMesh.geometry.tangents .data(), sizeof(glm::vec4), sizeof(glm::vec4)}
     };
 
     if(!oldMesh.geometry.boneIDs.empty())
@@ -435,36 +262,36 @@ static void extractVertexData(aiMesh const *aimesh, engine::Mesh &mesh)
         }
     }
 }
-static void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh, engine::Skeleton &skeleton)
+static void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh, engine::Model::Skeleton &skeleton)
 {
     // i hate it -- april 2025
     // it works -- october 2025
-    glm::ivec4 boneIDs{-1}; mesh.geometry.boneIDs.resize(mesh.geometry.positions.size(), boneIDs); 
+    glm::ivec4 boneIDs{-1}; mesh.geometry.boneIDs.resize(mesh.geometry.positions.size(), boneIDs);
     glm::vec4 weights{0}; mesh.geometry.weights.resize(mesh.geometry.positions.size(), weights);
     for(unsigned boneIndex = 0; boneIndex < aimesh->mNumBones; ++boneIndex) {
         int boneID = -1;
         aiBone const *bone = aimesh->mBones[boneIndex];
         std::string boneName = bone->mName.C_Str();
-        if(skeleton.boneMap.find(boneName) == skeleton.boneMap.end()) 
+        if(skeleton.boneMap.find(boneName) == skeleton.boneMap.end())
         {
             unsigned id = skeleton.boneMap.size();
             skeleton.bindTransform.emplace_back(toMat4(bone->mOffsetMatrix));
             skeleton.boneMap.try_emplace(boneName, id);
             boneID = id;
-        } else 
+        } else
         {
             boneID = skeleton.boneMap.at(boneName);
         }
         ENGINE_ASSERT(boneID != -1);
 
-        for(unsigned weightIndex = 0; weightIndex < bone->mNumWeights; ++weightIndex) 
+        for(unsigned weightIndex = 0; weightIndex < bone->mNumWeights; ++weightIndex)
         {
             unsigned vertexID = bone->mWeights[weightIndex].mVertexId;
             ENGINE_ASSERT(vertexID < mesh.geometry.positions.size());
             // record it in the first uninitialized slot
-            for(unsigned i = 0; i < 4; ++i) 
-            { 
-                if(mesh.geometry.boneIDs[vertexID][i] == -1) 
+            for(unsigned i = 0; i < 4; ++i)
+            {
+                if(mesh.geometry.boneIDs[vertexID][i] == -1)
                 {
                     mesh.geometry.boneIDs[vertexID][i] = boneID;
                     mesh.geometry.weights[vertexID][i] = bone->mWeights[weightIndex].mWeight;
@@ -474,13 +301,165 @@ static void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh, engine::Sk
         }
     }
 }
-void normalizeWeights(engine::Mesh::Geometry &geometry)
+static void normalizeWeights(engine::Mesh::Geometry &geometry)
 {
     for(auto &weight : geometry.weights)
         if(weight[0] + weight[1] + weight[2] + weight[3] > 1e-6f)
             weight /= weight[0] + weight[1] + weight[2] + weight[3];
 }
-engine::Mesh engine::loader::ModelLoader::processMesh(aiMesh const *aimesh, glm::mat4 const &transform)
+
+struct ModelLoaderImpl
+{
+    Material mDefaultMaterial;
+    ModelLoaderOptions mOptions;
+
+    aiScene const *mScene;
+    engine::Model *mModel;
+
+    // === === === ===
+    ModelLoaderImpl();
+    void loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ResourceHandle &out);
+    engine::Material convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties);
+    engine::Mesh processMesh(aiMesh const *aimesh, glm::mat4 const &transform);
+    std::unique_ptr<IResource> load();
+    void processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f});
+    engine::Animation processAnimation(aiAnimation const *animation);
+};
+
+ModelLoaderImpl::ModelLoaderImpl()
+{
+    Texture white;
+    white.data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
+        1, 1, 1
+    }.data()};
+    white.getPath() = "raw resource default/white";
+    white.srgb = false;
+
+    Texture normal;
+    normal.data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
+        0.5f, 0.5f, 1.0f
+    }.data()};
+    normal.getPath() = "raw resource default/normal";
+    normal.srgb = false;
+
+    Texture black;
+    black.data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
+        0, 0, 0
+    }.data()};
+    black.getPath() = "raw resource default/black";
+    black.srgb = false;
+
+    Texture tile;
+    tile.data = engine::Bitmap<float>{8, 8, 3, std::array<float, 8*8*3>{ // checkerboard
+        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
+        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
+        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
+        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
+        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
+    }.data()};
+    tile.getPath() = "raw resource default/tile";
+    tile.srgb = true;
+
+    mDefaultMaterial = {
+        .textures = {
+            .albedo       = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(tile)),
+            .metallic     = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(black)),
+            .roughness    = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(white)),
+            .ambient      = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(white)),
+            .normal       = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(normal)),
+            .displacement = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(black)),
+            .alpha        = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(white))
+        },
+        .properties = {
+            .ambient       = {0.1f, 0.1f, 0.1f},
+            .albedo        = {0.8f, 0.8f, 0.8f, 1.0f},
+            .specular      = {0.5f, 0.5f, 0.5f},
+            .emission      = {0.0f, 0.0f, 0.0f},
+
+            .shininess = 32.0f,
+            .metallic = 0.0f,
+            .ior       = 1.5f
+        }
+    };
+}
+
+void ModelLoaderImpl::loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ResourceHandle &out)
+{
+    if(material->GetTextureCount(type) == 0 || out)
+        return;
+
+    // load the first texture (multiple texture of the same type are not supported)
+    std::string directory = std::filesystem::path{mModel->path}.parent_path().string();
+    aiString str;
+    if(material->GetTexture(type, 0, &str) != AI_SUCCESS)
+        return;
+    bool srgb = type == aiTextureType_DIFFUSE;
+
+    aiTexture const *embedded = mScene->GetEmbeddedTexture(str.C_Str());
+    if(embedded)
+    {
+        if(embedded->mHeight == 0)
+        {
+            MODEL_LOADER_TRACE("Loading embedded compressed texture \"{}\"", embedded->mFilename.C_Str());
+            out = ResourceManager::instance().loadFromMemory(ResourceType::BITMAP, embedded->pcData, embedded->mWidth, mOptions.textureOptions);
+        } else
+        {
+            MODEL_LOADER_TRACE("Loading embedded raw texture \"{}\"", embedded->mFilename.C_Str());
+            out = fromRawAssimpTexture(embedded);
+        }
+
+        if(out)
+        {
+            auto &tex = static_cast<Texture &>(out.getResource().value().get());
+            tex.getPath().append(std::string{" embedded aiTexture "} + embedded->mFilename.C_Str());
+            tex.srgb = srgb;
+        }
+        return;
+    }
+
+    std::string filepath = directory + '/' + str.C_Str();
+
+    MODEL_LOADER_TRACE("Loading file texture \"{}\"", filepath);
+    out = ResourceManager::instance().loadFromFile(ResourceType::BITMAP, filepath, mOptions.textureOptions);
+
+    if(out)
+    {
+        auto &tex = static_cast<Texture &>(out.getResource().value().get());
+        tex.srgb = srgb;
+    }
+}
+engine::Material ModelLoaderImpl::convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties)
+{
+    engine::Material material;
+
+    // https://github.com/assimp/assimp/issues/430
+    loadMaterialTexture(aimaterial, aiTextureType_DIFFUSE,           material.textures.albedo      );
+    loadMaterialTexture(aimaterial, aiTextureType_NORMALS,           material.textures.normal      );
+    loadMaterialTexture(aimaterial, aiTextureType_HEIGHT,            material.textures.normal      );
+    loadMaterialTexture(aimaterial, aiTextureType_DISPLACEMENT,      material.textures.displacement);
+    loadMaterialTexture(aimaterial, aiTextureType_AMBIENT_OCCLUSION, material.textures.ambient     );
+    loadMaterialTexture(aimaterial, aiTextureType_DIFFUSE_ROUGHNESS, material.textures.roughness   );
+    loadMaterialTexture(aimaterial, aiTextureType_TRANSMISSION,      material.textures.alpha       );
+    loadMaterialTexture(aimaterial, aiTextureType_METALNESS,         material.textures.metallic    );
+
+    material.properties = {
+        .ambient       = getColor(aimaterial, defaultProperties.ambient,       AI_MATKEY_COLOR_AMBIENT),
+        .albedo        = getColor(aimaterial, defaultProperties.albedo,       AI_MATKEY_COLOR_DIFFUSE),
+        .specular      = getColor(aimaterial, defaultProperties.specular,      AI_MATKEY_COLOR_SPECULAR),
+        .emission      = getColor(aimaterial, defaultProperties.emission,      AI_MATKEY_COLOR_EMISSIVE),
+
+        .shininess     = getColor(aimaterial, defaultProperties.shininess,     AI_MATKEY_SHININESS),
+        .metallic      = getColor(aimaterial, defaultProperties.metallic,      AI_MATKEY_METALLIC_FACTOR),
+        .ior           = getColor(aimaterial, defaultProperties.ior,           AI_MATKEY_REFRACTI)
+    };
+
+    return material;
+}
+
+engine::Mesh ModelLoaderImpl::processMesh(aiMesh const *aimesh, glm::mat4 const &transform)
 {
     MODEL_LOADER_TRACE("Loading mesh \"{}\"", aimesh->mName.C_Str());
     engine::Mesh mesh;
@@ -488,47 +467,45 @@ engine::Mesh engine::loader::ModelLoader::processMesh(aiMesh const *aimesh, glm:
 
     if(aimesh->HasBones())
     {
-        extractBoneData(aimesh, mesh, currentModel->skeleton);
+        extractBoneData(aimesh, mesh, mModel->skeleton);
         normalizeWeights(mesh.geometry);
     }
 
-    auto e_defaultMaterial = getDefaultMaterial(*currentRegistry);
-    if(!currentScene->HasMaterials())
+    if(!mScene->HasMaterials())
     {
-        mesh.e_material = e_defaultMaterial;
+        mesh.material = mDefaultMaterial;
     }
     else
     {
-        auto const &defaultMaterial = currentRegistry->get<engine::Material>(e_defaultMaterial);
-        aiMaterial const *aimaterial = currentScene->mMaterials[aimesh->mMaterialIndex];
-        auto material = convertMaterial(aimaterial, defaultMaterial.properties);
-        setMissingTextures(material.textures, defaultMaterial.textures);
-        mesh.e_material = currentRegistry->create(std::move(material));
+        aiMaterial const *aimaterial = mScene->mMaterials[aimesh->mMaterialIndex];
+        auto material = convertMaterial(aimaterial, mDefaultMaterial.properties);
+        setMissingTextures(material.textures, mDefaultMaterial.textures);
+        mesh.material = material;
     }
 
     calculateMissingPrimitives(mesh);
     optimizeMesh(mesh);
 
-    // Apply transformation only for static meshes. 
+    // Apply transformation only for meshes.
     // Models with bones should use the bone transformations.
     if(!aimesh->HasBones())
         moveMesh(mesh.geometry, transform);
 
     return mesh;
 }
-void engine::loader::ModelLoader::processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f})
+void ModelLoaderImpl::processNodeMeshes(aiNode const *node, glm::mat4 parentTransform)
 {
     MODEL_LOADER_TRACE("Processing node \"{}\"", node->mName.C_Str());
     glm::mat4 nodeTransform = parentTransform * toMat4(node->mTransformation);
     for(unsigned i = 0; i < node->mNumMeshes; ++i) {
-        currentModel->meshes.emplace_back(std::move(processMesh(currentScene->mMeshes[node->mMeshes[i]], nodeTransform)));
+        mModel->meshes.emplace_back(std::move(processMesh(mScene->mMeshes[node->mMeshes[i]], nodeTransform)));
     }
     for(unsigned i = 0; i < node->mNumChildren; ++i) {
         processNodeMeshes(node->mChildren[i], nodeTransform);
     }
 }
 
-static void processAnimationNode(engine::Animation &result, aiAnimation const *animation, engine::Skeleton const &skeleton, aiNode const *node)
+void processAnimationNode(engine::Animation &result, aiAnimation const *animation, engine::Model::Skeleton const &skeleton, aiNode const *node)
 {
     std::string nodeName = node->mName.C_Str();
     aiNodeAnim const *nodeAnim = findNodeAnim(animation, nodeName);
@@ -565,7 +542,7 @@ static void processAnimationNode(engine::Animation &result, aiAnimation const *a
         processAnimationNode(result, animation, skeleton, node->mChildren[i]);
     }
 }
-engine::Animation engine::loader::ModelLoader::processAnimation(aiAnimation const *animation)
+engine::Animation ModelLoaderImpl::processAnimation(aiAnimation const *animation)
 {
     MODEL_LOADER_TRACE("Processing animation \"{}\"", animation->mName.C_Str());
 
@@ -573,9 +550,9 @@ engine::Animation engine::loader::ModelLoader::processAnimation(aiAnimation cons
     result.durationTicks = (float) animation->mDuration;
     result.ticksPerSecond = (animation->mTicksPerSecond > 0) ? (float) animation->mTicksPerSecond : 24.0f;
     result.name = animation->mName.C_Str();
-    result.bones.resize(currentModel->skeleton.boneMap.size());
+    result.bones.resize(mModel->skeleton.boneMap.size());
 
-    processAnimationNode(result, animation, currentModel->skeleton, currentScene->mRootNode);
+    processAnimationNode(result, animation, mModel->skeleton, mScene->mRootNode);
 
     for(auto &bone : result.bones)
     {
@@ -587,7 +564,7 @@ engine::Animation engine::loader::ModelLoader::processAnimation(aiAnimation cons
     return result;
 }
 
-static void calculateParent(engine::Skeleton &skeleton, aiNode const *node, int parent)
+void calculateParent(engine::Model::Skeleton &skeleton, aiNode const *node, int parent)
 {
     std::string nodeName = node->mName.C_Str();
 
@@ -604,32 +581,32 @@ static void calculateParent(engine::Skeleton &skeleton, aiNode const *node, int 
     }
 }
 
-ecs::entity engine::loader::ModelLoader::load()
+std::unique_ptr<IResource> ModelLoaderImpl::load()
 {
-    if(currentScene->HasMeshes())
-        MODEL_LOADER_TRACE("Loading {} meshes.", currentScene->mNumMeshes);
-    if(currentScene->HasAnimations())
-        MODEL_LOADER_TRACE("Loading {} animations.", currentScene->mNumAnimations);
+    if(mScene->HasMeshes())
+        MODEL_LOADER_TRACE("Loading {} meshes.", mScene->mNumMeshes);
+    if(mScene->HasAnimations())
+        MODEL_LOADER_TRACE("Loading {} animations.", mScene->mNumAnimations);
 
-    processNodeMeshes(currentScene->mRootNode);
+    processNodeMeshes(mScene->mRootNode);
 
-    MODEL_LOADER_TRACE("Model has {} bones.", currentModel->skeleton.boneMap.size());
+    MODEL_LOADER_TRACE("Model has {} bones.", mModel->skeleton.boneMap.size());
 
-    currentModel->skeleton.parents.resize(currentModel->skeleton.boneMap.size());
-    currentModel->skeleton.nodeTransform.resize(currentModel->skeleton.boneMap.size());
-    calculateParent(currentModel->skeleton, currentScene->mRootNode, -1);
+    mModel->skeleton.parents.resize(mModel->skeleton.boneMap.size());
+    mModel->skeleton.nodeTransform.resize(mModel->skeleton.boneMap.size());
+    calculateParent(mModel->skeleton, mScene->mRootNode, -1);
 
-    for(unsigned i = 0; i < currentScene->mNumAnimations; ++i)
+    for(unsigned i = 0; i < mScene->mNumAnimations; ++i)
     {
-        currentModel->animations.emplace_back(std::move(processAnimation(currentScene->mAnimations[i])));
+        mModel->animations.emplace_back(std::move(processAnimation(mScene->mAnimations[i])));
     }
 
     // TODO: morph targets
 
-    return currentRegistry->create(std::move(*currentModel));
+    return std::make_unique<IResource>(std::move(*mModel));
 }
 
-constexpr unsigned ASSIMP_FLAGS = 
+constexpr unsigned ASSIMP_FLAGS =
     aiProcess_SplitLargeMeshes      |
     aiProcess_GenNormals            |
     aiProcess_GenUVCoords           |
@@ -643,17 +620,18 @@ constexpr unsigned ASSIMP_FLAGS =
     aiProcess_ValidateDataStructure |
     aiProcess_LimitBoneWeights;
 
-ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::string_view path, LoadingFlags flags)
+std::unique_ptr<IResource> ModelLoader::loadFromFile(std::string_view path, LoaderOptions_t o)
 {
+    auto options = castOptions<ModelLoaderOptions>(o);
     MODEL_LOADER_TRACE("---");
     MODEL_LOADER_TRACE("Loading model \"{}\"", path);
     Assimp::Importer importer;
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
-    aiScene const *scene = importer.ReadFile(std::string{path}, 
+    aiScene const *scene = importer.ReadFile(std::string{path},
         ASSIMP_FLAGS |
-        (bool(flags & LoadingFlags::MODEL_FLIP_WINDING_ORDER) ? aiProcess_FlipWindingOrder : 0) |
-        (bool(flags & LoadingFlags::MODEL_FLIP_TEXTURES)      ? aiProcess_FlipUVs : 0)
+        (options.flipWindingOrder ? aiProcess_FlipWindingOrder : 0) |
+        (options.flipUVs ? aiProcess_FlipUVs : 0)
     );
 
     if(!scene)
@@ -665,26 +643,25 @@ ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::string_vi
     Model model;
     model.path = path;
 
-    currentModel = &model;
-    currentScene = scene;
-    currentRegistry = &reg;
-    currentFlags = flags;
-    currentModel->skeleton.globalInverseTransform = glm::inverse(toMat4(currentScene->mRootNode->mTransformation));
+    unwrap()->mModel = &model;
+    unwrap()->mScene = scene;
+    unwrap()->mOptions = options;
+    unwrap()->mModel->skeleton.globalInverseTransform = glm::inverse(toMat4(unwrap()->mScene->mRootNode->mTransformation));
 
-
-    return load();
+    return unwrap()->load();
 }
-ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::size_t size, void const *data, LoadingFlags flags)
+std::unique_ptr<IResource> ModelLoader::loadFromMemory(void const *data, size_t size, LoaderOptions_t o)
 {
+    auto options = castOptions<ModelLoaderOptions>(o);
     MODEL_LOADER_TRACE("---");
     MODEL_LOADER_TRACE("Loading model from memory");
     Assimp::Importer importer;
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
     importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
-    aiScene const *scene = importer.ReadFileFromMemory(data, size, 
+    aiScene const *scene = importer.ReadFileFromMemory(data, size,
         ASSIMP_FLAGS |
-        (bool(flags & LoadingFlags::MODEL_FLIP_WINDING_ORDER) ? aiProcess_FlipWindingOrder : 0) |
-        (bool(flags & LoadingFlags::MODEL_FLIP_TEXTURES)      ? aiProcess_FlipUVs : 0)
+        (options.flipWindingOrder ? aiProcess_FlipWindingOrder : 0) |
+        (options.flipUVs ? aiProcess_FlipUVs : 0)
     );
 
     if(!scene)
@@ -696,12 +673,10 @@ ecs::entity engine::loader::ModelLoader::load(ecs::registry &reg, std::size_t si
     Model model;
     model.path = "memory";
 
-    currentModel = &model;
-    currentScene = scene;
-    currentRegistry = &reg;
-    currentFlags = flags;
-    currentModel->skeleton.globalInverseTransform = glm::inverse(toMat4(currentScene->mRootNode->mTransformation));
+    unwrap()->mModel = &model;
+    unwrap()->mScene = scene;
+    unwrap()->mOptions = options;
+    unwrap()->mModel->skeleton.globalInverseTransform = glm::inverse(toMat4(unwrap()->mScene->mRootNode->mTransformation));
 
-
-    return load();
+    return unwrap()->load();
 }

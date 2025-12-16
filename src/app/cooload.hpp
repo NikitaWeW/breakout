@@ -80,40 +80,40 @@ namespace cooload
         bool printPercentage;
     };
 
-    /// \brief Resize the cube (buffers, projection, etc.)
-    /// \param cube The cube to process.
+    /// @brief Resize the cube (buffers, projection, etc.)
+    /// @param cube The cube to process.
     /// Should be called when the imageSize is changed.
     void resizeCube(SpinningCube &cube);
 
-    /// \brief Rotate the cube.
-    /// \param cube The cube to process.
-    /// \param time The animation time.
+    /// @brief Rotate the cube.
+    /// @param cube The cube to process.
+    /// @param time The animation time.
     /// Updates the cube model matrix.
     void animateCube(SpinningCube &cube, float time = 0);
 
-    /// \brief Draws a cube to its buffer.
-    /// \param cube The cube to process.
+    /// @brief Draws a cube to its buffer.
+    /// @param cube The cube to process.
     /// Assumes the cube is resized, might segfault if not.
     void draw(SpinningCube &cube);
 
-    /// \brief Gets the {columns, rows} console size.
+    /// @brief Gets the {columns, rows} console size.
     glm::uvec2 getConsoleSize();
 
-    /// \brief Guess what it does.
+    /// @brief Guess what it does.
     void clearConsole();
 
-    /// \brief Change the console cursor position.
+    /// @brief Change the console cursor position.
     void gotoxy(glm::uvec2 pos);
 
-    /// \brief Draws a cube to its stringstream.
-    /// \param bar The bar to process.
+    /// @brief Draws a cube to its stringstream.
+    /// @param bar The bar to process.
     void draw(Bar &bar);
 
-    /// \brief Some cool loading screen / example. 
+    /// @brief Some cool loading screen / example. 
     /// Run in a separate thread.
     // TODO: make it work nicer with logging
     void loadingScreen(float const *progress);
 
-    /// \brief Get the console cursor position.
+    /// @brief Get the console cursor position.
     glm::uvec2 getxy();
 } // namespace cooload

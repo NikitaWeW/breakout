@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/engine.hpp"
+#include "engine/Engine.hpp"
 #include "GLFW/glfw3.h"
 
 class Controller
@@ -21,7 +21,7 @@ public:
         bool locked = true;
     };
 
-    static ecs::entity createCamera(ecs::registry &reg, glm::vec3 pos = {0, 0, 0}, glm::vec3 target = {0, 0, -10});
+    static ecs::entity createCamera(Registry &reg, glm::vec3 pos = {0, 0, 0}, glm::vec3 target = {0, 0, -10});
 
-    void update(ecs::registry &reg);
+    void update(Registry &reg);
 };

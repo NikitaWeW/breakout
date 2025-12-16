@@ -1,8 +1,8 @@
 #pragma once
-#include "engine/Header/ecs.hpp"
+#include "engine/DSA/ECS.hpp"
 
 struct ChangeAnimationsTag {};
 struct SunTag {};
 
-void createScene(ecs::registry &reg);
-void updateScene(ecs::registry &reg, float deltatime);
+void createScene(engine::Registry &reg);
+void updateScene(engine::Registry &reg, float deltatime);

@@ -22,13 +22,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vector>
 #include "glm/gtc/constants.hpp"
 #include <array>
-#include "bitmap.hpp"
+#include "engine/DSA/Bitmap.hpp"
 
 #define EQUIRECT_ASSERT(x, msg) ENGINE_ASSERT_MSG(x, msg)
 
 namespace engine::eqr
 {
-    /// \brief OpenGL-style right-handed cube map faces indices.
+    /// @brief OpenGL-style right-handed cube map faces indices.
     enum CubemapFaces
     {
         POS_X = 0,
@@ -40,17 +40,17 @@ namespace engine::eqr
         NUM_CUBEMAP_FACES = 6
     };
 
-    /// \brief Convert a cubemap to an equirectangular image.
-    /// \param cubemapFaces An array of cubemap face bitmaps in the order of CubemapFaces enum of size CubemapFaces::NUM_CUBEMAP_FACES (6). The size and number of components of each face must be consistent.
-    /// \tparam T The type of a bitmap. May be deduced.
-    /// \return A 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
+    /// @brief Convert a cubemap to an equirectangular image.
+    /// @param cubemapFaces An array of cubemap face bitmaps in the order of CubemapFaces enum of size CubemapFaces::NUM_CUBEMAP_FACES (6). The size and number of components of each face must be consistent.
+    /// @tparam T The type of a bitmap. May be deduced.
+    /// @return A 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
     template <typename T>
     Bitmap<T> fromCubemap(std::array<Bitmap<T>, NUM_CUBEMAP_FACES> const &cubemapFaces);
 
-    /// \brief Convert an equirectangular image to a cubemap.
-    /// \param equirectangularImage A 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
-    /// \tparam T The type of a bitmap. May be deduced.
-    /// \return An array of square cubemap face bitmaps in the order of CubemapFaces enum of size CubemapFaces::NUM_CUBEMAP_FACES (6). The size and number of components of each face is consistent. The size is equal to equirectangular_width / 4 = equirectangular_height / 2.
+    /// @brief Convert an equirectangular image to a cubemap.
+    /// @param equirectangularImage A 2x1 bitmap of the size x = 4*cubemap_face_size; y = 2*cubemap_face_size with the same number of components as in the cubemap face, representing the equirectangular image.
+    /// @tparam T The type of a bitmap. May be deduced.
+    /// @return An array of square cubemap face bitmaps in the order of CubemapFaces enum of size CubemapFaces::NUM_CUBEMAP_FACES (6). The size and number of components of each face is consistent. The size is equal to equirectangular_width / 4 = equirectangular_height / 2.
     template <typename T>
     std::array<Bitmap<T>, NUM_CUBEMAP_FACES> toCubemap(Bitmap<T> const &equirectangularImage);
 } // namespace engine::eqr
@@ -60,7 +60,7 @@ namespace engine::eqr
 // Implementation 
 // ===============
 
-/// \cond Doxygen_Suppress
+/// @cond Doxygen_Suppress
 namespace engine::eqr
 {
     struct uvFace
@@ -310,4 +310,4 @@ namespace engine::eqr
     } // toCubemap
 } // namespace engine::eqr
 
-/// \endcond
+/// @endcond

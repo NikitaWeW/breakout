@@ -1,18 +1,18 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
-#include "glad/gl.h"
-#include "GLFW/glfw3.h"
-#include "engine/engine.hpp"
-#include "controller.hpp"
-#include "cooload.hpp"
 #include <thread>
 #include <random>
 #include <stack>
+
 #include "scene.hpp"
+#include "controller.hpp"
+#include "cooload.hpp"
 
 // The engine pipeline, game loop and other stuff will be abstracted 
 // into the engine::Engine class one the engine becomes mature enough.
+
+#include "engine/Engine.hpp"
 
 
 int main(int argc, char **argv) {
@@ -46,11 +46,12 @@ int main(int argc, char **argv) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
 
-    ecs::registry registry;
-
+    engine::Registry registry;
     registry.create(engine::Window{window});
 
     engine::Logger::init();
+
+    engine::addLoadersToResourceManager();
     
     createScene(registry);
 

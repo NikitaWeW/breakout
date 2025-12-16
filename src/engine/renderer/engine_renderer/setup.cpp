@@ -1,4 +1,4 @@
-#include "engine/Renderer/engineRenderer.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "engine/Logging/logging.hpp"
 #include "detail.hpp"
 
@@ -115,7 +115,7 @@ static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity
         ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.id, error.severity, error.type, error.source, error.message);
     }
 }
-static void setupOpengl(ecs::registry &)
+static void setupOpengl(Registry &)
 {
     using namespace engine;
 
@@ -136,7 +136,7 @@ static void setupOpengl(ecs::registry &)
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(debugCallback, nullptr);
 }
-void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
+void engine::EngineRenderer::setupPipeline(Registry &reg)
 {
     using namespace engine;
     renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
@@ -171,7 +171,7 @@ void engine::EngineRenderer::setupPipeline(ecs::registry &reg)
     glCreateBuffers(1, &data.SM.lightsSSBO.id);
 }
 
-void engine::EngineRenderer::setup(ecs::registry &reg)
+void engine::EngineRenderer::setup(Registry &reg)
 {
     auto view = reg.view<renderer::RendererData>();
     if(!view.empty())

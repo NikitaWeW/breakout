@@ -1,4 +1,4 @@
-#include "engine/Renderer/engineRenderer.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "detail.hpp"
 #include "ogl.hpp"
 #include "stb_rect_pack.h"
@@ -7,7 +7,7 @@
 
 namespace ogl = engine::renderer::ogl;
 
-static ogl::Texture getTexture(ecs::registry const &reg, ecs::entity e_texture)
+static ogl::Texture getTexture(Registry const &reg, ecs::entity e_texture)
 {
     using namespace engine;
     if(e_texture == 0)
@@ -16,7 +16,7 @@ static ogl::Texture getTexture(ecs::registry const &reg, ecs::entity e_texture)
 
     return reg.get<ogl::Texture>(e_texture);
 }
-void engine::EngineRenderer::processModels(ecs::registry &reg)
+void engine::EngineRenderer::processModels(Registry &reg)
 {
     using namespace engine;
     for(ecs::entity e_model : reg.view<engine::Model>(ecs::exclude_t<renderer::ProcessedModel>{}))
@@ -54,7 +54,7 @@ void engine::EngineRenderer::processModels(ecs::registry &reg)
         reg.emplace<renderer::ProcessedModel>(e_model);
     }
 }
-void engine::EngineRenderer::processMaterials(ecs::registry &reg) 
+void engine::EngineRenderer::processMaterials(Registry &reg) 
 {
     for(ecs::entity e_material : reg.view<engine::Material>(ecs::exclude_t<renderer::ProcessedMaterial>{}))
     {
@@ -74,7 +74,7 @@ void engine::EngineRenderer::processMaterials(ecs::registry &reg)
         reg.emplace<renderer::ProcessedMaterial>(e_material);
     }
 }
-void engine::EngineRenderer::processTextures(ecs::registry &reg)
+void engine::EngineRenderer::processTextures(Registry &reg)
 {
     for(ecs::entity e_texture : reg.view<engine::Texture>(ecs::exclude_t<renderer::ProcessedTexture>{}))
     {
@@ -103,7 +103,7 @@ static glm::vec3 getUp(glm::vec3 dir)
     return glm::abs(glm::dot(dir, {0,1,0})) >= 0.99 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0};
 }
 
-static void processPointLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
+static void processPointLight(engine::renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::PointLight>(e_light);
     engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
@@ -145,7 +145,7 @@ static void processPointLight(engine::renderer::RendererData &data, ecs::registr
     }
     data.pointLights.emplace_back(std::move(newLight));
 }
-static void processDirLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
+static void processDirLight(engine::renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::DirectionalLight>(e_light);
     engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
@@ -173,7 +173,7 @@ static void processDirLight(engine::renderer::RendererData &data, ecs::registry 
     }
     data.dirLights.emplace_back(std::move(newLight));
 }
-static void processSpotLight(engine::renderer::RendererData &data, ecs::registry const &reg, ecs::entity e_light)
+static void processSpotLight(engine::renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
 {
     auto const &light = reg.get<engine::SpotLight>(e_light);
     engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
@@ -284,7 +284,7 @@ static void makeAtlas(engine::renderer::RendererData &data)
     ogl::attachment(data.SM.atlas.fbo, data.SM.atlas.texture, data.SM.atlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
     data.SM.refresh = true;
 }
-void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::RendererData &data)
+void engine::EngineRenderer::processLights(Registry const &reg, renderer::RendererData &data)
 {
     data.pointLights.clear();
     data.dirLights.clear();
@@ -313,7 +313,7 @@ void engine::EngineRenderer::processLights(ecs::registry const &reg, renderer::R
 }
 
 // TODO: process data automatically based on the versioning system.
-void engine::EngineRenderer::processData(ecs::registry &reg)
+void engine::EngineRenderer::processData(Registry &reg)
 {
     ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
     renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));

@@ -1,12 +1,13 @@
 #pragma once
 #include <atomic>
+#include <vector> // For hash declaration
 
 namespace engine
 {
     class UID
     {
     public:
-        using type = unsigned long long;
+        using type = uint64_t;
     private:
         inline static std::atomic<type> m_next = 0;
         type m_id;

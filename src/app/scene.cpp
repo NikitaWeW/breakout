@@ -1,24 +1,24 @@
 #include "scene.hpp"
 
-#include "engine/engine.hpp"
+#include "engine/Engine.hpp"
 #include "controller.hpp"
 
 #include <random>
 
 #include "glm/gtx/quaternion.hpp"
 
-std::string printTexture(ecs::entity e_texture, ecs::registry const &reg)
+static std::string printTexture(ecs::entity e_texture, engine::Registry const &reg)
 {
     std::stringstream ss;
     auto const &texture = reg.get<engine::Texture>(e_texture);
     ss 
         << 'e' << e_texture << ", \"" 
-        << texture.path << "\", \t" 
+        << texture.getPath() << "\", \t" 
         << texture.data.getDimensions() << ", \t" 
         << (texture.srgb ? "srgb" : "not srgb");
     return ss.str();
 }
-void printModelData(ecs::entity e_model, ecs::registry const &registry)
+static void printModelData(ecs::entity e_model, engine::Registry const &registry)
 {
     ENGINE_ASSERT(registry.has<engine::Model>(e_model));
     engine::Model const &model = registry.get<engine::Model>(e_model);
@@ -75,12 +75,11 @@ void printModelData(ecs::entity e_model, ecs::registry const &registry)
     }
 }
 
-void createScene(ecs::registry &reg)
+void createScene(engine::Registry &reg)
 {
-    engine::Loader loader{reg};
-    auto cube =    loader.load(engine::DataType::MODEL, "res/models/cube.obj");
-    auto suzanne = loader.load(engine::DataType::MODEL, "res/models/suzanne.obj");
-    auto arrow =   loader.load(engine::DataType::MODEL, "res/models/arrow.glb");
+    auto cube =    engine::ResourceManager::instance().loadFromFile(engine::ResourceType::MODEL, "res/models/cube.obj");
+    auto suzanne = engine::ResourceManager::instance().loadFromFile(engine::ResourceType::MODEL, "res/models/suzanne.obj");
+    auto arrow =   engine::ResourceManager::instance().loadFromFile(engine::ResourceType::MODEL, "res/models/arrow.glb");
     reg.get<engine::Material>(reg.get<engine::Model>(arrow).meshes[0].e_material).properties.albedo = {0.2, 0.3, 0.9, 1};
     
     // === === === === === === === ===
@@ -338,7 +337,7 @@ void createScene(ecs::registry &reg)
     Controller::createCamera(reg, {0, 3, 0});
 }
 
-void updateScene(ecs::registry &reg, float deltatime)
+void updateScene(Registry &reg, float deltatime)
 {
     // === === === === === === === ===
     // CYCLE ANIMATIONS

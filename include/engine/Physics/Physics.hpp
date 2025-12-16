@@ -1,7 +1,7 @@
 #pragma once
-#include "engine/Header/data.hpp"
-#include "engine/Header/ecs.hpp"
-#include "engine/Header/uid.hpp"
+#include "engine/DSA/Data.hpp"
+#include "engine/DSA/ECS.hpp"
+#include "engine/Header/UID.hpp"
 #include "glm/glm.hpp"
 #include <unordered_map>
 
@@ -25,16 +25,16 @@ namespace engine
     public:
         IPhysicsEngine() = default;
         virtual ~IPhysicsEngine() = default;
-        virtual void update(ecs::registry &registry, float deltatime) = 0;
+        virtual void update(Registry &registry, float deltatime) = 0;
     };
 
     struct EnginePhysics : public IPhysicsEngine
     {
     private:
-        void movement(ecs::registry &reg, float deltatime);
+        void movement(Registry &reg, float deltatime);
         engine::UID m_uid;
     public:
-        void update(ecs::registry &registry, float deltatime) override;
+        void update(Registry &registry, float deltatime) override;
     };
 } // namespace engine::physics
 

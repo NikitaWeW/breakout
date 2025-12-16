@@ -1,7 +1,7 @@
-#include "engine/Physics/physics.hpp"
+#include "engine/Physics/Physics.hpp"
 #include "engine/Logging/logging.hpp"
 
-void engine::EnginePhysics::movement(ecs::registry &reg, float deltatime)
+void engine::EnginePhysics::movement(Registry &reg, float deltatime)
 {
     for(auto e : reg.view<engine::Transform, Velocity>())
     {

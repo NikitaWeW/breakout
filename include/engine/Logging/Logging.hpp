@@ -1,6 +1,7 @@
 #pragma once
 #include "spdlog/spdlog.h"
 #include <memory>
+#include "engine/Header/Config.hpp"
 
 // output glm objects with spdlog
 #include "fmt/ostream.h"
@@ -21,7 +22,7 @@ namespace engine
 }
 
 
-#ifdef ENGINE_NO_OUTPUT
+#ifdef ENGINE_NO_LOG
 
 #define ENGINE_CORE_TRACE(...)
 #define ENGINE_CORE_INFO(...)

@@ -1,4 +1,4 @@
-#include "engine/Renderer/engineRenderer.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "../detail.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
@@ -43,7 +43,7 @@ static void sendMaterial(ogl::Program const &program, engine::Material::Properti
     // glUniform1f(ogl::getUniform(program, "u_material.properties.metallic"), material.metallic);
     // glUniform1f(ogl::getUniform(program, "u_material.properties.ior"), material.ior);
 }
-static engine::renderer::Material getMaterial(ecs::registry const &reg, ecs::entity e_material)
+static engine::renderer::Material getMaterial(Registry const &reg, ecs::entity e_material)
 {
     using namespace engine;
     ENGINE_ASSERT(e_material != 0);
@@ -52,7 +52,7 @@ static engine::renderer::Material getMaterial(ecs::registry const &reg, ecs::ent
     return reg.get<renderer::Material>(e_material);
 }
 
-void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance) 
+void engine::EngineRenderer::renderMainInstance(Registry &reg, ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance) 
 {
     auto const &instance = reg.get<engine::Instance>(e_instance);
     ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedModel>(instance.e_model), "Forgot to call engine::EngineRenderer::processData()?");
@@ -83,7 +83,7 @@ void engine::EngineRenderer::renderMainInstance(ecs::registry &reg, ogl::Program
     }
 }
 
-void engine::EngineRenderer::renderMain(ecs::registry &reg, renderer::RendererData &data)
+void engine::EngineRenderer::renderMain(Registry &reg, renderer::RendererData &data)
 { 
     // TODO: split render passes and make a system for custom user graphics (render graph?)`
     auto const &camera = reg.get<engine::Camera>(data.context.e_camera);

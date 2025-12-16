@@ -1,11 +1,11 @@
 #include "../detail.hpp"
-#include "engine/Renderer/engineRenderer.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 namespace ogl = engine::renderer::ogl;
 using namespace engine;
 
-static void drawSM(ecs::registry const &reg, renderer::RendererData const &data, size_t first, size_t count)
+static void drawSM(Registry const &reg, renderer::RendererData const &data, size_t first, size_t count)
 {
     glViewportArrayv(0, count, reinterpret_cast<float const *>(&data.SM.viewports.at(first)));
     
@@ -53,7 +53,7 @@ static unsigned getMaxViewports()
     return static_cast<unsigned>(res);
 }
 
-void EngineRenderer::renderShadowMaps(ecs::registry &reg, renderer::RendererData &data, unsigned toDraw)
+void EngineRenderer::renderShadowMaps(Registry &reg, renderer::RendererData &data, unsigned toDraw)
 {
     // RENDERER_TRACE("Drawing {} / {} shadow maps", toDraw, data.SM.lights.size());
     
