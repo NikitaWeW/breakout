@@ -17,9 +17,4 @@ public:
 
     char const *what() const noexcept override { return mMsg.c_str(); }
 };
-
-class ResourceError : public EngineError { public: using EngineError::EngineError; };
-class InvalidResourceLoaderError : public ResourceError { public: using EngineError::EngineError; };
-class InvalidResourceHandleError : public ResourceError { public: using EngineError::EngineError; };
-
 } // namespace engine

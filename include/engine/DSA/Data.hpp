@@ -6,7 +6,10 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
 
-// TODO: sort this data.hpp mess
+#include <optional>
+#include "engine/Resource/Resources.hpp"
+
+// TODO: sort this mess out of Data.hpp
 
 namespace engine
 {
@@ -38,8 +41,8 @@ namespace engine
     struct Instance
     {
         ecs::entity e_model = 0;
-        /// Overrides the material contained in the Model of the e_material if not 0. contains engine::Material component.
+        /// Overrides the material contained in the Model of the material if not 0. contains engine::Material component.
         // TODO: dont store materials in entities, store them directly
-        ecs::entity e_material = 0;
+        std::optional<Material> materialOverride = std::nullopt;
     };
 } // namespace engine

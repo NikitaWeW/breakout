@@ -7,18 +7,18 @@
 
 #include "glm/gtx/quaternion.hpp"
 
-static std::string printTexture(ecs::entity e_texture, engine::Registry const &reg)
+std::string printTexture(ecs::entity e_texture, ecs::registry const &reg)
 {
     std::stringstream ss;
     auto const &texture = reg.get<engine::Texture>(e_texture);
     ss 
         << 'e' << e_texture << ", \"" 
-        << texture.getPath() << "\", \t" 
+        << texture.path << "\", \t" 
         << texture.data.getDimensions() << ", \t" 
         << (texture.srgb ? "srgb" : "not srgb");
     return ss.str();
 }
-static void printModelData(ecs::entity e_model, engine::Registry const &registry)
+void printModelData(ecs::entity e_model, ecs::registry const &registry)
 {
     ENGINE_ASSERT(registry.has<engine::Model>(e_model));
     engine::Model const &model = registry.get<engine::Model>(e_model);
@@ -54,33 +54,34 @@ static void printModelData(ecs::entity e_model, engine::Registry const &registry
         ENGINE_INFO("  BoneIDs:   {}", mesh.geometry.boneIDs.size());
         ENGINE_INFO("  Weights:   {}", mesh.geometry.weights.size());
         
-        auto const &material = registry.get<engine::Material>(mesh.e_material);
         ENGINE_INFO("Material:");
         ENGINE_INFO("Textures:");
-        ENGINE_INFO("  Albedo:       {}", printTexture(material.textures.albedo, registry));
-        ENGINE_INFO("  Metallic:     {}", printTexture(material.textures.metallic, registry));
-        ENGINE_INFO("  Roughness:    {}", printTexture(material.textures.roughness, registry));
-        ENGINE_INFO("  Ambient:      {}", printTexture(material.textures.ambient, registry));
-        ENGINE_INFO("  Normal:       {}", printTexture(material.textures.normal, registry));
-        ENGINE_INFO("  Displacement: {}", printTexture(material.textures.displacement, registry));
-        ENGINE_INFO("  Alpha:        {}", printTexture(material.textures.alpha, registry));
+        ENGINE_INFO("  Albedo:       {}", printTexture(mesh.material.textures.albedo, registry));
+        ENGINE_INFO("  Metallic:     {}", printTexture(mesh.material.textures.metallic, registry));
+        ENGINE_INFO("  Roughness:    {}", printTexture(mesh.material.textures.roughness, registry));
+        ENGINE_INFO("  Ambient:      {}", printTexture(mesh.material.textures.ambient, registry));
+        ENGINE_INFO("  Normal:       {}", printTexture(mesh.material.textures.normal, registry));
+        ENGINE_INFO("  Displacement: {}", printTexture(mesh.material.textures.displacement, registry));
+        ENGINE_INFO("  Alpha:        {}", printTexture(mesh.material.textures.alpha, registry));
         ENGINE_INFO("Properties:");
-        ENGINE_INFO("  Ambient:       {}", fmt::streamed(material.properties.ambient));
-        ENGINE_INFO("  Albedo:        {}", fmt::streamed(material.properties.albedo));
-        ENGINE_INFO("  Specular:      {}", fmt::streamed(material.properties.specular));
-        ENGINE_INFO("  Emission:      {}", fmt::streamed(material.properties.emission));
-        ENGINE_INFO("  Shininess:     {}", material.properties.shininess);
-        ENGINE_INFO("  Metallic:      {}", material.properties.metallic);
-        ENGINE_INFO("  IOR:           {}", material.properties.ior);
+        ENGINE_INFO("  Ambient:       {}", fmt::streamed(mesh.material.properties.ambient));
+        ENGINE_INFO("  Albedo:        {}", fmt::streamed(mesh.material.properties.albedo));
+        ENGINE_INFO("  Specular:      {}", fmt::streamed(mesh.material.properties.specular));
+        ENGINE_INFO("  Emission:      {}", fmt::streamed(mesh.material.properties.emission));
+        ENGINE_INFO("  Shininess:     {}", mesh.material.properties.shininess);
+        ENGINE_INFO("  Metallic:      {}", mesh.material.properties.metallic);
+        ENGINE_INFO("  IOR:           {}", mesh.material.properties.ior);
     }
 }
 
 void createScene(engine::Registry &reg)
 {
-    auto cube =    engine::ResourceManager::instance().loadFromFile(engine::ResourceType::MODEL, "res/models/cube.obj");
-    auto suzanne = engine::ResourceManager::instance().loadFromFile(engine::ResourceType::MODEL, "res/models/suzanne.obj");
-    auto arrow =   engine::ResourceManager::instance().loadFromFile(engine::ResourceType::MODEL, "res/models/arrow.glb");
-    reg.get<engine::Material>(reg.get<engine::Model>(arrow).meshes[0].e_material).properties.albedo = {0.2, 0.3, 0.9, 1};
+    engine::ModelLoader loader{reg};
+    engine::CubemapLoader cubemapLoader{reg};
+    auto cube =    loader.loadFromFile("res/models/cube.obj");
+    auto suzanne = loader.loadFromFile("res/models/suzanne.obj");
+    auto arrow =   loader.loadFromFile("res/models/arrow.glb");
+    reg.get<engine::Model>(arrow).meshes[0].material.properties.albedo = {0.2, 0.3, 0.9, 1};
     
     // === === === === === === === ===
     // RANDOM STUFF
@@ -102,14 +103,14 @@ void createScene(engine::Registry &reg)
             }
         );
         reg.create( // some random sphere
-            engine::Instance{loader.load(engine::DataType::MODEL, "res/models/sphere.obj")}, 
+            engine::Instance{loader.loadFromFile("res/models/sphere.obj")}, 
             engine::Transform{
                 .position = {-2, 1, 4},
                 .scale = {0.5, 0.5, 0.5}
             }
         );
         reg.create(
-            engine::Instance{loader.load(engine::DataType::MODEL, "res/models/lemon.glb")}, 
+            engine::Instance{loader.loadFromFile("res/models/lemon.glb")}, 
             engine::Transform{
                 .position = {4, 0.5, -5},
                 .orientation = glm::normalize(glm::angleAxis(46.0f, glm::vec3{2, 2, -4})),
@@ -126,7 +127,7 @@ void createScene(engine::Registry &reg)
         );
         reg.create( // deccer cubes (working flawlessly)
             engine::Instance{
-                loader.load(engine::DataType::MODEL, "res/models/deccer_cubes/SM_Deccer_Cubes_Textured_Complex.glb")
+                loader.loadFromFile("res/models/deccer_cubes/SM_Deccer_Cubes_Textured_Complex.glb")
             }, 
             engine::Transform{
                 .position = {-5, 2, 0},
@@ -142,7 +143,7 @@ void createScene(engine::Registry &reg)
         reg.create( // fox with cycling animations
             ChangeAnimationsTag{},
             engine::Instance{
-                loader.load(engine::DataType::MODEL, "res/models/fox.glb")
+                loader.loadFromFile("res/models/fox.glb")
             }, 
             engine::Transform{
                 .position = {4, 0, -7},
@@ -154,7 +155,7 @@ void createScene(engine::Registry &reg)
         ); 
         reg.create( // dancing buddy 0 (dances so hard he accelerates into the sky)
             engine::Instance{
-                loader.load(engine::DataType::MODEL, "res/models/Silly_Dancing.fbx")
+                loader.loadFromFile("res/models/Silly_Dancing.fbx")
             }, 
             engine::Transform{
                 .position = {0, 0, -7},
@@ -169,7 +170,7 @@ void createScene(engine::Registry &reg)
         );
         reg.create( // dancing buddy 1
             engine::Instance{
-                loader.load(engine::DataType::MODEL, "res/models/Gangnam.fbx")
+                loader.loadFromFile("res/models/Gangnam.fbx")
             }, 
             engine::Transform{
                 .position = {-2, 0, -8},
@@ -182,7 +183,7 @@ void createScene(engine::Registry &reg)
         );
         reg.create( // animation test (made myself thus it looks so bad)
             engine::Instance{
-                loader.load(engine::DataType::MODEL, "res/models/blob.glb")
+                loader.loadFromFile("res/models/blob.glb")
             }, 
             engine::Transform{
                 .position = {5, 0, -3},
@@ -199,13 +200,13 @@ void createScene(engine::Registry &reg)
     // OIT TEST
     // === === === === === === === ===
     {
-        engine::Material material = reg.get<engine::Material>(reg.get<engine::Model>(cube).meshes.at(0).e_material);
+        engine::Material material = reg.get<engine::Model>(cube).meshes.at(0).material;
 
         material.properties.albedo = {1, 0, 0, 0.5};
         reg.create(
             engine::Instance{
                 .e_model = cube,
-                .e_material = reg.create(material) // copy transparent material and override the model material
+                .materialOverride = material // copy transparent material and override the model material
             },
             engine::Transform{
                 .position = {4, 1, 4},
@@ -217,7 +218,7 @@ void createScene(engine::Registry &reg)
         reg.create(
             engine::Instance{
                 .e_model = cube,
-                .e_material = reg.create(material)
+                .materialOverride = material
             },
             engine::Transform{
                 .position = {5.5, 1, 4},
@@ -229,7 +230,7 @@ void createScene(engine::Registry &reg)
         reg.create(
             engine::Instance{
                 .e_model = cube,
-                .e_material = reg.create(material)
+                .materialOverride = material
             },
             engine::Transform{
                 .position = {7, 1, 4},
@@ -241,7 +242,7 @@ void createScene(engine::Registry &reg)
         reg.create(
             engine::Instance{
                 suzanne,
-                .e_material = reg.create(material)
+                .materialOverride = material
             },
             engine::Transform{
                 .position = {2, 1, 4},
@@ -330,14 +331,14 @@ void createScene(engine::Registry &reg)
         );
 
         reg.create<engine::Skybox>({
-            loader.load(engine::DataType::CUBEMAP, "res/textures/citrus_orchard_road_puresky_2k.hdr")
+            cubemapLoader.loadFromFile("res/textures/citrus_orchard_road_puresky_2k.hdr")
         });
     }
 
     Controller::createCamera(reg, {0, 3, 0});
 }
 
-void updateScene(Registry &reg, float deltatime)
+void updateScene(engine::Registry &reg, float deltatime)
 {
     // === === === === === === === ===
     // CYCLE ANIMATIONS

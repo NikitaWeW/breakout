@@ -79,7 +79,7 @@ namespace engine
         };
     // expose some of the implementation to be able to override it in the derivatives. 
     // FIXME: dont
-    // TODO: pimpl
+    // TODO: pimpl this
     protected: 
         Config m_context;
         void renderMainInstance(Registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
@@ -90,7 +90,6 @@ namespace engine
         void setupPipeline(Registry &reg);
 
         void processModels(Registry &reg);
-        void processMaterials(Registry &reg);
         void processTextures(Registry &reg);
         void processLights(Registry const &reg, renderer::RendererData &data);
     public:

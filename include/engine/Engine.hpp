@@ -14,7 +14,7 @@
 #include "Renderer/Renderer.hpp"
 #include "Renderer/EngineRenderer.hpp"
 
-#include "Resource/ResourceManager.hpp"
+#include "Resource/Loaders.hpp"
 #include "Resource/Resources.hpp"
 
 #include "Input/Input.hpp"

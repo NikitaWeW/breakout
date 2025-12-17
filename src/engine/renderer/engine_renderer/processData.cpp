@@ -6,34 +6,25 @@
 // TODO: versioning system: Only update / add objects if the versions mismatch.
 
 namespace ogl = engine::renderer::ogl;
+using namespace engine;
 
-static ogl::Texture getTexture(Registry const &reg, ecs::entity e_texture)
+void EngineRenderer::processModels(Registry &reg)
 {
     using namespace engine;
-    if(e_texture == 0)
-        return ogl::Texture{};
-    ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedTexture>(e_texture), "Forgot to call engine::EngineRenderer::processData?");
-
-    return reg.get<ogl::Texture>(e_texture);
-}
-void engine::EngineRenderer::processModels(Registry &reg)
-{
-    using namespace engine;
-    for(ecs::entity e_model : reg.view<engine::Model>(ecs::exclude_t<renderer::ProcessedModel>{}))
+    for(ecs::entity e_model : reg.view<Model>(ecs::exclude_t<renderer::ProcessedModel>{}))
     {
-        auto const &model = reg.get<engine::Model>(e_model);
+        auto const &model = reg.get<Model>(e_model);
         renderer::Model newModel;
         newModel.skeleton = model.skeleton;
         newModel.animated = model.skeleton.boneMap.size() != 0;
 
         for(auto const &mesh : model.meshes)
         {
-            ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedMaterial>(mesh.e_material), "Forgot to call engine::EngineRenderer::processData?");
             renderer::Mesh newMesh;
             newMesh.mode = GL_TRIANGLES;
             newMesh.count = mesh.geometry.indices.size();
     
-            newMesh.e_material = mesh.e_material;
+            newMesh.material = renderer::convertMaterial(reg, mesh.material);
     
             glCreateVertexArrays(1, &newMesh.vao.id);
             
@@ -54,39 +45,19 @@ void engine::EngineRenderer::processModels(Registry &reg)
         reg.emplace<renderer::ProcessedModel>(e_model);
     }
 }
-void engine::EngineRenderer::processMaterials(Registry &reg) 
+void EngineRenderer::processTextures(Registry &reg)
 {
-    for(ecs::entity e_material : reg.view<engine::Material>(ecs::exclude_t<renderer::ProcessedMaterial>{}))
+    for(ecs::entity e_texture : reg.view<Texture>(ecs::exclude_t<renderer::ProcessedTexture>{}))
     {
-        auto const &material = reg.get<engine::Material>(e_material);
-        ecs::entity const &entity = e_material; // destination
-
-        renderer::Material newMaterial;
-        newMaterial.properties = material.properties;
-        newMaterial.textures = {
-            .albedo    = getTexture(reg, material.textures.albedo),
-            .normal    = getTexture(reg, material.textures.normal),
-            .metallic  = getTexture(reg, material.textures.metallic),
-            .roughness = getTexture(reg, material.textures.roughness) 
-        };
-
-        reg.emplace<renderer::Material>(entity, std::move(newMaterial));
-        reg.emplace<renderer::ProcessedMaterial>(e_material);
-    }
-}
-void engine::EngineRenderer::processTextures(Registry &reg)
-{
-    for(ecs::entity e_texture : reg.view<engine::Texture>(ecs::exclude_t<renderer::ProcessedTexture>{}))
-    {
-        auto const &texture = reg.get<engine::Texture>(e_texture);
+        auto const &texture = reg.get<Texture>(e_texture);
 
         reg.emplace<ogl::Texture>(e_texture, ogl::makeTexture(texture.data, texture.srgb));
         reg.emplace<renderer::ProcessedTexture>(e_texture);
     }
 
-    for(ecs::entity e_cubemap : reg.view<engine::Cubemap>(ecs::exclude_t<renderer::ProcessedCubemap>{}))
+    for(ecs::entity e_cubemap : reg.view<Cubemap>(ecs::exclude_t<renderer::ProcessedCubemap>{}))
     {
-        auto const &cubemap = reg.get<engine::Cubemap>(e_cubemap);
+        auto const &cubemap = reg.get<Cubemap>(e_cubemap);
 
         reg.emplace<ogl::Cubemap>(e_cubemap, ogl::makeCubemap(cubemap.faces));
         reg.emplace<renderer::ProcessedCubemap>(e_cubemap);
@@ -103,22 +74,22 @@ static glm::vec3 getUp(glm::vec3 dir)
     return glm::abs(glm::dot(dir, {0,1,0})) >= 0.99 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0};
 }
 
-static void processPointLight(engine::renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
+static void processPointLight(renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
 {
-    auto const &light = reg.get<engine::PointLight>(e_light);
-    engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
-    engine::renderer::PointLight newLight{
+    auto const &light = reg.get<PointLight>(e_light);
+    Transform transform = reg.has<Transform>(e_light) ? reg.get<Transform>(e_light) : Transform{};
+    renderer::PointLight newLight{
         .color = light.color,
         .position = transform.position,
         .farPlane = 0.0f,
     };
 
-    if(reg.has<engine::ShadowLight>(e_light))
+    if(reg.has<ShadowLight>(e_light))
     {
-        auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
+        auto const &shadowLight = reg.get<ShadowLight>(e_light);
         newLight.farPlane = shadowLight.farPlane;
-        data.SM.atlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
-            .type = engine::renderer::ShadowMapAtlas::Light::POINT,
+        data.SM.atlas.lights.emplace_back(renderer::ShadowMapAtlas::Light{
+            .type = renderer::ShadowMapAtlas::Light::POINT,
             .drawLightIndex = data.SM.lights.size(),
             .lightIndex = data.pointLights.size(),
             .size = shadowLight.shadowMapSize
@@ -136,7 +107,7 @@ static void processPointLight(engine::renderer::RendererData &data, Registry con
 
         for(unsigned i = 0; i < 6; ++i)
         {
-            data.SM.lights.emplace_back(engine::renderer::DrawLight{
+            data.SM.lights.emplace_back(renderer::DrawLight{
                 .viewMat = CUBE_FACE_MATRICES[i] * glm::translate({1.0f}, -transform.position),
                 .projMat = glm::perspective(glm::radians(90.0f), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
             });
@@ -145,26 +116,26 @@ static void processPointLight(engine::renderer::RendererData &data, Registry con
     }
     data.pointLights.emplace_back(std::move(newLight));
 }
-static void processDirLight(engine::renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
+static void processDirLight(renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
 {
-    auto const &light = reg.get<engine::DirectionalLight>(e_light);
-    engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
-    engine::renderer::DirLight newLight{
+    auto const &light = reg.get<DirectionalLight>(e_light);
+    Transform transform = reg.has<Transform>(e_light) ? reg.get<Transform>(e_light) : Transform{};
+    renderer::DirLight newLight{
         .color = light.color,
         .direction = getDir(transform.orientation)
     };
     
-    if(reg.has<engine::ShadowLight>(e_light))
+    if(reg.has<ShadowLight>(e_light))
     {
-        auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
-        data.SM.atlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
-            .type = engine::renderer::ShadowMapAtlas::Light::DIR,
+        auto const &shadowLight = reg.get<ShadowLight>(e_light);
+        data.SM.atlas.lights.emplace_back(renderer::ShadowMapAtlas::Light{
+            .type = renderer::ShadowMapAtlas::Light::DIR,
             .drawLightIndex = data.SM.lights.size(),
             .lightIndex = data.dirLights.size(),
             .size = shadowLight.shadowMapSize
         });
         // TODO: cascade SM
-        data.SM.lights.emplace_back(engine::renderer::DrawLight{
+        data.SM.lights.emplace_back(renderer::DrawLight{
             .viewMat = glm::lookAt(glm::vec3{0} - (newLight.direction * 10.0f), glm::vec3{0}, getUp(newLight.direction)),
             .projMat = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
         });
@@ -173,12 +144,12 @@ static void processDirLight(engine::renderer::RendererData &data, Registry const
     }
     data.dirLights.emplace_back(std::move(newLight));
 }
-static void processSpotLight(engine::renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
+static void processSpotLight(renderer::RendererData &data, Registry const &reg, ecs::entity e_light)
 {
-    auto const &light = reg.get<engine::SpotLight>(e_light);
-    engine::Transform transform = reg.has<engine::Transform>(e_light) ? reg.get<engine::Transform>(e_light) : engine::Transform{};
+    auto const &light = reg.get<SpotLight>(e_light);
+    Transform transform = reg.has<Transform>(e_light) ? reg.get<Transform>(e_light) : Transform{};
 
-    engine::renderer::SpotLight newLight{
+    renderer::SpotLight newLight{
         .color = light.color,
         .position = transform.position,
         .direction = getDir(transform.orientation),
@@ -186,16 +157,16 @@ static void processSpotLight(engine::renderer::RendererData &data, Registry cons
         .outerConeAngle = light.outerConeAngle
     };
 
-    if(reg.has<engine::ShadowLight>(e_light))
+    if(reg.has<ShadowLight>(e_light))
     {
-        auto const &shadowLight = reg.get<engine::ShadowLight>(e_light);
-        data.SM.atlas.lights.emplace_back(engine::renderer::ShadowMapAtlas::Light{
-            .type = engine::renderer::ShadowMapAtlas::Light::SPOT,
+        auto const &shadowLight = reg.get<ShadowLight>(e_light);
+        data.SM.atlas.lights.emplace_back(renderer::ShadowMapAtlas::Light{
+            .type = renderer::ShadowMapAtlas::Light::SPOT,
             .drawLightIndex = data.SM.lights.size(),
             .lightIndex = data.spotLights.size(),
             .size = shadowLight.shadowMapSize
         });
-        data.SM.lights.emplace_back(engine::renderer::DrawLight{
+        data.SM.lights.emplace_back(renderer::DrawLight{
             .viewMat = glm::lookAt(newLight.position, newLight.position + newLight.direction, getUp(newLight.direction)),
             .projMat = glm::perspective(glm::radians(newLight.outerConeAngle), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         });
@@ -204,7 +175,7 @@ static void processSpotLight(engine::renderer::RendererData &data, Registry cons
     }
     data.spotLights.emplace_back(std::move(newLight));
 }
-static void makeAtlas(engine::renderer::RendererData &data)
+static void makeAtlas(renderer::RendererData &data)
 {
     std::vector<stbrp_rect> rects;
     rects.reserve(data.SM.atlas.lights.size());
@@ -213,7 +184,7 @@ static void makeAtlas(engine::renderer::RendererData &data)
     {
         auto const &light = data.SM.atlas.lights[i];
         rects.emplace_back(stbrp_rect{
-            .w = static_cast<int>(light.size) * (light.type == engine::renderer::ShadowMapAtlas::Light::POINT ? 6 : 1),
+            .w = static_cast<int>(light.size) * (light.type == renderer::ShadowMapAtlas::Light::POINT ? 6 : 1),
             .h = static_cast<int>(light.size),
             .x = 0,
             .y = 0,
@@ -235,11 +206,11 @@ static void makeAtlas(engine::renderer::RendererData &data)
         
         data.SM.atlas.size = glm::max(data.SM.atlas.size, {rect.x + rect.w, rect.y + rect.h});
 
-        engine::renderer::ShadowMapAtlas::Location location{
+        renderer::ShadowMapAtlas::Location location{
             .pos = { rect.x, rect.y },
             .size = static_cast<unsigned>(rect.h)
         };
-        engine::renderer::DrawLightViewport viewport{
+        renderer::DrawLightViewport viewport{
             .pos = location.pos,
             .size = { location. size, location.size }
         };
@@ -284,7 +255,7 @@ static void makeAtlas(engine::renderer::RendererData &data)
     ogl::attachment(data.SM.atlas.fbo, data.SM.atlas.texture, data.SM.atlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
     data.SM.refresh = true;
 }
-void engine::EngineRenderer::processLights(Registry const &reg, renderer::RendererData &data)
+void EngineRenderer::processLights(Registry const &reg, renderer::RendererData &data)
 {
     data.pointLights.clear();
     data.dirLights.clear();
@@ -313,12 +284,11 @@ void engine::EngineRenderer::processLights(Registry const &reg, renderer::Render
 }
 
 // TODO: process data automatically based on the versioning system.
-void engine::EngineRenderer::processData(Registry &reg)
+void EngineRenderer::processData(Registry &reg)
 {
-    ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
+    ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call EngineRenderer::setup()?");
     renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
     processTextures(reg);
-    processMaterials(reg);
     processModels(reg);
     processLights(reg, data);
 }

@@ -43,14 +43,6 @@ static void sendMaterial(ogl::Program const &program, engine::Material::Properti
     // glUniform1f(ogl::getUniform(program, "u_material.properties.metallic"), material.metallic);
     // glUniform1f(ogl::getUniform(program, "u_material.properties.ior"), material.ior);
 }
-static engine::renderer::Material getMaterial(Registry const &reg, ecs::entity e_material)
-{
-    using namespace engine;
-    ENGINE_ASSERT(e_material != 0);
-    ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedMaterial>(e_material), "Forgot to call engine::EngineRenderer::processData()?");
-
-    return reg.get<renderer::Material>(e_material);
-}
 
 void engine::EngineRenderer::renderMainInstance(Registry &reg, ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance) 
 {
@@ -63,7 +55,7 @@ void engine::EngineRenderer::renderMainInstance(Registry &reg, ogl::Program cons
     {
         glm::mat4 modelMat = reg.has<engine::Transform>(e_instance) ? reg.get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
         glm::mat3 normalMat = glm::transpose(glm::inverse(modelMat));
-        renderer::Material material = getMaterial(reg, instance.e_material ? instance.e_material : mesh.e_material);
+        renderer::Material material = instance.materialOverride.has_value() ? renderer::convertMaterial(reg, instance.materialOverride.value()) : mesh.material;
 
         bindTextures(shader, material.textures, data.defaultTexture);
         sendMaterial(shader, material.properties);

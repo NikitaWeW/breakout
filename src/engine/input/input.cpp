@@ -3,7 +3,7 @@
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    Registry &reg = *static_cast<Registry *>(glfwGetWindowUserPointer(window));
+    engine::Registry &reg = *static_cast<engine::Registry *>(glfwGetWindowUserPointer(window));
 
     engine::input::KeyEvent event = {
         .window = window,
@@ -21,7 +21,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 }
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    Registry &reg = *static_cast<Registry *>(glfwGetWindowUserPointer(window));
+    engine::Registry &reg = *static_cast<engine::Registry *>(glfwGetWindowUserPointer(window));
 
     engine::input::CursorPosEvent event = {
         .window = window,
@@ -39,7 +39,7 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 }
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-    Registry &reg = *static_cast<Registry *>(glfwGetWindowUserPointer(window));
+    engine::Registry &reg = *static_cast<engine::Registry *>(glfwGetWindowUserPointer(window));
 
     engine::input::MouseButtonEvent event{
         .window = window,
@@ -56,7 +56,7 @@ static void mouse_button_callback(GLFWwindow* window, int button, int action, in
 }
 static void scroll_callback(GLFWwindow* window, double, double yoffset)
 {
-    Registry &reg = *static_cast<Registry *>(glfwGetWindowUserPointer(window));
+    engine::Registry &reg = *static_cast<engine::Registry *>(glfwGetWindowUserPointer(window));
 
     engine::input::ScrollEvent event = {
         .window = window,
@@ -70,7 +70,7 @@ static void scroll_callback(GLFWwindow* window, double, double yoffset)
     }
 }
 
-void engine::input::setup(Registry &reg)
+void engine::input::setup(engine::Registry &reg)
 {
     ENGINE_ASSERT_MSG(!reg.view<engine::Window>().empty(), "forgot to add a window?");
     for(ecs::entity e_window : reg.view<engine::Window>())
@@ -85,7 +85,7 @@ void engine::input::setup(Registry &reg)
     }
 }
 
-void engine::input::update(Registry &reg)
+void engine::input::update(engine::Registry &reg)
 {
     ENGINE_ASSERT_MSG(!reg.view<engine::Window>().empty(), "forgot to add a window?");
     for(ecs::entity e_window : reg.view<engine::Window>())

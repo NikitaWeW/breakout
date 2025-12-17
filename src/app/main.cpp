@@ -51,8 +51,6 @@ int main(int argc, char **argv) {
 
     engine::Logger::init();
 
-    engine::addLoadersToResourceManager();
-    
     createScene(registry);
 
     progress += 1.0f / toLoad;

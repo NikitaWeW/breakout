@@ -12,7 +12,6 @@ namespace engine::renderer
     struct ProcessedModel {};
     struct ProcessedTexture {};
     struct ProcessedCubemap {};
-    struct ProcessedMaterial {};
 
     struct Material
     {
@@ -27,7 +26,7 @@ namespace engine::renderer
     };
     struct Mesh
     {
-        ecs::entity e_material;
+        Material material;
         ogl::VAO vao;
         ogl::IBO ibo;
         GLenum mode = GL_TRIANGLES;
@@ -36,7 +35,8 @@ namespace engine::renderer
     };
     struct Model
     {
-        Model::Skeleton skeleton;
+        std::optional<renderer::Material> materialOverride;
+        engine::Model::Skeleton skeleton;
         std::vector<Mesh> meshes;
         bool animated = false;
     };
@@ -162,4 +162,26 @@ namespace engine::renderer
 
         EngineRenderer::Config context;
     };
+
+    inline ogl::Texture getTexture(engine::Registry const &reg, ecs::entity e_texture)
+    {
+        using namespace engine;
+        if(e_texture == 0)
+            return ogl::Texture{};
+        ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedTexture>(e_texture), "Forgot to call engine::EngineRenderer::processData?");
+
+        return reg.get<ogl::Texture>(e_texture);
+    }
+    inline engine::renderer::Material convertMaterial(engine::Registry const &reg, engine::Material material)
+    {
+        return {
+            .properties = material.properties,
+            .textures = {
+                .albedo    = getTexture(reg, material.textures.albedo),
+                .normal    = getTexture(reg, material.textures.normal),
+                .metallic  = getTexture(reg, material.textures.metallic),
+                .roughness = getTexture(reg, material.textures.roughness) 
+            }
+        };
+    }
 } // namespace engine::renderer

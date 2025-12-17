@@ -80,4 +80,6 @@ constexpr ContainerT<Entity> toEntities(Registry &reg, ContainerT<ecs::entity> c
     return res;
 }
 
+constexpr ecs::entity INVALID_ENTITY = 0u;
+
 } // namespace engine

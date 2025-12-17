@@ -1,6 +1,4 @@
 #pragma once
-#include "engine/Resource/ResourceManager.hpp"
-
 #include "glm/glm.hpp"
 #include "engine/DSA/Bitmap.hpp"
 #include "glm/gtc/quaternion.hpp"
@@ -11,14 +9,11 @@ namespace engine
 {
 
 /// @brief Its a 2d texture duh.
-struct Texture : public IResource
+struct Texture
 {
     Bitmap<float> data;
     bool srgb = false;
-};
-struct TextureLoaderOptions : public ILoaderOptions
-{
-    bool flip = false;
+    std::string path;
 };
 
 struct Material
@@ -26,13 +21,13 @@ struct Material
     /// @brief Contains entities with the Texture component, invalid if not present.
     struct Textures
     {
-        ResourceHandle albedo;
-        ResourceHandle metallic;
-        ResourceHandle roughness;
-        ResourceHandle ambient;
-        ResourceHandle normal;
-        ResourceHandle displacement;
-        ResourceHandle alpha;
+        ecs::entity albedo = INVALID_ENTITY;
+        ecs::entity metallic = INVALID_ENTITY;
+        ecs::entity roughness = INVALID_ENTITY;
+        ecs::entity ambient = INVALID_ENTITY;
+        ecs::entity normal = INVALID_ENTITY;
+        ecs::entity displacement = INVALID_ENTITY;
+        ecs::entity alpha = INVALID_ENTITY;
     } textures;
     struct Properties
     {
@@ -94,7 +89,7 @@ struct Mesh
     
     Material material;
 };
-struct Model : public IResource
+struct Model
 {
     std::vector<Mesh> meshes;
     std::vector<Animation> animations;
@@ -109,21 +104,11 @@ struct Model : public IResource
         std::unordered_map<std::string, unsigned> boneMap; // bone name to bone id
     } skeleton;
 };
-struct ModelLoaderOptions : public ILoaderOptions
-{
-    bool flipWindingOrder = false;
-    bool flipUVs = false;
-    TextureLoaderOptions textureOptions;
-};
 
 /// @brief 6 textures make a cube
-struct Cubemap : public IResource
+struct Cubemap
 {
     std::array<Bitmap<float>, 6> faces;
     std::string path;
 };
-struct CubemapLoaderOptions : public TextureLoaderOptions {};
-
-/// @brief Register the default loaders to the ResourceManager::instance()
-void addLoadersToResourceManager();
 } // namespace engine

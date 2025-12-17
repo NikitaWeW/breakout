@@ -1,5 +1,5 @@
 #include "engine/Animation/Animation.hpp"
-#include "engine/Logging/logging.hpp"
+#include "engine/Logging/Logging.hpp"
 #include "engine/DSA/Data.hpp"
 #include <algorithm>
 #include <optional>

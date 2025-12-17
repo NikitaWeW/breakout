@@ -1,5 +1,5 @@
 #include "engine/Renderer/EngineRenderer.hpp"
-#include "engine/Logging/logging.hpp"
+#include "engine/Logging/Logging.hpp"
 #include "detail.hpp"
 
 namespace ogl = engine::renderer::ogl;
@@ -115,7 +115,7 @@ static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity
         ENGINE_CORE_WARN("{}: opengl {} severity {}, raised from {}: \n\t {}", error.id, error.severity, error.type, error.source, error.message);
     }
 }
-static void setupOpengl(Registry &)
+static void setupOpengl(engine::Registry &)
 {
     using namespace engine;
 

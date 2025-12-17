@@ -1,4 +1,6 @@
-#include "Loaders.hpp"
+#include "engine/Resource/Resources.hpp"
+#include "engine/Resource/Loaders.hpp"
+#include "engine/Logging/Logging.hpp"
 #include <filesystem>
 
 #include "meshoptimizer.h"
@@ -63,7 +65,7 @@ static float getColor(aiMaterial const *material, float defaultColor, const char
     return defaultColor;
 }
 
-static void setMissingTextures(engine::Material::Textures &material, engine::Material::Textures const &defaultMaterial)
+static void setMissingTextures(Material::Textures &material, Material::Textures const &defaultMaterial)
 {
     if(!material.albedo      ) material.albedo       = defaultMaterial.albedo;
     if(!material.metallic    ) material.metallic     = defaultMaterial.metallic;
@@ -84,39 +86,9 @@ static aiNodeAnim const *findNodeAnim(aiAnimation const *animation, std::string_
 
     return nullptr;
 }
-static std::string stringID() { return std::to_string(UID{}.value()); }
-static ResourceHandle fromRawAssimpTexture(aiTexture const *texture)
-{
-    ENGINE_ASSERT(texture->mHeight == 0);
-    unsigned const width = static_cast<unsigned>(texture->mWidth);
-    unsigned const height = static_cast<unsigned>(texture->mHeight);
-
-    if(!texture->pcData)
-    {
-        ENGINE_CORE_ERROR("aiTexture has no texel data");
-        return ResourceHandle{};
-    }
-
-    engine::Texture result;
-    result.data = engine::Bitmap<float>{width, height, 4};
-    // result.getPath() = "raw resource " + stringID() + " aiTexture " + texture->mFilename.C_Str();
-
-    for (size_t i = 0; i < width * height; ++i)
-    {
-        aiTexel const &texel = texture->pcData[i];
-        result.data.setPixel(static_cast<unsigned>(i % width), static_cast<unsigned>(i / width), {
-            u8ToFloat(texel.r),
-            u8ToFloat(texel.g),
-            u8ToFloat(texel.b),
-            u8ToFloat(texel.a)
-        });
-    }
-
-    return ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(std::move(result)));
-}
 
 // FIXME: probably wrong.
-static void calculateMissingPrimitives(engine::Mesh &mesh)
+static void calculateMissingPrimitives(Mesh &mesh)
 {
     ENGINE_ASSERT(!mesh.geometry.positions.empty());
 
@@ -189,9 +161,9 @@ static void calculateMissingPrimitives(engine::Mesh &mesh)
         }
     }
 }
-static void optimizeMesh(engine::Mesh &mesh)
+static void optimizeMesh(Mesh &mesh)
 {
-    engine::Mesh oldMesh = mesh;
+    Mesh oldMesh = mesh;
     bool indexed = !oldMesh.geometry.indices.empty();
 
     size_t index_count = indexed ? oldMesh.geometry.indices.size() : oldMesh.geometry.positions.size();
@@ -227,7 +199,7 @@ static void optimizeMesh(engine::Mesh &mesh)
     else
         MODEL_LOADER_TRACE("Optimized mesh. Had {} indices and {} vertices. Has {} indices and {} vertices", oldMesh.geometry.indices.size(), oldMesh.geometry.positions.size(), mesh.geometry.indices.size(), mesh.geometry.positions.size());
 }
-static void moveMesh(engine::Mesh::Geometry &primitives, glm::mat4 const &mat)
+static void moveMesh(Mesh::Geometry &primitives, glm::mat4 const &mat)
 {
     if(mat == glm::mat4{1.0f})
         return;
@@ -244,7 +216,7 @@ static void moveMesh(engine::Mesh::Geometry &primitives, glm::mat4 const &mat)
         tangent = normalMat * tangent;
 }
 
-static void extractVertexData(aiMesh const *aimesh, engine::Mesh &mesh)
+static void extractVertexData(aiMesh const *aimesh, Mesh &mesh)
 {
     for(unsigned i = 0; i < aimesh->mNumVertices; ++i) {
         mesh.geometry.positions.emplace_back(aimesh->mVertices[i].x, aimesh->mVertices[i].y, aimesh->mVertices[i].z, 1);
@@ -262,7 +234,7 @@ static void extractVertexData(aiMesh const *aimesh, engine::Mesh &mesh)
         }
     }
 }
-static void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh, engine::Model::Skeleton &skeleton)
+static void extractBoneData(aiMesh const *aimesh, Mesh &mesh, Model::Skeleton &skeleton)
 {
     // i hate it -- april 2025
     // it works -- october 2025
@@ -301,77 +273,101 @@ static void extractBoneData(aiMesh const *aimesh, engine::Mesh &mesh, engine::Mo
         }
     }
 }
-static void normalizeWeights(engine::Mesh::Geometry &geometry)
+static void normalizeWeights(Mesh::Geometry &geometry)
 {
     for(auto &weight : geometry.weights)
         if(weight[0] + weight[1] + weight[2] + weight[3] > 1e-6f)
             weight /= weight[0] + weight[1] + weight[2] + weight[3];
 }
 
-struct ModelLoaderImpl
+struct engine::ModelLoaderImpl
 {
     Material mDefaultMaterial;
     ModelLoaderOptions mOptions;
+    TextureLoader mTextureLoader;
 
     aiScene const *mScene;
-    engine::Model *mModel;
+    Model *mModel;
+    Registry *mRegistry;
 
     // === === === ===
-    ModelLoaderImpl();
-    void loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ResourceHandle &out);
-    engine::Material convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties);
-    engine::Mesh processMesh(aiMesh const *aimesh, glm::mat4 const &transform);
-    std::unique_ptr<IResource> load();
+    ModelLoaderImpl(Registry &reg);
+    ecs::entity fromRawAssimpTexture(aiTexture const *texture);
+    void loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out);
+    Material convertMaterial(aiMaterial const *aimaterial, Material::Properties const &defaultProperties);
+    Mesh processMesh(aiMesh const *aimesh, glm::mat4 const &transform);
+    ecs::entity load();
     void processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f});
-    engine::Animation processAnimation(aiAnimation const *animation);
+    Animation processAnimation(aiAnimation const *animation);
 };
 
-ModelLoaderImpl::ModelLoaderImpl()
+ModelLoaderImpl::ModelLoaderImpl(Registry &reg)
 {
-    Texture white;
-    white.data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-        1, 1, 1
-    }.data()};
-    white.getPath() = "raw resource default/white";
-    white.srgb = false;
+    mRegistry = &reg;
+    ecs::entity white = 0;
+    ecs::entity normal = 0;
+    ecs::entity black = 0;
+    ecs::entity tile = 0;
 
-    Texture normal;
-    normal.data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
-        0.5f, 0.5f, 1.0f
-    }.data()};
-    normal.getPath() = "raw resource default/normal";
-    normal.srgb = false;
+    for(ecs::entity e_texture : mRegistry->view<Texture>())
+    {
+        auto &texture = mRegistry->get<Texture>(e_texture);
 
-    Texture black;
-    black.data = engine::Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
-        0, 0, 0
-    }.data()};
-    black.getPath() = "raw resource default/black";
-    black.srgb = false;
+        if(texture.path == "default/white")
+            white = e_texture;
+        if(texture.path == "default/normal")
+            normal = e_texture;
+        if(texture.path == "default/black")
+            black = e_texture;
+        if(texture.path == "default/tile")
+            tile = e_texture;
+    }
 
-    Texture tile;
-    tile.data = engine::Bitmap<float>{8, 8, 3, std::array<float, 8*8*3>{ // checkerboard
-        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
-        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
-        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
-        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
-        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
-        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
-        1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5,
-        0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0,
-    }.data()};
-    tile.getPath() = "raw resource default/tile";
-    tile.srgb = true;
+    if(!white)
+        white = mRegistry->create(Texture{
+            .data = Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
+                1, 1, 1
+            }.data()},
+            .path = "default/white"
+        });
+    if(!normal)
+        normal = mRegistry->create(Texture{
+            .data = Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
+                0.5f, 0.5f, 1.0f
+            }.data()},
+            .path = "default/normal"
+        });
+    if(!black)
+        black = mRegistry->create(Texture{
+            .data = Bitmap<float>{1, 1, 3, std::array<float, 1*3>{
+                0, 0, 0
+            }.data()},
+            .path = "default/black"
+        });
+    if(!tile)
+        tile = mRegistry->create(Texture{
+            .data = Bitmap<float>{8, 8, 3, std::array<float, 8*8*3>{ // checkerboard
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
+                1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 
+                0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 
+            }.data()},
+            .path = "default/tile"
+        });
 
     mDefaultMaterial = {
         .textures = {
-            .albedo       = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(tile)),
-            .metallic     = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(black)),
-            .roughness    = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(white)),
-            .ambient      = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(white)),
-            .normal       = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(normal)),
-            .displacement = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(black)),
-            .alpha        = ResourceManager::instance().addRawResource(ResourceType::BITMAP, std::make_unique<IResource>(white))
+            .albedo       = tile,
+            .metallic     = black,
+            .roughness    = white,
+            .ambient      = white,
+            .normal       = normal,
+            .displacement = black,
+            .alpha        = white
         },
         .properties = {
             .ambient       = {0.1f, 0.1f, 0.1f},
@@ -386,7 +382,36 @@ ModelLoaderImpl::ModelLoaderImpl()
     };
 }
 
-void ModelLoaderImpl::loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ResourceHandle &out)
+ecs::entity ModelLoaderImpl::fromRawAssimpTexture(aiTexture const *texture)
+{
+    ENGINE_ASSERT(texture->mHeight == 0);
+    unsigned const width = static_cast<unsigned>(texture->mWidth);
+    unsigned const height = static_cast<unsigned>(texture->mHeight);
+
+    if(!texture->pcData)
+    {
+        ENGINE_CORE_ERROR("aiTexture has no texel data");
+        return INVALID_ENTITY;
+    }
+
+    Texture result;
+    result.data = Bitmap<float>{width, height, 4};
+    // result.path = "raw resource " + stringID() + " aiTexture " + texture->mFilename.C_Str();
+
+    for (size_t i = 0; i < width * height; ++i)
+    {
+        aiTexel const &texel = texture->pcData[i];
+        result.data.setPixel(static_cast<unsigned>(i % width), static_cast<unsigned>(i / width), {
+            u8ToFloat(texel.r),
+            u8ToFloat(texel.g),
+            u8ToFloat(texel.b),
+            u8ToFloat(texel.a)
+        });
+    }
+
+    return mRegistry->create(std::move(result));
+}
+void ModelLoaderImpl::loadMaterialTexture(aiMaterial const *material, aiTextureType const type, ecs::entity &out)
 {
     if(material->GetTextureCount(type) == 0 || out)
         return;
@@ -404,36 +429,30 @@ void ModelLoaderImpl::loadMaterialTexture(aiMaterial const *material, aiTextureT
         if(embedded->mHeight == 0)
         {
             MODEL_LOADER_TRACE("Loading embedded compressed texture \"{}\"", embedded->mFilename.C_Str());
-            out = ResourceManager::instance().loadFromMemory(ResourceType::BITMAP, embedded->pcData, embedded->mWidth, mOptions.textureOptions);
+            out = mTextureLoader.loadFromMemory(embedded->pcData, embedded->mWidth, mOptions.textureOptions);
         } else
         {
             MODEL_LOADER_TRACE("Loading embedded raw texture \"{}\"", embedded->mFilename.C_Str());
             out = fromRawAssimpTexture(embedded);
         }
-
-        if(out)
-        {
-            auto &tex = static_cast<Texture &>(out.getResource().value().get());
-            tex.getPath().append(std::string{" embedded aiTexture "} + embedded->mFilename.C_Str());
-            tex.srgb = srgb;
-        }
-        return;
     }
-
-    std::string filepath = directory + '/' + str.C_Str();
-
-    MODEL_LOADER_TRACE("Loading file texture \"{}\"", filepath);
-    out = ResourceManager::instance().loadFromFile(ResourceType::BITMAP, filepath, mOptions.textureOptions);
+    else
+    {
+        std::string filepath = directory + '/' + str.C_Str();
+    
+        MODEL_LOADER_TRACE("Loading file texture \"{}\"", filepath);
+        out = mTextureLoader.loadFromFile(filepath, mOptions.textureOptions);
+    }
 
     if(out)
     {
-        auto &tex = static_cast<Texture &>(out.getResource().value().get());
+        auto &tex = mRegistry->get<Texture>(out);
         tex.srgb = srgb;
     }
 }
-engine::Material ModelLoaderImpl::convertMaterial(aiMaterial const *aimaterial, engine::Material::Properties const &defaultProperties)
+Material ModelLoaderImpl::convertMaterial(aiMaterial const *aimaterial, Material::Properties const &defaultProperties)
 {
-    engine::Material material;
+    Material material;
 
     // https://github.com/assimp/assimp/issues/430
     loadMaterialTexture(aimaterial, aiTextureType_DIFFUSE,           material.textures.albedo      );
@@ -447,7 +466,7 @@ engine::Material ModelLoaderImpl::convertMaterial(aiMaterial const *aimaterial, 
 
     material.properties = {
         .ambient       = getColor(aimaterial, defaultProperties.ambient,       AI_MATKEY_COLOR_AMBIENT),
-        .albedo        = getColor(aimaterial, defaultProperties.albedo,       AI_MATKEY_COLOR_DIFFUSE),
+        .albedo        = getColor(aimaterial, defaultProperties.albedo,        AI_MATKEY_COLOR_DIFFUSE),
         .specular      = getColor(aimaterial, defaultProperties.specular,      AI_MATKEY_COLOR_SPECULAR),
         .emission      = getColor(aimaterial, defaultProperties.emission,      AI_MATKEY_COLOR_EMISSIVE),
 
@@ -459,10 +478,10 @@ engine::Material ModelLoaderImpl::convertMaterial(aiMaterial const *aimaterial, 
     return material;
 }
 
-engine::Mesh ModelLoaderImpl::processMesh(aiMesh const *aimesh, glm::mat4 const &transform)
+Mesh ModelLoaderImpl::processMesh(aiMesh const *aimesh, glm::mat4 const &transform)
 {
     MODEL_LOADER_TRACE("Loading mesh \"{}\"", aimesh->mName.C_Str());
-    engine::Mesh mesh;
+    Mesh mesh;
     extractVertexData(aimesh, mesh);
 
     if(aimesh->HasBones())
@@ -478,9 +497,8 @@ engine::Mesh ModelLoaderImpl::processMesh(aiMesh const *aimesh, glm::mat4 const 
     else
     {
         aiMaterial const *aimaterial = mScene->mMaterials[aimesh->mMaterialIndex];
-        auto material = convertMaterial(aimaterial, mDefaultMaterial.properties);
-        setMissingTextures(material.textures, mDefaultMaterial.textures);
-        mesh.material = material;
+        mesh.material = convertMaterial(aimaterial, mDefaultMaterial.properties);
+        setMissingTextures(mesh.material.textures, mDefaultMaterial.textures);
     }
 
     calculateMissingPrimitives(mesh);
@@ -505,7 +523,7 @@ void ModelLoaderImpl::processNodeMeshes(aiNode const *node, glm::mat4 parentTran
     }
 }
 
-void processAnimationNode(engine::Animation &result, aiAnimation const *animation, engine::Model::Skeleton const &skeleton, aiNode const *node)
+void processAnimationNode(Animation &result, aiAnimation const *animation, Model::Skeleton const &skeleton, aiNode const *node)
 {
     std::string nodeName = node->mName.C_Str();
     aiNodeAnim const *nodeAnim = findNodeAnim(animation, nodeName);
@@ -515,7 +533,7 @@ void processAnimationNode(engine::Animation &result, aiAnimation const *animatio
         for(unsigned i = 0; i < nodeAnim->mNumPositionKeys; ++i)
         {
             auto const &key = nodeAnim->mPositionKeys[i];
-            keyframes.positions.emplace_back(engine::Animation::PositionKey{
+            keyframes.positions.emplace_back(Animation::PositionKey{
                 .value = toVec3(key.mValue),
                 .timeTicks = static_cast<float>(key.mTime)
             });
@@ -523,7 +541,7 @@ void processAnimationNode(engine::Animation &result, aiAnimation const *animatio
         for(unsigned i = 0; i < nodeAnim->mNumRotationKeys; ++i)
         {
             auto const &key = nodeAnim->mRotationKeys[i];
-            keyframes.orientations.emplace_back(engine::Animation::OrientationKey{
+            keyframes.orientations.emplace_back(Animation::OrientationKey{
                 .value = glm::normalize(toQuat(key.mValue)),
                 .timeTicks = static_cast<float>(key.mTime)
             });
@@ -531,7 +549,7 @@ void processAnimationNode(engine::Animation &result, aiAnimation const *animatio
         for(unsigned i = 0; i < nodeAnim->mNumScalingKeys; ++i)
         {
             auto const &key = nodeAnim->mScalingKeys[i];
-            keyframes.scales.emplace_back(engine::Animation::ScaleKey{
+            keyframes.scales.emplace_back(Animation::ScaleKey{
                 .value = toVec3(key.mValue),
                 .timeTicks = static_cast<float>(key.mTime)
             });
@@ -542,11 +560,11 @@ void processAnimationNode(engine::Animation &result, aiAnimation const *animatio
         processAnimationNode(result, animation, skeleton, node->mChildren[i]);
     }
 }
-engine::Animation ModelLoaderImpl::processAnimation(aiAnimation const *animation)
+Animation ModelLoaderImpl::processAnimation(aiAnimation const *animation)
 {
     MODEL_LOADER_TRACE("Processing animation \"{}\"", animation->mName.C_Str());
 
-    engine::Animation result;
+    Animation result;
     result.durationTicks = (float) animation->mDuration;
     result.ticksPerSecond = (animation->mTicksPerSecond > 0) ? (float) animation->mTicksPerSecond : 24.0f;
     result.name = animation->mName.C_Str();
@@ -556,15 +574,15 @@ engine::Animation ModelLoaderImpl::processAnimation(aiAnimation const *animation
 
     for(auto &bone : result.bones)
     {
-        std::sort(bone.positions   .begin(), bone.positions   .end(), [](engine::Animation::PositionKey    const &first, engine::Animation::PositionKey    const &second){ return first.timeTicks < second.timeTicks; });
-        std::sort(bone.orientations.begin(), bone.orientations.end(), [](engine::Animation::OrientationKey const &first, engine::Animation::OrientationKey const &second){ return first.timeTicks < second.timeTicks; });
-        std::sort(bone.scales      .begin(), bone.scales      .end(), [](engine::Animation::ScaleKey       const &first, engine::Animation::ScaleKey       const &second){ return first.timeTicks < second.timeTicks; });
+        std::sort(bone.positions   .begin(), bone.positions   .end(), [](Animation::PositionKey    const &first, Animation::PositionKey    const &second){ return first.timeTicks < second.timeTicks; });
+        std::sort(bone.orientations.begin(), bone.orientations.end(), [](Animation::OrientationKey const &first, Animation::OrientationKey const &second){ return first.timeTicks < second.timeTicks; });
+        std::sort(bone.scales      .begin(), bone.scales      .end(), [](Animation::ScaleKey       const &first, Animation::ScaleKey       const &second){ return first.timeTicks < second.timeTicks; });
     }
 
     return result;
 }
 
-void calculateParent(engine::Model::Skeleton &skeleton, aiNode const *node, int parent)
+void calculateParent(Model::Skeleton &skeleton, aiNode const *node, int parent)
 {
     std::string nodeName = node->mName.C_Str();
 
@@ -581,7 +599,7 @@ void calculateParent(engine::Model::Skeleton &skeleton, aiNode const *node, int 
     }
 }
 
-std::unique_ptr<IResource> ModelLoaderImpl::load()
+ecs::entity ModelLoaderImpl::load()
 {
     if(mScene->HasMeshes())
         MODEL_LOADER_TRACE("Loading {} meshes.", mScene->mNumMeshes);
@@ -603,7 +621,7 @@ std::unique_ptr<IResource> ModelLoaderImpl::load()
 
     // TODO: morph targets
 
-    return std::make_unique<IResource>(std::move(*mModel));
+    return mRegistry->create(std::move(*mModel));
 }
 
 constexpr unsigned ASSIMP_FLAGS =
@@ -620,9 +638,17 @@ constexpr unsigned ASSIMP_FLAGS =
     aiProcess_ValidateDataStructure |
     aiProcess_LimitBoneWeights;
 
-std::unique_ptr<IResource> ModelLoader::loadFromFile(std::string_view path, LoaderOptions_t o)
+ModelLoader::ModelLoader(Registry &reg) : Handle(new ModelLoaderImpl{reg})
+{ 
+    unwrap().mTextureLoader = TextureLoader{*unwrap().mRegistry}; 
+}
+ecs::entity ModelLoader::loadFromFile(std::string_view path, ModelLoaderOptions options)
 {
-    auto options = castOptions<ModelLoaderOptions>(o);
+    ENGINE_ASSERT_MSG(!this->empty(), "Invalid loader! (make sure to not use default constructor when making an actual loader)");
+    for(auto e_model : unwrap().mRegistry->view<Model>())
+        if(unwrap().mRegistry->get<Model>(e_model).path == path)
+            return e_model;
+
     MODEL_LOADER_TRACE("---");
     MODEL_LOADER_TRACE("Loading model \"{}\"", path);
     Assimp::Importer importer;
@@ -637,22 +663,22 @@ std::unique_ptr<IResource> ModelLoader::loadFromFile(std::string_view path, Load
     if(!scene)
     {
         ENGINE_CORE_ERROR("Error parsing \"{}\": {}", path, importer.GetErrorString());
-        return 0;
+        return INVALID_ENTITY;
     }
 
     Model model;
     model.path = path;
 
-    unwrap()->mModel = &model;
-    unwrap()->mScene = scene;
-    unwrap()->mOptions = options;
-    unwrap()->mModel->skeleton.globalInverseTransform = glm::inverse(toMat4(unwrap()->mScene->mRootNode->mTransformation));
+    unwrap().mModel = &model;
+    unwrap().mScene = scene;
+    unwrap().mOptions = options;
+    unwrap().mModel->skeleton.globalInverseTransform = glm::inverse(toMat4(unwrap().mScene->mRootNode->mTransformation));
 
-    return unwrap()->load();
+    return unwrap().load();
 }
-std::unique_ptr<IResource> ModelLoader::loadFromMemory(void const *data, size_t size, LoaderOptions_t o)
+ecs::entity ModelLoader::loadFromMemory(void const *data, size_t size, ModelLoaderOptions options)
 {
-    auto options = castOptions<ModelLoaderOptions>(o);
+    ENGINE_ASSERT_MSG(!this->empty(), "Invalid loader! (make sure to not use default constructor when making an actual loader)");
     MODEL_LOADER_TRACE("---");
     MODEL_LOADER_TRACE("Loading model from memory");
     Assimp::Importer importer;
@@ -667,16 +693,16 @@ std::unique_ptr<IResource> ModelLoader::loadFromMemory(void const *data, size_t 
     if(!scene)
     {
         ENGINE_CORE_ERROR("Error parsing from memory: {}", importer.GetErrorString());
-        return 0;
+        return INVALID_ENTITY;
     }
 
     Model model;
-    model.path = "memory";
+    model.path = "loadFromMemory";
 
-    unwrap()->mModel = &model;
-    unwrap()->mScene = scene;
-    unwrap()->mOptions = options;
-    unwrap()->mModel->skeleton.globalInverseTransform = glm::inverse(toMat4(unwrap()->mScene->mRootNode->mTransformation));
+    unwrap().mModel = &model;
+    unwrap().mScene = scene;
+    unwrap().mOptions = options;
+    unwrap().mModel->skeleton.globalInverseTransform = glm::inverse(toMat4(unwrap().mScene->mRootNode->mTransformation));
 
-    return unwrap()->load();
+    return unwrap().load();
 }

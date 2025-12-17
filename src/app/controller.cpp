@@ -3,7 +3,7 @@
 
 #define CAMERA_COMPONENTS engine::Camera, engine::Transform, Controller::ControllableCamera, engine::Velocity, engine::input::InputListener
 
-ecs::entity Controller::createCamera(Registry &reg, glm::vec3 pos, glm::vec3 target)
+ecs::entity Controller::createCamera(engine::Registry &reg, glm::vec3 pos, glm::vec3 target)
 {
     auto e = reg.create<CAMERA_COMPONENTS>();
     reg.get<Controller::ControllableCamera>(e).window = reg.view<engine::Window>().at(0);
@@ -15,7 +15,7 @@ ecs::entity Controller::createCamera(Registry &reg, glm::vec3 pos, glm::vec3 tar
     return e;
 }
 
-void Controller::update(Registry &reg)
+void Controller::update(engine::Registry &reg)
 {
     for(ecs::entity e_camera : reg.view<CAMERA_COMPONENTS>())
     {
