@@ -2,7 +2,7 @@
 #include "engine/Logging/Logging.hpp"
 #include "detail.hpp"
 
-namespace ogl = engine::renderer::ogl;
+using namespace engine;
 
 static void debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar *message, const void *) {
     if(source == GL_DEBUG_SOURCE_SHADER_COMPILER && (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_OTHER)) return; // handled by ShaderProgram class 
@@ -136,10 +136,9 @@ static void setupOpengl(engine::Registry &)
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(debugCallback, nullptr);
 }
-void engine::EngineRenderer::setupPipeline(Registry &reg)
+void engine::EngineRendererImpl::setupPipeline()
 {
     using namespace engine;
-    renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
     
     glCreateFramebuffers(1, &data.oitFBO.id);
     {
@@ -171,18 +170,11 @@ void engine::EngineRenderer::setupPipeline(Registry &reg)
     glCreateBuffers(1, &data.SM.lightsSSBO.id);
 }
 
-void engine::EngineRenderer::setup(Registry &reg)
+EngineRenderer::EngineRenderer(Registry &reg, EngineRendererConfig conf) : Handle(new EngineRendererImpl{})
 {
-    auto view = reg.view<renderer::RendererData>();
-    if(!view.empty())
-    {
-        ENGINE_ASSERT_MSG(view.size() <= 1, "multiple instances of EngineRenderer in registry!");
-        for(auto e : view)
-            reg.destroy(e);
-    }
-    reg.create(renderer::RendererData{
-        .context = context(),
-    });
+    unwrap().data.reg = &reg;
+    unwrap().data.config = conf;
+
     setupOpengl(reg);
-    setupPipeline(reg);
+    unwrap().setupPipeline();
 }

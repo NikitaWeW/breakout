@@ -10,7 +10,6 @@ namespace engine
     class Handle
     {
     protected:
-        // FIXME: might be inefficient.
         TPointer<TObject> mObj = nullptr;
     public:
         inline Handle(TObject *obj) : mObj(obj) {}

@@ -1,7 +1,7 @@
 #include "engine/Renderer/EngineRenderer.hpp"
 #include "../detail.hpp"
 
-namespace ogl = engine::renderer::ogl;
+namespace ogl = engine::ogl;
 
 void engine::EngineRenderer::draw(Registry &reg)
 {

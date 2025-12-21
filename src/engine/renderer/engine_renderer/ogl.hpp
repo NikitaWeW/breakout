@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 
-namespace engine::renderer::ogl
+namespace engine::ogl
 {
     /// @brief Generic OpenGL object wrapper.
     /// Holds an OpenGL object id.
@@ -198,4 +198,4 @@ namespace engine::renderer::ogl
     /// @brief Remove the latest buffer from the vertex array object.
     /// @param vao The vertex array object.
     void popVertexBuffer(ogl::VAO &vao);
-} // namespace engine::renderer::ogl
+} // namespace engine::ogl

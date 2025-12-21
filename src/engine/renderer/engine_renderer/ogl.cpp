@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 
-namespace ogl = engine::renderer::ogl;
+namespace ogl = engine::ogl;
 
 static bool compileProgramShader(ogl::Program::Shader &shader) noexcept {
     shader.id = glCreateShader(shader.type);

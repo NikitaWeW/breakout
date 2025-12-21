@@ -2,7 +2,7 @@
 #include "../detail.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-namespace ogl = engine::renderer::ogl;
+namespace ogl = engine::ogl;
 
 static void bindTexture(int location, ogl::Texture texture, ogl::Texture defaultTexture, unsigned &slot)
 {
@@ -44,16 +44,16 @@ static void sendMaterial(ogl::Program const &program, engine::Material::Properti
     // glUniform1f(ogl::getUniform(program, "u_material.properties.ior"), material.ior);
 }
 
-void engine::EngineRenderer::renderMainInstance(Registry &reg, ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance) 
+void engine::EngineRendererImpl::renderMainInstance(ogl::Program const &shader, ecs::entity const &e_instance) 
 {
-    auto const &instance = reg.get<engine::Instance>(e_instance);
-    ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedModel>(instance.e_model), "Forgot to call engine::EngineRenderer::processData()?");
-    renderer::Model const &model = reg.get<renderer::Model>(instance.e_model);
-    bool animated = model.animated && reg.has<CurrentAnimation>(e_instance);
+    auto const &instance = data.reg->get<engine::Instance>(e_instance);
+    ENGINE_ASSERT_MSG(data.reg->has<renderer::ProcessedTag>(instance.e_model), "Forgot to call engine::EngineRenderer::processData()?");
+    renderer::Model const &model = data.reg->get<renderer::Model>(instance.e_model);
+    bool animated = model.animated && data.reg->has<CurrentAnimation>(e_instance);
 
     for(auto const &mesh : model.meshes)
     {
-        glm::mat4 modelMat = reg.has<engine::Transform>(e_instance) ? reg.get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
+        glm::mat4 modelMat = data.reg->has<engine::Transform>(e_instance) ? data.reg->get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
         glm::mat3 normalMat = glm::transpose(glm::inverse(modelMat));
         renderer::Material material = instance.materialOverride.has_value() ? renderer::convertMaterial(reg, instance.materialOverride.value()) : mesh.material;
 
@@ -64,7 +64,7 @@ void engine::EngineRenderer::renderMainInstance(Registry &reg, ogl::Program cons
         glUniformMatrix4fv(ogl::getUniform(shader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
         if(animated)
         {
-            auto const &boneMatrices = reg.get<CurrentAnimation>(e_instance).boneMatrices;
+            auto const &boneMatrices = data.reg->get<CurrentAnimation>(e_instance).boneMatrices;
             ENGINE_ASSERT(boneMatrices.size() == model.skeleton.boneMap.size());
             glUniformMatrix4fv(ogl::getUniform(shader, "u_boneMatrices"), boneMatrices.size(), false, glm::value_ptr(boneMatrices.front())); // TODO: switch to ssbo or ubo.
         }
@@ -75,10 +75,10 @@ void engine::EngineRenderer::renderMainInstance(Registry &reg, ogl::Program cons
     }
 }
 
-void engine::EngineRenderer::renderMain(Registry &reg, renderer::RendererData &data)
+void engine::EngineRendererImpl::renderMain()
 { 
     // TODO: split render passes and make a system for custom user graphics (render graph?)`
-    auto const &camera = reg.get<engine::Camera>(data.context.e_camera);
+    auto const &camera = data.reg->get<engine::Camera>(data.config.e_camera);
 
     glViewport(0, 0, camera.size.x, camera.size.y);
 
@@ -115,7 +115,7 @@ void engine::EngineRenderer::renderMain(Registry &reg, renderer::RendererData &d
     
     // draw opaque objects
     glUniform1i(ogl::getUniform(data.shaders.propShader, "u_transparent"), false);
-    for(ecs::entity e_instance : reg.view<Instance>(ecs::exclude_t<Transparent>{}))
+    for(ecs::entity e_instance : data.reg->view<Instance>(ecs::exclude_t<Transparent>{}))
         renderMainInstance(reg, data.shaders.propShader, data, e_instance);
 
     // =====================
@@ -143,24 +143,24 @@ void engine::EngineRenderer::renderMain(Registry &reg, renderer::RendererData &d
 
     // draw transparent objects
     glUniform1i(ogl::getUniform(data.shaders.propShader, "u_transparent"), true);
-    for(ecs::entity e_instance : reg.view<Instance, Transparent>()) 
-        renderMainInstance(reg, data.shaders.propShader, data, e_instance);
+    for(ecs::entity e_instance : data.reg->view<Instance, Transparent>()) 
+        renderMainInstance(data.shaders.propShader, e_instance);
 
     // =====================
     // draw skybox
     // =====================
     {
-        auto skyboxView = reg.view<Skybox>();
+        auto skyboxView = data.reg->view<Skybox>();
         if(!skyboxView.empty())
         {
-            auto const &skybox = reg.get<Skybox>(skyboxView[0]);
+            auto const &skybox = data.reg->get<Skybox>(skyboxView[0]);
             if(skyboxView.size() > 1)
             {
-                ENGINE_ASSERT(reg.has<Cubemap>(skybox.e_cubemap));
-                ENGINE_CORE_WARN("Multiple sky boxes found. Drawing the first one: \"{}\"", reg.get<Cubemap>(skybox.e_cubemap).path);
+                ENGINE_ASSERT(data.reg->has<Cubemap>(skybox.e_cubemap));
+                ENGINE_CORE_WARN("Multiple sky boxes found. Drawing the first one: \"{}\"", data.reg->get<Cubemap>(skybox.e_cubemap).path);
             }
-            ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedCubemap>(skybox.e_cubemap), "Forgot to call engine::EngineRenderer::processData()?");
-            auto const &cubemap = reg.get<ogl::Cubemap>(skybox.e_cubemap);
+            ENGINE_ASSERT_MSG(data.reg->has<renderer::ProcessedTag>(skybox.e_cubemap), "Forgot to call engine::EngineRenderer::processData()?");
+            auto const &cubemap = data.reg->get<ogl::Cubemap>(skybox.e_cubemap);
 
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDisable(GL_BLEND);

@@ -10,7 +10,7 @@ namespace engine
 
 struct TextureLoaderOptions
 {
-    bool flip = false;
+    bool flip = true;
 };
 struct ModelLoaderOptions
 {
@@ -20,6 +20,8 @@ struct ModelLoaderOptions
 };
 struct CubemapLoaderOptions : public TextureLoaderOptions {};
 
+
+// TODO: Replace ecs::entity with engine::Entity
 class ModelLoader : private Handle<struct ModelLoaderImpl>
 {
 public:

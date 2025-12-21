@@ -1,19 +1,11 @@
 #pragma once
+#include "engine/DSA/ECS.hpp"
 #include "engine/Renderer/Renderer.hpp"
-
-// FIXME: redo this renderer mess, make a better architecture/structure
-
-namespace engine::renderer
-{
-    namespace ogl
-    {
-        struct Program;
-    }
-    struct RendererData;
-}
+#include "engine/Header/Handle.hpp"
 
 namespace engine
 {
+    // FIXME: not in use
     struct DynamicLight {};
     struct ShadowLight 
     {
@@ -58,51 +50,35 @@ namespace engine
         ecs::entity e_cubemap;
     };
 
-    /// Prevent an instance from getting drawn by renderer.
+    /// Prevent an instance from getting drawn.
     struct RendererExclude {};
 
     /// Tag to exclude this object from shadow mapping pass. Can be added to lights and instances.
     struct NoShadow {};
 
-    class EngineRenderer : public IRenderer
+    /// @brief The renderer settings.
+    struct EngineRendererConfig
+    {
+        /// contains the engine::Camera component.
+        ecs::entity e_camera = INVALID_ENTITY;
+
+        /// @brief Controls the number of frames given to redraw the entire shadow map atlas. 
+        /// More frames increase performance, but the shadows might lag behind.
+        unsigned MAX_SHADOW_MAP_FRAMES = 4;
+    };
+    class EngineRenderer : public IRenderer, public Handle<struct EngineRendererImpl>
     {
     public:
-        /// @brief The renderer settings.
-        struct Config
-        {
-            /// contains the engine::Camera component
-            ecs::entity e_camera = 0;
-
-            /// @brief Controls the number of frames given to redraw the entire shadow map atlas. 
-            /// More frames increase performance, but the shadows might lag behind.
-            unsigned MAX_SHADOW_MAP_FRAMES = 4;
-        };
-    // expose some of the implementation to be able to override it in the derivatives. 
-    // FIXME: dont
-    // TODO: pimpl this
-    protected: 
-        Config m_context;
-        void renderMainInstance(Registry &reg, engine::renderer::ogl::Program const &shader, renderer::RendererData const &data, ecs::entity const &e_instance);
-        void renderMain(Registry &reg, renderer::RendererData &data);
-
-        void renderShadowMaps(Registry &reg, renderer::RendererData &data, unsigned toDraw);
-        
-        void setupPipeline(Registry &reg);
-
-        void processModels(Registry &reg);
-        void processTextures(Registry &reg);
-        void processLights(Registry const &reg, renderer::RendererData &data);
-    public:
+        /// @brief Construct an invalid renderer.
         EngineRenderer() = default;
-        EngineRenderer(Config const &context);
+        /// @brief Construct a valid renderer
+        /// @param reg The registry to draw to.
+        /// @param conf The config duh.
+        EngineRenderer(Registry &reg, EngineRendererConfig conf);
 
-        /// Access the context that is used to setup registries. 
-        /// Doesent affect registries that are already set up.
-        inline Config const &context() const { return m_context; }
-        inline Config &context() { return m_context; }
-
-        void setup(Registry &reg) override;
-        void processData(Registry &reg) override;
-        void draw(Registry &reg) override;
+        void processData();
+        // FIXME: registry is unused for now.
+        // TODO: Remove the per-renderer registry from the constructor and make renderer setup automatically for each registry.
+        void draw(Registry &) override;
     };
 } // namespace engine

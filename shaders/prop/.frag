@@ -258,7 +258,7 @@ vec3 calculateLight(PointLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
         vec3(max(dot(normal, lightDir), 0.0));
     vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
     vec3 shadow = calculateShadow(light, normal, viewDir);
-    return shadow;
+    // return shadow;
 
     return vec3(ambient + (1 - shadow) * (diffuse + specular));
 }
@@ -270,7 +270,7 @@ vec3 calculateLight(DirLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
         vec3(max(dot(normal, -light.direction), 0.0));
     vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
     vec3 shadow = calculateShadow(light, normal, viewDir);
-    return shadow;
+    // return shadow;
 
     return ambient + (1 - shadow) * (diffuse + specular);
 }
@@ -293,7 +293,7 @@ vec3 calculateLight(SpotLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
             vec3(max(dot(normal, lightDir), 0.0));
         vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
         vec3 shadow = calculateShadow(light, normal, viewDir);
-    return shadow;
+    // return shadow;
 
         return ambient + (1 - shadow) * (diffuse + specular);
     } else {
@@ -313,18 +313,18 @@ void main()
     if(!u_transparent && color.a < opaqueThreshold) discard;
 
     vec3 lightColor = vec3(0);
-    // for(uint i = 0u; i < u_numPointLights; ++i) {
-    //     lightColor += calculateLight(pointLights[i], normal, viewDir, texCoords).xyz;
-    // }
+    for(uint i = 0u; i < u_numPointLights; ++i) {
+        lightColor += calculateLight(pointLights[i], normal, viewDir, texCoords).xyz;
+    }
     for(uint i = 0u; i < u_numDirLights; ++i) {
         lightColor += calculateLight(dirLights[i], normal, viewDir, texCoords).rgb;
     }
-    // for(uint i = 0u; i < u_numSpotLights; ++i) {
-    //     lightColor += calculateLight(spotLights[i], normal, viewDir, texCoords).xyz;
-    // }
+    for(uint i = 0u; i < u_numSpotLights; ++i) {
+        lightColor += calculateLight(spotLights[i], normal, viewDir, texCoords).xyz;
+    }
 
     color.rgb *= lightColor;
-    color.rgb = lightColor;
+    // color.rgb = lightColor;
 
     if(u_transparent) {
         // float weight = max(min(1.0, max(max(color.r, color.g), color.b) * color.a), color.a) * clamp(0.03 / (1e-5 + pow(gl_FragCoord.z / 200, 4.0)), 1e-2, 3e3);

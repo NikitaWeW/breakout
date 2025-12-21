@@ -45,4 +45,16 @@ namespace engine
         // TODO: dont store materials in entities, store them directly
         std::optional<Material> materialOverride = std::nullopt;
     };
+
+    struct Version
+    {
+    public:
+        using value_t = uint32_t;
+    private:
+        value_t mValue = 1;
+    public:
+        inline value_t get() const  { return mValue; }
+        inline value_t increment() { return ++mValue; }
+        inline bool operator==(Version const &other) { return mValue == other.mValue; }
+    };
 } // namespace engine
