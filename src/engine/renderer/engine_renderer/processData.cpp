@@ -1,3 +1,4 @@
+#include "engine/DSA/ECS.hpp"
 #include "engine/Header/Config.hpp"
 #include "engine/Logging/Logging.hpp"
 #include "engine/Renderer/EngineRenderer.hpp"
@@ -5,18 +6,21 @@
 #include "ogl.hpp"
 #include "stb_rect_pack.h"
 #include <nicecs/ecs.hpp>
+#include <numeric>
+#include <unordered_set>
 
-// TODO: versioning system: Only update / add objects if the versions mismatch.
+// FIXME: This file contains shittiest spaghetti code on planet earth that needs to be nuked.
+// Shut it up: 
+// #define RENDERER_TRACE(...)
 
-namespace ogl = engine::ogl;
 using namespace engine;
 
 void EngineRendererImpl::processModels()
 {
     using namespace engine;
-    for(ecs::entity e_model : data.reg->view<Model>(ecs::exclude_t<renderer::ProcessedTag>{}))
+    for(ecs::entity e_model : reg->view<Model>(ecs::exclude_t<renderer::ProcessedTag>{}))
     {
-        auto const &model = data.reg->get<Model>(e_model);
+        auto const &model = reg->get<Model>(e_model);
         renderer::Model newModel;
         newModel.skeleton = model.skeleton;
         newModel.animated = model.skeleton.boneMap.size() != 0;
@@ -27,7 +31,7 @@ void EngineRendererImpl::processModels()
             newMesh.mode = GL_TRIANGLES;
             newMesh.count = mesh.geometry.indices.size();
     
-            newMesh.material = renderer::convertMaterial(*data.reg, mesh.material);
+            newMesh.material = renderer::convertMaterial(*reg, mesh.material);
     
             glCreateVertexArrays(1, &newMesh.vao.id);
             
@@ -44,26 +48,26 @@ void EngineRendererImpl::processModels()
             newModel.meshes.emplace_back(std::move(newMesh));
         }
 
-        data.reg->emplace<renderer::Model>(e_model, std::move(newModel));
-        data.reg->emplace<renderer::ProcessedTag>(e_model);
+        reg->emplace<renderer::Model>(e_model, std::move(newModel));
+        reg->emplace<renderer::ProcessedTag>(e_model);
     }
 }
 void EngineRendererImpl::processTextures()
 {
-    for(ecs::entity e_texture : data.reg->view<Texture>(ecs::exclude_t<renderer::ProcessedTag>{}))
+    for(ecs::entity e_texture : reg->view<Texture>(ecs::exclude_t<renderer::ProcessedTag>{}))
     {
-        auto const &texture = data.reg->get<Texture>(e_texture);
+        auto const &texture = reg->get<Texture>(e_texture);
 
-        data.reg->emplace<ogl::Texture>(e_texture, ogl::makeTexture(texture.data, texture.srgb));
-        data.reg->emplace<renderer::ProcessedTag>(e_texture);
+        reg->emplace<ogl::Texture>(e_texture, ogl::makeTexture(texture.data, texture.srgb));
+        reg->emplace<renderer::ProcessedTag>(e_texture);
     }
 
-    for(ecs::entity e_cubemap : data.reg->view<Cubemap>(ecs::exclude_t<renderer::ProcessedTag>{}))
+    for(ecs::entity e_cubemap : reg->view<Cubemap>(ecs::exclude_t<renderer::ProcessedTag>{}))
     {
-        auto const &cubemap = data.reg->get<Cubemap>(e_cubemap);
+        auto const &cubemap = reg->get<Cubemap>(e_cubemap);
 
-        data.reg->emplace<ogl::Cubemap>(e_cubemap, ogl::makeCubemap(cubemap.faces));
-        data.reg->emplace<renderer::ProcessedTag>(e_cubemap);
+        reg->emplace<ogl::Cubemap>(e_cubemap, ogl::makeCubemap(cubemap.faces));
+        reg->emplace<renderer::ProcessedTag>(e_cubemap);
     }
 }
 
@@ -82,16 +86,27 @@ void EngineRendererImpl::processData()
     processTextures();
     processModels();
 
-    for(auto e_light : data.reg->view<DynamicLight>())
-    {
-        data.mLightManager.tryUpdateLight(Entity{*data.reg, e_light});
-    }
+    for(auto e_light : reg->viewAny<engine::PointLight, engine::DirectionalLight, engine::SpotLight, engine::AreaLight>())
+        mLightManager.tryUpdateLight(Entity{*reg, e_light});
+
+    mLightManager.apply();
 }
 
+
+
+
+
+bool renderer::LightManager::isShadowLightChanged(ecs::entity index, engine::ShadowLight const &light)
+{
+    bool isNew = mShadowLightsCache.contains(index);
+    auto &cached = mShadowLightsCache[index];
+    return cached != light && !isNew;
+}
 void renderer::LightManager::processPointLight(Entity e_light)
 {
-    auto const &light = e_light.get<PointLight>();
-    auto index = e_light.entity();
+    RENDERER_TRACE("Processing point light e{}", e_light.entity());
+    auto const &light = e_light.get<engine::PointLight>();
+    auto const index = e_light.entity();
 
     Transform transform = e_light.has<Transform>() ? e_light.get<Transform>() : Transform{};
     renderer::PointLight newLight{
@@ -100,65 +115,58 @@ void renderer::LightManager::processPointLight(Entity e_light)
         .farPlane = 0.0f,
     };
 
-    if(e_light.has<ShadowLight>())
+    if(e_light.has<engine::ShadowLight>())
     {
-        auto const &shadowLight = e_light.get<ShadowLight>();
+        mDrawLightChanged = true;
+        auto const &shadowLight = e_light.get<engine::ShadowLight>();
+
+        if(isShadowLightChanged(index, shadowLight))
+            mViewportChanged = true;
+            
         newLight.farPlane = shadowLight.farPlane;
 
-        // No idea if this is correct...k
-        // Edit: looks like it is correct...
-        constexpr std::array<glm::mat4, 6> CUBE_FACE_MATRICES = {
-            glm::mat4{ { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +X
-            glm::mat4{ { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -X
-            glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Y
-            glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -Y
-            glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Z
-            glm::mat4{ {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }  // -Z
+        mShadowLights[index] = {
+            .size = shadowLight.shadowMapSize,
+            .viewMat = glm::translate({1.0f}, -transform.position),
+            .projMat = glm::perspective(glm::radians(90.0f), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         };
-
-        for(unsigned i = 0; i < 6; ++i)
-        {
-            mDrawLights[index] = renderer::DrawLight{
-                .viewMat = CUBE_FACE_MATRICES[i] * glm::translate({1.0f}, -transform.position),
-                .projMat = glm::perspective(glm::radians(90.0f), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
-            };
-            mViewports[index] = Viewport{
-                .size = shadowLight.shadowMapSize
-            };
-        }
     }
     mPointLights[index] = std::move(newLight);
 }
 void renderer::LightManager::processDirLight(Entity e_light)
 {
-    auto index = e_light.entity();
-    auto const &light = e_light.get<DirectionalLight>();
+    RENDERER_TRACE("Processing dir light e{}", e_light.entity());
+    auto const index = e_light.entity();
+    auto const &light = e_light.get<engine::DirectionalLight>();
     Transform transform = e_light.has<Transform>() ? e_light.get<Transform>() : Transform{};
     renderer::DirLight newLight{
         .color = light.color,
         .direction = getDir(transform.orientation)
     };
     
-    if(e_light.has<ShadowLight>())
+    if(e_light.has<engine::ShadowLight>())
     {
-        auto const &shadowLight = e_light.get<ShadowLight>();
+        mDrawLightChanged = true;
+        auto const &shadowLight = e_light.get<engine::ShadowLight>();
+        if(isShadowLightChanged(index, shadowLight))
+            mViewportChanged = true;
         
         // TODO: cascade SM
-        mDrawLights[index] = renderer::DrawLight{
+
+        mShadowLights[index] = {
+            .size = shadowLight.shadowMapSize,
             .viewMat = glm::lookAt(glm::vec3{0} - (newLight.direction * 10.0f), glm::vec3{0}, getUp(newLight.direction)),
             .projMat = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
         };
-        mViewports[index] = Viewport{
-            .size = shadowLight.shadowMapSize
-        };
-        newLight.viewProj = mDrawLights.data().back().projMat * mDrawLights.data().back().viewMat;
+        newLight.viewProj = mShadowLights.get(index).projMat * mShadowLights.get(index).viewMat;
     }
     mDirLights[index] = std::move(newLight);
 }
 void renderer::LightManager::processSpotLight(Entity e_light)
 {
-    auto index = e_light.entity();
-    auto const &light = e_light.get<SpotLight>();
+    RENDERER_TRACE("Processing spot light e{}", e_light.entity());
+    auto const index = e_light.entity();
+    auto const &light = e_light.get<engine::SpotLight>();
     Transform transform = e_light.has<Transform>() ? e_light.get<Transform>() : Transform{};
 
     renderer::SpotLight newLight{
@@ -169,31 +177,52 @@ void renderer::LightManager::processSpotLight(Entity e_light)
         .outerConeAngle = light.outerConeAngle
     };
 
-    if(e_light.has<ShadowLight>())
+    if(e_light.has<engine::ShadowLight>())
     {
-        auto const &shadowLight = e_light.get<ShadowLight>();
-        mDrawLights[index] = renderer::DrawLight{
+        mDrawLightChanged = true;
+        auto const &shadowLight = e_light.get<engine::ShadowLight>();
+        if(isShadowLightChanged(index, shadowLight))
+            mViewportChanged = true;
+        
+        mShadowLights[index] = {
+            .size = shadowLight.shadowMapSize,
             .viewMat = glm::lookAt(newLight.position, newLight.position + newLight.direction, getUp(newLight.direction)),
             .projMat = glm::perspective(glm::radians(newLight.outerConeAngle), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         };
-        newLight.viewProj = mDrawLights.data().back().projMat * mDrawLights.data().back().viewMat;
-        mViewports[index] = Viewport{
-            .size = shadowLight.shadowMapSize
-        };
+        newLight.viewProj = mShadowLights.get(index).projMat * mShadowLights.get(index).viewMat;
     }
     mSpotLights[index] = std::move(newLight);
+}
+void renderer::LightManager::deleteLight(ecs::entity light)
+{
+    RENDERER_TRACE("Removing light e{}", light);
+    if(mShadowLightsCache.contains(light))
+        mViewportChanged = true;
+
+    mVersions.erase(light);
+    if(mPointLights.contains(light))       mPointLights.erase(light);
+    if(mDirLights.contains(light))         mDirLights.erase(light);
+    if(mSpotLights.contains(light))        mSpotLights.erase(light);
+    if(mShadowLights.contains(light))      mShadowLights.erase(light);
+    if(mShadowLightsCache.contains(light)) mShadowLightsCache.erase(light);
+
+    mShouldUpdate = true;
+}
+bool renderer::LightManager::isOmnidirectional(ecs::entity e)
+{
+    return mPointLights.contains(e);
 }
 void renderer::LightManager::makeAtlas()
 {
     std::vector<stbrp_rect> rects;
     rects.reserve(mAtlas.viewports.size());
 
-    for(auto [index, viewport] : mViewports)
+    for(auto [index, light] : mShadowLights)
     {
         rects.emplace_back(stbrp_rect{
             .id = static_cast<int>(index),
-            .w = static_cast<int>(viewport.size) * (mPointLights.contains(index) ? 6 : 1),
-            .h = static_cast<int>(viewport.size),
+            .w = static_cast<int>(light.size) * (isOmnidirectional(index) ? 6 : 1),
+            .h = static_cast<int>(light.size),
             .x = 0,
             .y = 0,
         });
@@ -243,23 +272,109 @@ void renderer::LightManager::makeAtlas()
         }
     }
 
+    ogl::attachment(mAtlas.fbo, mAtlas.texture, mAtlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
+    mAtlas.framesDrawn = 0;
+    mAtlas.refreshed = true;
 
     RENDERER_TRACE("Made {}x{} mAtlas", mAtlas.size.x, mAtlas.size.y);
 
     for(auto const &light : mPointLights.data())
-        ENGINE_CORE_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+        RENDERER_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
     for(auto const &light : mDirLights.data())
-        ENGINE_CORE_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+        RENDERER_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
     for(auto const &light : mSpotLights.data())
-        ENGINE_CORE_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
-    ENGINE_CORE_TRACE("================");
-    ENGINE_CORE_TRACE("{} viewports: ", mAtlas.viewports.size());
+        RENDERER_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    RENDERER_TRACE("================");
+    RENDERER_TRACE("{} viewports: ", mAtlas.viewports.size());
     for(auto const &viewport : mAtlas.viewports)
-        ENGINE_CORE_TRACE("Position: [{}, {}], \tsize: [{}, {}]", viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
-    ENGINE_CORE_TRACE("================");
+        RENDERER_TRACE("Position: [{}, {}], \tsize: [{}, {}]", viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
+    RENDERER_TRACE("================");
+}
+/* void renderer::LightManager::sortViewports()
+{
+    RENDERER_TRACE("Sorting {} viewports", mAtlas.viewports.size());
+    RENDERER_TRACE("Viewport index to entity: {}", mAtlas.viewportIndexToEntity);
+    RENDERER_TRACE("Entity to draw light index: {}", mAtlas.entityToDrawLightIndex);
+
+    std::vector<size_t> indices(mAtlas.viewports.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::sort(indices.begin(), indices.end(), [&](auto const &first, auto const &second){
+        auto firstIndex = mAtlas.entityToDrawLightIndex.at(mAtlas.viewportIndexToEntity.at(first));
+        auto secondIndex = mAtlas.entityToDrawLightIndex.at(mAtlas.viewportIndexToEntity.at(second));
+
+        return firstIndex == secondIndex ? first < second : firstIndex < secondIndex;
+    });
+    
+    RENDERER_TRACE("Applying {} indices: {}", indices.size(), indices);
+    auto const viewportsCopy = mAtlas.viewports;
+    auto const viewportsToEntityCopy = mAtlas.viewportIndexToEntity;
+    mAtlas.viewportIndexToEntity.clear();
+    for(size_t i = 0; i < indices.size(); ++i)
+    {
+        auto index = indices[i];
+        mAtlas.viewports[i] = viewportsCopy[index];
+        mAtlas.viewportIndexToEntity[i] = viewportsToEntityCopy.at(index);
+        RENDERER_TRACE("{})\tindex: {}, \t e{}", i, index, viewportsToEntityCopy.at(index));
+    }
 
 
-    ogl::attachment(mAtlas.fbo, mAtlas.texture, mAtlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
+    RENDERER_TRACE("Result: ");
+    for(size_t i = 0; i < mAtlas.viewports.size(); ++i)
+    {
+        auto const &viewport = mAtlas.viewports[i];
+        auto entity = mAtlas.viewportIndexToEntity.at(i);
+        auto index = mAtlas.entityToDrawLightIndex.at(mAtlas.viewportIndexToEntity.at(i));
+        RENDERER_TRACE("Position: [{}, {}], \tsize: [{}, {}], \t viewport index: {}, \tdraw light index: {}, \t e{}", viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y, i, index, entity);
+    }
+    RENDERER_TRACE("================");
+
+} */
+void renderer::LightManager::makeDrawLights()
+{
+    RENDERER_TRACE("Making {} draw lights", mShadowLights.size());
+
+    // No idea if this is correct...
+    // Edit: looks like it is correct...
+    constexpr std::array<glm::mat4, 6> CUBE_FACE_MATRICES = {
+        glm::mat4{ { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +X
+        glm::mat4{ { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -X
+        glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Y
+        glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -Y
+        glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Z
+        glm::mat4{ {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }  // -Z
+    };
+
+    mAtlas.drawLights.clear();
+    for(auto [index, light] : mShadowLights)
+    {
+        if(isOmnidirectional(index))
+        {
+            for(unsigned i = 0; i < 6; ++i)
+            {
+                mAtlas.drawLights.emplace_back(DrawLight{
+                    .viewMat = CUBE_FACE_MATRICES[i] * light.viewMat,
+                    .projMat = light.projMat
+                });
+            }
+        } else {
+            mAtlas.drawLights.emplace_back(DrawLight{
+                .viewMat = light.viewMat,
+                .projMat = light.projMat
+            });
+        }
+    }
+}
+void renderer::LightManager::setup()
+{
+    glCreateFramebuffers(1, &mAtlas.fbo.id);
+    {
+        std::array<GLenum, 1> const drawbuffers = { GL_NONE };
+        glNamedFramebufferDrawBuffers(mAtlas.fbo.id, drawbuffers.size(), drawbuffers.data());
+    }
+    glCreateBuffers(1, &mPointLightsSSBO.id);
+    glCreateBuffers(1, &mDirLightsSSBO.id);
+    glCreateBuffers(1, &mSpotLightsSSBO.id);
+    glCreateBuffers(1, &mAtlas.drawLightsSSBO.id);
 }
 
 void renderer::LightManager::tryUpdateLight(Entity light)
@@ -269,10 +384,12 @@ void renderer::LightManager::tryUpdateLight(Entity light)
         ENGINE_CORE_ERROR("renderer::LightManager::updateLight: e{} doesent have a \"Version\" component", light.entity());
         return;
     }
+    mThisFrameLights.emplace(light.entity());
     auto &version = light.get<Version>();
 
+    bool isNew = !mVersions.contains(light.entity());
     auto &currentVersion = mVersions[light.entity()];
-    if(currentVersion == version)
+    if(currentVersion == version && !isNew)
         return; // Up-to-date
 
     currentVersion = version;
@@ -289,17 +406,41 @@ void renderer::LightManager::tryUpdateLight(Entity light)
     else
         ENGINE_ASSERT_MSG(false, "Entity has no lights!");
 }
+
+void renderer::LightManager::populateBuffers()
+{
+    glNamedBufferData(mPointLightsSSBO.id,       mPointLights.size()      * sizeof(renderer::PointLight), mPointLights.data().data(), GL_STATIC_DRAW);
+    glNamedBufferData(mDirLightsSSBO.id,         mDirLights.size()        * sizeof(renderer::DirLight),   mDirLights.data().data(),   GL_STATIC_DRAW);
+    glNamedBufferData(mSpotLightsSSBO.id,        mSpotLights.size()       * sizeof(renderer::SpotLight),  mSpotLights.data().data(),  GL_STATIC_DRAW);
+    glNamedBufferData(mAtlas.drawLightsSSBO.id,  mAtlas.drawLights.size() * sizeof(renderer::DrawLight),  mAtlas.drawLights.data(),   GL_STATIC_DRAW);
+}
+
 void renderer::LightManager::apply()
 {
+    for(auto e_light : mLastFrameLights)
+    {
+        if(mThisFrameLights.find(e_light) == mThisFrameLights.end())
+            deleteLight(e_light);
+    }
+    mLastFrameLights = mThisFrameLights;
+    mThisFrameLights.clear();
+
     if(!mShouldUpdate)
         return;
 
-    makeAtlas();
+    mAtlas.refreshed = false;
+    if(mViewportChanged)
+    {
+        makeAtlas();
+        // sortViewports();
+    }
+    if(mViewportChanged || mDrawLightChanged)
+    {
+        makeDrawLights();
+    }
+    populateBuffers();
 
-    glNamedBufferData(mPointLightsSSBO.id, mPointLights.size() * sizeof(renderer::PointLight), mPointLights.data().data(), GL_STATIC_DRAW);
-    glNamedBufferData(mDirLightsSSBO.id,   mDirLights.size()   * sizeof(renderer::DirLight),   mDirLights.data().data(),   GL_STATIC_DRAW);
-    glNamedBufferData(mSpotLightsSSBO.id,  mSpotLights.size()  * sizeof(renderer::SpotLight),  mSpotLights.data().data(),  GL_STATIC_DRAW);
-    glNamedBufferData(mDrawLightsSSBO.id,  mDrawLights.size()  * sizeof(renderer::DrawLight),  mDrawLights.data().data(),  GL_STATIC_DRAW);    
-
+    mViewportChanged = false;
+    mDrawLightChanged = false;
     mShouldUpdate = false;
 }

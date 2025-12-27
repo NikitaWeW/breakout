@@ -1,5 +1,6 @@
 #pragma once
 #include "spdlog/spdlog.h"
+#include "spdlog/fmt/ranges.h"
 #include <memory>
 #include "engine/Header/Config.hpp"
 

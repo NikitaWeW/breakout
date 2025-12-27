@@ -3,34 +3,39 @@
 
 namespace ogl = engine::ogl;
 
-void engine::EngineRenderer::draw(Registry &reg)
+void engine::EngineRendererImpl::draw()
 {
-    ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
-    renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
-    auto &camera = reg.get<engine::Camera>(data.context.e_camera);
+    // ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
+    // renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
+    auto &camera = reg->get<engine::Camera>(config.e_camera);
 
     if(camera.size == glm::uvec2{0, 0})
         return;
 
-    if(data.prevCamSize != camera.size) 
+    if(prevCamSize != camera.size) 
     { // resize or initialize buffers / textures
-        ogl::attachment(data.mainFBO, data.mainFBOColor,        camera.size, GL_COLOR_ATTACHMENT0, GL_RGBA32F);
-        ogl::attachment(data.oitFBO,  data.oitAccumTexture,     camera.size, GL_COLOR_ATTACHMENT1, GL_RGBA32F);
-        ogl::attachment(data.oitFBO,  data.oitRevealageTexture, camera.size, GL_COLOR_ATTACHMENT2, GL_R16    );
+        ogl::attachment(mainFBO, mainFBOColor,        camera.size, GL_COLOR_ATTACHMENT0, GL_RGBA32F);
+        ogl::attachment(oitFBO,  oitAccumTexture,     camera.size, GL_COLOR_ATTACHMENT1, GL_RGBA32F);
+        ogl::attachment(oitFBO,  oitRevealageTexture, camera.size, GL_COLOR_ATTACHMENT2, GL_R16    );
 
-        ogl::attachment(data.mainFBO, data.mainFBORBO, camera.size);
-        glNamedFramebufferRenderbuffer(data.oitFBO.id, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, data.mainFBORBO.id);
+        ogl::attachment(mainFBO, mainFBORBO, camera.size);
+        glNamedFramebufferRenderbuffer(oitFBO.id, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, mainFBORBO.id);
     }
 
-    unsigned toDraw = glm::min<unsigned>(data.SM.lights.size() - data.SM.framesDrawn, glm::max<unsigned>(glm::ceil(data.SM.lights.size() / static_cast<float>(m_context.MAX_SHADOW_MAP_FRAMES)), 1));
-    if(data.SM.refresh)
-    {
-        data.SM.framesDrawn = 0;
-        toDraw = data.SM.lights.size();
-        data.SM.refresh = false;
-    }
-    renderShadowMaps(reg, data, toDraw);
-    renderMain(reg, data);
+    processData();
 
-    data.prevCamSize = camera.size;
+    auto const &atlas = mLightManager.getAtlas();
+    unsigned toDraw = glm::min<unsigned>(atlas.viewports.size() - atlas.framesDrawn, glm::max<unsigned>(glm::ceil(atlas.viewports.size() / static_cast<float>(config.MAX_SHADOW_MAP_FRAMES)), 1));
+
+    if(atlas.refreshed) // Draw all
+        toDraw = atlas.viewports.size();
+    renderShadowMaps(toDraw);
+    renderMain();
+
+    prevCamSize = camera.size;
+}
+void engine::EngineRenderer::draw(Registry &reg)
+{
+    // unwrap().reg = &reg;
+    unwrap().draw();
 }

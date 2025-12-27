@@ -9,9 +9,24 @@ project(breakout C CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(cmake/cpm.cmake)
 
+# Setup assimp.
+# WARNING: Remove when adding exporting. Remove when mature.
+set(ASSIMP_NO_EXPORT ON)
+
+# WARNING: Not all loaders are built. Perhaps remove this when mature.
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF)
+foreach(LOADER FBX OBJ GLTF)
+    set(ASSIMP_BUILD_${LOADER}_IMPORTER ON)
+endforeach()
+
+set(ASSIMP_BUILD_TESTS OFF)
+set(ASSIMP_INSTALL OFF)
 set(ASSIMP_WARNINGS_AS_ERRORS OFF)
+
+# WARNING: nicecs is still in parallel development (minor tweaks mostly), using commit hashes to avoid spamming releases. Change to release version when mature.
+CPMAddPackage("gh:nikitawew/nicecs#c2b2f0f")
+
 CPMAddPackage("gh:glfw/glfw#3.4")
-CPMAddPackage("gh:nikitawew/nicecs@1.5.7")
 CPMAddPackage("gh:gabime/spdlog@1.16.0")
 CPMAddPackage("gh:assimp/assimp@6.0.2")
 CPMAddPackage("gh:g-truc/glm#1.0.2")

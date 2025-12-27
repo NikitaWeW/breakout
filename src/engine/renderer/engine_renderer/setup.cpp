@@ -140,41 +140,36 @@ void engine::EngineRendererImpl::setupPipeline()
 {
     using namespace engine;
     
-    glCreateFramebuffers(1, &data.oitFBO.id);
+    glCreateFramebuffers(1, &oitFBO.id);
     {
         std::array<GLenum, 3> const drawbuffers = { GL_NONE, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-        glNamedFramebufferDrawBuffers(data.oitFBO.id, drawbuffers.size(), drawbuffers.data());
+        glNamedFramebufferDrawBuffers(oitFBO.id, drawbuffers.size(), drawbuffers.data());
     }
 
-    glCreateFramebuffers(1, &data.mainFBO.id);
+    glCreateFramebuffers(1, &mainFBO.id);
 
-    glCreateFramebuffers(1, &data.SM.atlas.fbo.id);
-    {
-        std::array<GLenum, 1> const drawbuffers = { GL_NONE };
-        glNamedFramebufferDrawBuffers(data.SM.atlas.fbo.id, drawbuffers.size(), drawbuffers.data());
-    }
+    shaders.screenShader                  = ogl::compileShader("shaders/hdrImage");
+    shaders.propShader                    = ogl::compileShader("shaders/prop");
+    shaders.oitCompositeShader            = ogl::compileShader("shaders/oitComposite");
+    shaders.skyboxShader                  = ogl::compileShader("shaders/skybox");
+    shaders.depthMapShader                = ogl::compileShader("shaders/depthMapOpaque");
 
-    data.shaders.screenShader                  = ogl::compileShader("shaders/hdrImage");
-    data.shaders.propShader                    = ogl::compileShader("shaders/prop");
-    data.shaders.oitCompositeShader            = ogl::compileShader("shaders/oitComposite");
-    data.shaders.skyboxShader                  = ogl::compileShader("shaders/skybox");
-    data.shaders.depthMapShader                = ogl::compileShader("shaders/depthMapOpaque");
-
-    data.defaultTexture = ogl::makeTexture(engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
+    defaultTexture = ogl::makeTexture(engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
         1, 1, 1
     }.data()}, false);
 
-    glCreateBuffers(1, &data.pointLightsSSBO.id);
-    glCreateBuffers(1, &data.dirLightsSSBO.id);
-    glCreateBuffers(1, &data.spotLightsSSBO.id);
-    glCreateBuffers(1, &data.SM.lightsSSBO.id);
 }
+void EngineRendererImpl::setup()
+{
+    setupOpengl(*reg);
+    mLightManager.setup();
+    setupPipeline();
+}
+
 
 EngineRenderer::EngineRenderer(Registry &reg, EngineRendererConfig conf) : Handle(new EngineRendererImpl{})
 {
-    unwrap().data.reg = &reg;
-    unwrap().data.config = conf;
-
-    setupOpengl(reg);
-    unwrap().setupPipeline();
+    unwrap().reg = &reg;
+    unwrap().config = conf;
+    unwrap().setup();
 }

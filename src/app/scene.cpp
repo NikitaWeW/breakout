@@ -1,5 +1,6 @@
 #include "scene.hpp"
 
+#include "engine/DSA/Data.hpp"
 #include "engine/Engine.hpp"
 #include "controller.hpp"
 
@@ -258,8 +259,8 @@ void createScene(engine::Registry &reg)
     // === === === === === === === ===
     {
         reg.create( // sun
+            engine::Version{},
             SunTag{},
-            engine::DynamicLight{},
             engine::DirectionalLight{
                 .color = glm::vec3{1, 0.9, 0.8} * 1.0f
             },
@@ -273,7 +274,7 @@ void createScene(engine::Registry &reg)
         );
 
         reg.create(
-            engine::DynamicLight{},
+            engine::Version{},
             engine::SpotLight{
                 .color = glm::vec3{0.1, 0.5, 0.9} * 10.0f
             },
@@ -289,7 +290,7 @@ void createScene(engine::Registry &reg)
             }
         );
         reg.create(
-            engine::DynamicLight{},
+            engine::Version{},
             engine::SpotLight{
                 .color = glm::vec3{0.9, 0.6, 0.3} * 10.0f
             },
@@ -306,7 +307,7 @@ void createScene(engine::Registry &reg)
         );
 
         reg.create(
-            engine::DynamicLight{},
+            engine::Version{},
             engine::PointLight{
                 .color = glm::vec3{0.9, 0.4, 0.9} * 10.0f
             },
@@ -318,7 +319,7 @@ void createScene(engine::Registry &reg)
             }
         );
         reg.create(
-            engine::DynamicLight{},
+            engine::Version{},
             engine::PointLight{
                 .color = glm::vec3{0.2, 0.9, 0.9} * 10.0f
             },
@@ -370,10 +371,11 @@ void updateScene(engine::Registry &reg, float deltatime)
     // === === === === === === === ===
     // MOVE SUN
     // === === === === === === === ===
-    for(auto e : reg.view<SunTag, engine::Transform>())
+    for(auto e : reg.view<SunTag, engine::Transform, engine::Version>())
     {
         glm::quat &orientation = reg.get<engine::Transform>(e).orientation;
 
         orientation = glm::rotate(orientation, deltatime * 0.1f, glm::normalize(glm::vec3{0, 0, 1}));
+        reg.get<engine::Version>(e).increment();
     }
 }

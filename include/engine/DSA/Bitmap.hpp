@@ -21,7 +21,7 @@ namespace engine
         /// @brief Construct a valid bitmap.
         /// @param width, height Dimensions of the bitmap
         /// @param numComponents The number of channels / Format_t's per pixel
-        /// @param data The optional data. If not provided, the bitmap is filled with default values.
+        /// @param data The optional  If not provided, the bitmap is filled with default values.
         Bitmap(unsigned width, unsigned height, unsigned numComponents, Format_t const *data = nullptr);
 
         /// @brief Sets the pixel at the (x; y) absolute coordinates to a specified value.

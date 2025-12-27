@@ -4,6 +4,7 @@
 #include <thread>
 #include <random>
 #include <stack>
+#include "argparse.h"
 
 #include "scene.hpp"
 #include "controller.hpp"
@@ -15,14 +16,35 @@
 #include "engine/Engine.hpp"
 
 
-int main(int argc, char **argv) {
-    constexpr unsigned toLoad = 3 + 1;
-    float progress = 0; // will be easier once i'll implement some kind of asset manager.
-    
+int main(int argc, char const **argv) {
     // TODO: make loading screen work nicer with logging
     bool loadingScreen = false;
 
+    argparse::ArgumentParser parser("app", "no idea what to put here");
+    parser.add_argument()
+        .names({ "-l", "--loading-screen" })
+        .description("toggle fancy loading screen with a spinning cube")
+        .required(false);
+
+    auto err = parser.parse(argc, argv);
+    if(err) 
+    {
+        std::cout << err << std::endl;
+        parser.print_help();
+        return -1;
+    }
+
+    if(parser.exists("loading-screen"))
+        loadingScreen = parser.get<bool>("l");
+
+    constexpr unsigned toLoad = 3 + 1;
+    float progress = 0; // will be easier once i'll implement some kind of asset manager.
+
     std::thread loadingScreenThread{cooload::loadingScreen, loadingScreen ? &progress : nullptr};
+
+    engine::Logger::init();
+    if(!loadingScreen)
+        ENGINE_INFO("Starting up...");
 
     GLFWwindow* window;
     
@@ -49,8 +71,6 @@ int main(int argc, char **argv) {
     engine::Registry registry;
     registry.create(engine::Window{window});
 
-    engine::Logger::init();
-
     createScene(registry);
 
     progress += 1.0f / toLoad;
@@ -62,15 +82,12 @@ int main(int argc, char **argv) {
     camera.speed = 4;
     camera.sensitivity = 0.125;
 
-    engine::EngineRenderer mainRenderer{};
-    mainRenderer.context() = {
+    engine::EngineRenderer mainRenderer{registry, {
         .e_camera = e_camera,
         .MAX_SHADOW_MAP_FRAMES = 5
-    };
+    }};
 
     engine::IRenderer *renderer = &mainRenderer;
-    renderer->setup(registry); 
-    renderer->processData(registry);
 
     engine::Animator animator;
     Controller controller;
@@ -100,10 +117,13 @@ int main(int argc, char **argv) {
         glfwSwapBuffers(window);
 
         deltatime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count() * 1e-9f;
+
+        // TODO: Better console management: write to string streams and draw the buffers to the terminal.
         glfwSetWindowTitle(window, (std::to_string(deltatime * 1e3) + "ms | " + std::to_string(1/deltatime) + "fps").c_str());
-        std::cout << "\033[s";
-        ENGINE_INFO("dt: {:3f}ms;\t {:.3f} fps", deltatime * 1e3, 1.0f / deltatime);
-        std::cout << "\033[u";
+        // std::cout << "\033[s";
+        // ENGINE_INFO("dt: {:3f}ms;\t {:.3f} fps", deltatime * 1e3, 1.0f / deltatime);
+        // std::cout << "\033[u";
+        // break;
     }
 
     ENGINE_INFO("Exiting...");

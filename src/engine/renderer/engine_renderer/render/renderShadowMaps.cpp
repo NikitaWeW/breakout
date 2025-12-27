@@ -6,12 +6,13 @@ using namespace engine;
 
 void EngineRendererImpl::drawSM(size_t first, size_t count)
 {
-    glViewportArrayv(0, count, reinterpret_cast<float const *>(&SM.viewports.at(first)));
+    auto const &atlas = mLightManager.getAtlas();
+    glViewportArrayv(0, count, reinterpret_cast<float const *>(&atlas.viewports.at(first)));
     
     glEnable(GL_SCISSOR_TEST);
     for(size_t i = first; i < first + count; ++i)
     {
-        auto viewport = SM.viewports[i];
+        auto const &viewport = atlas.viewports[i];
         glScissor(viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
@@ -54,9 +55,12 @@ static unsigned getMaxViewports()
 
 void EngineRendererImpl::renderShadowMaps(unsigned toDraw)
 {
-    // RENDERER_TRACE("Drawing {} / {} shadow maps", toDraw, SM.lights.size());
+    auto const &atlas = mLightManager.getAtlas();
+    RENDERER_TRACE("Drawing {} / {} shadow maps", toDraw, atlas.viewports.size());
+    if(toDraw == 0)
+        return;
     
-    glBindFramebuffer(GL_FRAMEBUFFER, SM.atlas.fbo.id);
+    glBindFramebuffer(GL_FRAMEBUFFER, atlas.fbo.id);
 
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
@@ -75,7 +79,7 @@ void EngineRendererImpl::renderShadowMaps(unsigned toDraw)
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, SM.lightsSSBO.id);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, atlas.drawLightsSSBO.id);
     glUseProgram(shaders.depthMapShader.id);
 
     // Annoyingly this approach is limited by GL_MAX_VIEWPORTS, so the rendering is done in batches.
@@ -84,10 +88,10 @@ void EngineRendererImpl::renderShadowMaps(unsigned toDraw)
     for(unsigned batch = 0; batch <= toDraw / maxDraw; ++batch)
     {
         unsigned thisDraw = glm::min(toDraw - maxDraw * batch, maxDraw);
-        drawSM(reg, data, SM.framesDrawn, thisDraw);
-        SM.framesDrawn += thisDraw;
+        drawSM(atlas.framesDrawn, thisDraw);
+        atlas.framesDrawn += thisDraw;
     }
 
-    if(SM.framesDrawn >= SM.lights.size())
-        SM.framesDrawn = 0;
+    if(atlas.framesDrawn >= atlas.viewports.size())
+        atlas.framesDrawn = 0;
 }

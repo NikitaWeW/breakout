@@ -1,18 +1,25 @@
 #pragma once
 #include "engine/DSA/ECS.hpp"
+#include "engine/Header/UID.hpp"
 #include "engine/Renderer/Renderer.hpp"
 #include "engine/Header/Handle.hpp"
 
 namespace engine
 {
-    // FIXME: not in use
-    struct DynamicLight {};
     struct ShadowLight 
     {
         unsigned shadowMapSize = 1024;
 
         float nearPlane = 0.1;
         float farPlane = 100;
+
+        inline bool operator==(ShadowLight const &other) 
+        {
+            return shadowMapSize == other.shadowMapSize &&
+            glm::abs(nearPlane - other.nearPlane) <= 1e-6 &&
+            glm::abs(farPlane - other.farPlane) <= 1e-6;
+        }
+        inline bool operator!=(ShadowLight const &other) { return !operator==(other); }
     };
     struct PointLight 
     {
