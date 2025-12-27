@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "engine/Logging/Logging.hpp"
 
 #define RENDERER_TRACE ENGINE_CORE_TRACE
 
