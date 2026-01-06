@@ -25,17 +25,17 @@ namespace engine
 
 #ifdef ENGINE_NO_LOG
 
-#define ENGINE_CORE_TRACE(...)
-#define ENGINE_CORE_INFO(...)
-#define ENGINE_CORE_WARN(...)
-#define ENGINE_CORE_ERROR(...)
-#define ENGINE_CORE_CRITICAL(...)
+#define ENGINE_CORE_TRACE(...) (void)0
+#define ENGINE_CORE_INFO(...) (void)0
+#define ENGINE_CORE_WARN(...) (void)0
+#define ENGINE_CORE_ERROR(...) (void)0
+#define ENGINE_CORE_CRITICAL(...) (void)0
 
-#define ENGINE_TRACE(...)
-#define ENGINE_INFO(...)
-#define ENGINE_WARN(...)
-#define ENGINE_ERROR(...)
-#define ENGINE_CRITICAL(...)
+#define ENGINE_TRACE(...) (void)0
+#define ENGINE_INFO(...) (void)0
+#define ENGINE_WARN(...) (void)0
+#define ENGINE_ERROR(...) (void)0
+#define ENGINE_CRITICAL(...) (void)0
 
 #else
 

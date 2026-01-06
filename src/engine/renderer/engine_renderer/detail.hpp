@@ -9,7 +9,10 @@
 #include <vector>
 #include "engine/Logging/Logging.hpp"
 
-#define RENDERER_TRACE ENGINE_CORE_TRACE
+// #define RENDERER_TRACE ENGINE_CORE_TRACE
+#ifndef RENDERER_TRACE
+#define RENDERER_TRACE(...) (void)0
+#endif 
 
 namespace engine::renderer
 {
@@ -97,6 +100,13 @@ namespace engine::renderer
     {
         glm::mat4 viewMat;
         glm::mat4 projMat;
+        int omnidirectional;
+        float farPlane;
+        glm::vec2 _pad1;
+        glm::vec3 position;
+        float _pad2;
+        glm::vec4 _pad3;
+        glm::vec4 _pad4;
     };
     struct DrawLightViewport
     {
@@ -154,6 +164,8 @@ namespace engine::renderer
         bool mShouldUpdate = false;
         bool mViewportChanged = false;
         bool mDrawLightChanged = false;
+
+        engine::Entity mECamera;
     private:
         void processPointLight(Entity light);
         void processDirLight(Entity light);
@@ -177,6 +189,7 @@ namespace engine::renderer
         /// @brief Recompute atlas and update buffers if necessary.
         void apply();
         void setup();
+        void setCamera(engine::Entity e_cam);
         
         inline ogl::SSBO const &getPointLights() const { return mPointLightsSSBO; }
         inline ogl::SSBO const &getDirLights()   const { return mDirLightsSSBO;   }
@@ -194,9 +207,14 @@ namespace engine::renderer
     inline ogl::Texture getTexture(engine::Registry const &reg, ecs::entity e_texture)
     {
         using namespace engine;
-        if(e_texture == 0)
+        if(e_texture) {
+            ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedTag>(e_texture), "Forgot to call engine::EngineRenderer::processData?");
+        }
+        if(e_texture == 0 || !reg.has<renderer::ProcessedTag>(e_texture))
+        {
+            ENGINE_CORE_WARN("Invalid texture in material!");
             return ogl::Texture{};
-        ENGINE_ASSERT_MSG(reg.has<renderer::ProcessedTag>(e_texture), "Forgot to call engine::EngineRenderer::processData?");
+        }
 
         return reg.get<ogl::Texture>(e_texture);
     }
@@ -236,6 +254,15 @@ struct engine::EngineRendererImpl
         ogl::Program oitCompositeShader;
         ogl::Program skyboxShader;
         ogl::Program depthMapShader;
+
+        inline bool valid() const {
+            return 
+            screenShader.id && 
+            propShader.id && 
+            oitCompositeShader.id && 
+            skyboxShader.id && 
+            depthMapShader.id;
+        }
     } shaders;
 
     // The model loader should handle the default textures. This one is for edge cases.
@@ -245,6 +272,8 @@ struct engine::EngineRendererImpl
 
     EngineRendererConfig config;
     Registry *reg = nullptr;
+
+    bool debugView = false;
 
     void renderMainInstance(engine::ogl::Program const &shader, ecs::entity const &e_instance);
     void renderMain();
@@ -260,6 +289,7 @@ struct engine::EngineRendererImpl
     void processData();
     void draw();
 
+    void compileShaders();
     void setup();
 };
 

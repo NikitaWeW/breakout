@@ -1,6 +1,7 @@
 #include "engine/Renderer/EngineRenderer.hpp"
 #include "engine/Logging/Logging.hpp"
 #include "detail.hpp"
+#include "ogl.hpp"
 
 using namespace engine;
 
@@ -136,6 +137,29 @@ static void setupOpengl(engine::Registry &)
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(debugCallback, nullptr);
 }
+void engine::EngineRenderer::recompileShaders()
+{
+    ENGINE_CORE_INFO("Recompiling shaders!");
+    unwrap().compileShaders();
+}
+void engine::EngineRenderer::toggleDebugView()
+{
+    auto &debug = unwrap().debugView;
+    debug = !debug;
+    ENGINE_CORE_INFO("Debug view is now {}", debug);
+}
+
+void engine::EngineRendererImpl::compileShaders()
+{
+    ogl::recompileShader(shaders.screenShader,       "shaders/hdrImage");
+    ogl::recompileShader(shaders.propShader,         "shaders/prop");
+    ogl::recompileShader(shaders.oitCompositeShader, "shaders/oitComposite");
+    ogl::recompileShader(shaders.skyboxShader,       "shaders/skybox");
+    ogl::recompileShader(shaders.depthMapShader,     "shaders/depthMapOpaque");
+
+    if(!shaders.valid())
+        ENGINE_CORE_WARN("Failed to compile shaders, disabling the renderer until recompiled successfully!");
+}
 void engine::EngineRendererImpl::setupPipeline()
 {
     using namespace engine;
@@ -148,14 +172,10 @@ void engine::EngineRendererImpl::setupPipeline()
 
     glCreateFramebuffers(1, &mainFBO.id);
 
-    shaders.screenShader                  = ogl::compileShader("shaders/hdrImage");
-    shaders.propShader                    = ogl::compileShader("shaders/prop");
-    shaders.oitCompositeShader            = ogl::compileShader("shaders/oitComposite");
-    shaders.skyboxShader                  = ogl::compileShader("shaders/skybox");
-    shaders.depthMapShader                = ogl::compileShader("shaders/depthMapOpaque");
+    compileShaders();
 
-    defaultTexture = ogl::makeTexture(engine::Bitmap<float>{1, 1, 3, std::array<float, 1*1*3>{
-        1, 1, 1
+    defaultTexture = ogl::makeTexture(engine::Bitmap<float>{2, 2, 3, std::array<float, 2*2*3>{
+        0,0,0, 1,0,1, 1,0,1, 0,0,0,
     }.data()}, false);
 
 }
@@ -163,6 +183,7 @@ void EngineRendererImpl::setup()
 {
     setupOpengl(*reg);
     mLightManager.setup();
+    mLightManager.setCamera(Entity{*reg, config.e_camera});
     setupPipeline();
 }
 

@@ -5,6 +5,7 @@ namespace ogl = engine::ogl;
 
 void engine::EngineRendererImpl::draw()
 {
+    if(!shaders.valid()) return;
     // ENGINE_ASSERT_MSG(reg.view<renderer::RendererData>().size() == 1, "forgot to call engine::EngineRenderer::setup()?");
     // renderer::RendererData &data = reg.get<renderer::RendererData>(reg.view<renderer::RendererData>().at(0));
     auto &camera = reg->get<engine::Camera>(config.e_camera);

@@ -1,6 +1,7 @@
 #pragma once
 #include "engine/DSA/ECS.hpp"
 #include "engine/Header/Handle.hpp"
+#include "engine/Resource/Resources.hpp"
 #include <string>
 
 namespace engine
@@ -30,6 +31,7 @@ public:
     explicit ModelLoader(Registry &reg);
     ecs::entity loadFromFile(std::string_view path, ModelLoaderOptions options = {});
     ecs::entity loadFromMemory(void const *data, size_t size, ModelLoaderOptions options = {});
+    Material getDefaultMaterial() const;
 };
 
 class TextureLoader : private Handle<struct TextureLoaderImpl>

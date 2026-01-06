@@ -103,6 +103,11 @@ namespace engine::ogl
     /// @return A Program object with compiled and linked shaders (id == 0 on failure).
     Program compileShader(std::string_view dirpath);
 
+    /// @brief Delete the old program if valid, compile and link a shader program from a directory of shader sources.
+    /// @param dirpath Directory containing shader source files.
+    /// @return True if compilation was successful, false otherwise.
+    bool recompileShader(Program &program, std::string_view dirpath);
+
     /// @brief Get the location of a uniform variable in a program.
     /// @param program The program to query.
     /// @param name The uniform variable name.

@@ -24,7 +24,6 @@ namespace engine
     struct PointLight 
     {
         glm::vec3 color = {1, 1, 1};
-        float intensity = 1;
     };
     struct DirectionalLight 
     {
@@ -35,12 +34,10 @@ namespace engine
         glm::vec3 color = {1, 1, 1};
         float innerConeAngle = 35;
         float outerConeAngle = 45;
-        float intensity = 1;
     };
     struct AreaLight 
     {
         glm::vec3 color = {1, 1, 1};
-        float intensity = 1;
         glm::vec2 size = {1, 1};
         enum class Shape
         {
@@ -71,7 +68,8 @@ namespace engine
 
         /// @brief Controls the number of frames given to redraw the entire shadow map atlas. 
         /// More frames increase performance, but the shadows might lag behind.
-        unsigned MAX_SHADOW_MAP_FRAMES = 4;
+        /// Set to 1 to disable this feature.
+        unsigned MAX_SHADOW_MAP_FRAMES = 2;
     };
     class EngineRenderer : public IRenderer, public Handle<struct EngineRendererImpl>
     {
@@ -87,5 +85,8 @@ namespace engine
         // FIXME: registry is unused for now.
         // TODO: Remove the per-renderer registry from the constructor and make renderer setup automatically for each registry.
         void draw(Registry &) override;
+
+        void recompileShaders();
+        void toggleDebugView();
     };
 } // namespace engine

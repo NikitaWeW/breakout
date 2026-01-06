@@ -1,5 +1,6 @@
 #include "engine/Renderer/EngineRenderer.hpp"
 #include "../detail.hpp"
+#include "engine/Resource/Resources.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 namespace ogl = engine::ogl;
@@ -55,7 +56,7 @@ void engine::EngineRendererImpl::renderMainInstance(ogl::Program const &shader, 
     {
         glm::mat4 modelMat = reg->has<engine::Transform>(e_instance) ? reg->get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
         glm::mat3 normalMat = glm::transpose(glm::inverse(modelMat));
-        renderer::Material material = instance.materialOverride.has_value() ? renderer::convertMaterial(*reg, instance.materialOverride.value()) : mesh.material;
+        renderer::Material material = reg->has<engine::Material>(e_instance) ? renderer::convertMaterial(*reg, reg->get<engine::Material>(e_instance)) : mesh.material;
 
         bindTextures(shader, material.textures, defaultTexture);
         sendMaterial(shader, material.properties);
@@ -85,7 +86,7 @@ void engine::EngineRendererImpl::renderMain()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mLightManager.getPointLights().id);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, mLightManager.getDirLights().id  );
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mLightManager.getSpotLights().id );
-    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, mLightManager.getAtlas().texture.id);
+    glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, mLightManager.getAtlas().texture.id);
     
     // For solid and oit transparent passes
     glUseProgram(shaders.propShader.id);
@@ -210,7 +211,8 @@ void engine::EngineRendererImpl::renderMain()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glUseProgram(shaders   .screenShader.id);
     glActiveTexture(GL_TEXTURE0 + 0); glBindTexture(GL_TEXTURE_2D, mainFBOColor.id);
-    glBindTexture(GL_TEXTURE_2D, mLightManager.getAtlas().texture.id);
+    if(debugView)
+        glBindTexture(GL_TEXTURE_2D, mLightManager.getAtlas().texture.id);
 
     // draw a quad (hard-coded in VSh)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

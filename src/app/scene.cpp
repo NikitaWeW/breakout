@@ -1,30 +1,42 @@
 #include "scene.hpp"
 
 #include "engine/DSA/Data.hpp"
+#include "engine/DSA/ECS.hpp"
 #include "engine/Engine.hpp"
 #include "controller.hpp"
 
+#include <fmt/ostream.h>
 #include <random>
 
+#include "engine/Resource/Loaders.hpp"
+#include "engine/Resource/Resources.hpp"
 #include "glm/gtx/quaternion.hpp"
 
-std::string printTexture(ecs::entity e_texture, ecs::registry const &reg)
+struct ChangeAnimationsTag {};
+struct SunTag {};
+struct Bouncy {
+    float height = 1;
+    float currentOffset = 0;
+    float speed = 0.1;
+};
+
+std::string printTexture(engine::Entity e_texture)
 {
     std::stringstream ss;
-    auto const &texture = reg.get<engine::Texture>(e_texture);
+    auto const &texture = e_texture.get<engine::Texture>();
     ss 
-        << 'e' << e_texture << ", \"" 
+        << 'e' << e_texture.entity() << ", \"" 
         << texture.path << "\", \t" 
-        << texture.data.getDimensions() << ", \t" 
+        << texture.data.getWidth() << "x" << texture.data.getHeight() << ", \t" 
         << (texture.srgb ? "srgb" : "not srgb");
     return ss.str();
 }
-void printModelData(ecs::entity e_model, ecs::registry const &registry)
+void printModelData(engine::Entity e_model)
 {
-    ENGINE_ASSERT(registry.has<engine::Model>(e_model));
-    engine::Model const &model = registry.get<engine::Model>(e_model);
+    ENGINE_ASSERT(e_model.has<engine::Model>());
+    engine::Model const &model = e_model.get<engine::Model>();
     ENGINE_INFO("");
-    ENGINE_INFO("Model: \"{}\"", model.path);
+    ENGINE_INFO("Model: e{}: \"{}\"", e_model.entity(), model.path);
     ENGINE_INFO("Skeleton: ");
     ENGINE_INFO("  Bone map size / number of bones: {}", model.skeleton.boneMap.size());
     if(model.skeleton.boneMap.size() <= 30)
@@ -57,13 +69,13 @@ void printModelData(ecs::entity e_model, ecs::registry const &registry)
         
         ENGINE_INFO("Material:");
         ENGINE_INFO("Textures:");
-        ENGINE_INFO("  Albedo:       {}", printTexture(mesh.material.textures.albedo, registry));
-        ENGINE_INFO("  Metallic:     {}", printTexture(mesh.material.textures.metallic, registry));
-        ENGINE_INFO("  Roughness:    {}", printTexture(mesh.material.textures.roughness, registry));
-        ENGINE_INFO("  Ambient:      {}", printTexture(mesh.material.textures.ambient, registry));
-        ENGINE_INFO("  Normal:       {}", printTexture(mesh.material.textures.normal, registry));
-        ENGINE_INFO("  Displacement: {}", printTexture(mesh.material.textures.displacement, registry));
-        ENGINE_INFO("  Alpha:        {}", printTexture(mesh.material.textures.alpha, registry));
+        ENGINE_INFO("  Albedo:       {}", printTexture(engine::Entity{e_model.reg(), mesh.material.textures.albedo}));
+        ENGINE_INFO("  Metallic:     {}", printTexture(engine::Entity{e_model.reg(), mesh.material.textures.metallic}));
+        ENGINE_INFO("  Roughness:    {}", printTexture(engine::Entity{e_model.reg(), mesh.material.textures.roughness}));
+        ENGINE_INFO("  Ambient:      {}", printTexture(engine::Entity{e_model.reg(), mesh.material.textures.ambient}));
+        ENGINE_INFO("  Normal:       {}", printTexture(engine::Entity{e_model.reg(), mesh.material.textures.normal}));
+        ENGINE_INFO("  Displacement: {}", printTexture(engine::Entity{e_model.reg(), mesh.material.textures.displacement}));
+        ENGINE_INFO("  Alpha:        {}", printTexture(engine::Entity{e_model.reg(), mesh.material.textures.alpha}));
         ENGINE_INFO("Properties:");
         ENGINE_INFO("  Ambient:       {}", fmt::streamed(mesh.material.properties.ambient));
         ENGINE_INFO("  Albedo:        {}", fmt::streamed(mesh.material.properties.albedo));
@@ -78,11 +90,15 @@ void printModelData(ecs::entity e_model, ecs::registry const &registry)
 void createScene(engine::Registry &reg)
 {
     engine::ModelLoader loader{reg};
+    engine::TextureLoader tloader{reg};
     engine::CubemapLoader cubemapLoader{reg};
     auto cube =    loader.loadFromFile("res/models/cube.obj");
     auto suzanne = loader.loadFromFile("res/models/suzanne.obj");
     auto arrow =   loader.loadFromFile("res/models/arrow.glb");
+    auto sphere  = loader.loadFromFile("res/models/sphere.obj");
+    auto hollowCube = loader.loadFromFile("res/models/HollowCube.glb");
     reg.get<engine::Model>(arrow).meshes[0].material.properties.albedo = {0.2, 0.3, 0.9, 1};
+    printModelData(engine::Entity{reg, hollowCube});
     
     // === === === === === === === ===
     // RANDOM STUFF
@@ -104,7 +120,7 @@ void createScene(engine::Registry &reg)
             }
         );
         reg.create( // some random sphere
-            engine::Instance{loader.loadFromFile("res/models/sphere.obj")}, 
+            engine::Instance{sphere}, 
             engine::Transform{
                 .position = {-2, 1, 4},
                 .scale = {0.5, 0.5, 0.5}
@@ -122,8 +138,8 @@ void createScene(engine::Registry &reg)
         reg.create( // plane
             engine::Instance{cube}, 
             engine::Transform{
-                .position = { 0, 0, -2 },
-                .scale = { 100, 0, 100 }
+                .position = { 0, 0, -2.1 },
+                .scale = { 100, 0.1, 100 }
             }
         );
         reg.create( // deccer cubes (working flawlessly)
@@ -133,6 +149,91 @@ void createScene(engine::Registry &reg)
             engine::Transform{
                 .position = {-5, 2, 0},
                 .scale = glm::vec3{0.5}
+            }
+        );
+    }
+
+
+    // === === === === === === === ===
+    // OMNIDIRECTIONAL SHADOWS TEST
+    // === === === === === === === ===
+    {
+        auto material = loader.getDefaultMaterial();
+        material.textures.albedo = tloader.loadFromFile("res/textures/acquerrello-marble-2000-mm-architextures.jpg");
+        material.properties.albedo = { 0.5f, 0.1f, 0.8f, 1.0f };
+
+        glm::vec3 pos{20, 5.1, 20};
+        ENGINE_TRACE(fmt::streamed(pos));
+        reg.create(
+            engine::Instance{hollowCube}, 
+            material,
+            engine::Transform{
+                .position = pos,
+                .scale = { 10, 10, 10 }
+            }
+        );
+        reg.create(
+            engine::Instance{cube}, 
+            engine::Transform{
+                .position = pos + glm::vec3(-3, 1, 2),
+                .orientation = glm::normalize(glm::angleAxis(42.0f, glm::vec3{-14, 512, -90}))
+            }
+        );
+        reg.create(
+            engine::Instance{suzanne},
+            engine::Transform{
+                .position = pos + glm::vec3(2, 4, 2),
+                .orientation = glm::normalize(glm::angleAxis(-14.0f, glm::vec3{3, -4, 1})),
+                .scale = glm::vec3{0.5}
+            }
+        );
+        reg.create(
+            engine::Instance{sphere}, 
+            engine::Transform{
+                .position = pos + glm::vec3(0, -2, 2),
+                .scale = glm::vec3{0.5}
+            }
+        );
+        reg.create(
+            engine::Instance{suzanne},
+            engine::Transform{
+                .position = pos + glm::vec3(3, 2, -1),
+                .orientation = glm::normalize(glm::angleAxis(-2.0f, glm::vec3{-14, 512, -90})),
+                .scale = glm::vec3{0.5}
+            }
+        );
+        reg.create(
+            engine::Instance{suzanne},
+            engine::Transform{
+                .position = pos + glm::vec3(2.2, -4, 0),
+                .orientation = glm::normalize(glm::angleAxis(-2.0f, glm::vec3{-14, 512, -90})),
+                .scale = glm::vec3{0.5}
+            }
+        );
+        reg.create(
+            engine::Instance{sphere}, 
+            engine::Transform{
+                .position = pos + glm::vec3(-2, 1, -3),
+                .scale = glm::vec3{0.5}
+            }
+        );
+        reg.create(
+            engine::Instance{sphere}, 
+            engine::Transform{
+                .position = pos + glm::vec3(-3, -1, 2),
+                .scale = glm::vec3{0.5}
+            }
+        );
+        reg.create(
+            engine::Version{},
+            engine::PointLight{
+                .color = glm::vec3{0.2, 0.9, 0.9} * 10.0f
+            },
+            engine::ShadowLight{
+                .shadowMapSize = 1024
+            },
+            engine::Transform{
+                .position = pos,
             }
         );
     }
@@ -205,10 +306,8 @@ void createScene(engine::Registry &reg)
 
         material.properties.albedo = {1, 0, 0, 0.5};
         reg.create(
-            engine::Instance{
-                .e_model = cube,
-                .materialOverride = material // copy transparent material and override the model material
-            },
+            engine::Instance{.e_model = cube},
+            material,
             engine::Transform{
                 .position = {4, 1, 4},
                 .scale = {0, 2, 2}
@@ -217,10 +316,8 @@ void createScene(engine::Registry &reg)
         );
         material.properties.albedo = {0, 1, 0, 0.5};
         reg.create(
-            engine::Instance{
-                .e_model = cube,
-                .materialOverride = material
-            },
+            engine::Instance{.e_model = cube},
+            material,
             engine::Transform{
                 .position = {5.5, 1, 4},
                 .scale = {0, 2, 2}
@@ -229,10 +326,8 @@ void createScene(engine::Registry &reg)
         );
         material.properties.albedo = {0, 0, 1, 0.5};
         reg.create(
-            engine::Instance{
-                .e_model = cube,
-                .materialOverride = material
-            },
+            engine::Instance{.e_model = cube},
+            material,
             engine::Transform{
                 .position = {7, 1, 4},
                 .scale = {0, 2, 2}
@@ -241,10 +336,8 @@ void createScene(engine::Registry &reg)
         );
         material.properties.albedo = {0.9, 0.9, 1, 0.5};
         reg.create(
-            engine::Instance{
-                suzanne,
-                .materialOverride = material
-            },
+            engine::Instance{.e_model = suzanne},
+            material,
             engine::Transform{
                 .position = {2, 1, 4},
                 .orientation = glm::normalize(glm::angleAxis(-54.3f, glm::vec3{3.0f, 1, -8})),
@@ -260,31 +353,31 @@ void createScene(engine::Registry &reg)
     {
         reg.create( // sun
             engine::Version{},
-            SunTag{},
+            // SunTag{},
             engine::DirectionalLight{
                 .color = glm::vec3{1, 0.9, 0.8} * 1.0f
             },
             engine::ShadowLight{
                 .shadowMapSize = 2048,
-                .farPlane = 500
+                .farPlane = 50
             },
             engine::Transform{
-                .orientation = glm::quatLookAt(glm::normalize(glm::vec3{0, -1, 0}), glm::vec3{1,0, 0})
+                .orientation = glm::quatLookAt(glm::normalize(glm::vec3{0.9, -0.4, -0.4}), glm::vec3{0, 1, 0})
             }
         );
 
         reg.create(
             engine::Version{},
             engine::SpotLight{
-                .color = glm::vec3{0.1, 0.5, 0.9} * 10.0f
+                .color = glm::vec3{0.1, 0.5, 0.9} * 20.0f
             },
             engine::ShadowLight{
                 .shadowMapSize = 1024
             },
             engine::Transform{
-                .position = {3, 2, 2},
+                .position = {-1, 2, -0.8},
                 .orientation = glm::quatLookAt(
-                    glm::normalize(glm::vec3{0, 0, 0} - glm::vec3{3, 2, 2}),
+                    glm::normalize(glm::vec3{0.8f, -0.3f, -0.5f}),
                     glm::vec3{1,0,0}
                 )
             }
@@ -307,6 +400,10 @@ void createScene(engine::Registry &reg)
         );
 
         reg.create(
+            Bouncy{
+                .height = 1,
+                .speed = 0.1,
+            },
             engine::Version{},
             engine::PointLight{
                 .color = glm::vec3{0.9, 0.4, 0.9} * 10.0f
@@ -332,7 +429,7 @@ void createScene(engine::Registry &reg)
         );
 
         reg.create<engine::Skybox>({
-            cubemapLoader.loadFromFile("res/textures/citrus_orchard_road_puresky_2k.hdr")
+            cubemapLoader.loadFromFile("res/textures/citrus_orchard_road_puresky_2k.hdr", {engine::TextureLoaderOptions{ .flip = false }})
         });
     }
 
@@ -375,7 +472,22 @@ void updateScene(engine::Registry &reg, float deltatime)
     {
         glm::quat &orientation = reg.get<engine::Transform>(e).orientation;
 
-        orientation = glm::rotate(orientation, deltatime * 0.1f, glm::normalize(glm::vec3{0, 0, 1}));
+        orientation = glm::rotate(orientation, deltatime * 0.1f, glm::normalize(glm::vec3{0, 0.5, 1}));
         reg.get<engine::Version>(e).increment();
     }
+
+    for(auto e : reg.view<engine::Transform, Bouncy>())
+    {
+        auto &bouncy = reg.get<Bouncy>(e);
+        auto &transform = reg.get<engine::Transform>(e);
+        transform.position.y -= bouncy.currentOffset;
+        if(bouncy.currentOffset < 0 || bouncy.currentOffset > bouncy.height)
+            bouncy.speed = -bouncy.speed;
+        bouncy.currentOffset += bouncy.speed * deltatime;
+        transform.position.y += bouncy.currentOffset;
+        
+        if(reg.has<engine::Version>(e))
+            reg.get<engine::Version>(e).increment();
+    }
+    
 }

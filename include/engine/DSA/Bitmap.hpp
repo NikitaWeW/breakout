@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/Header/Config.hpp"
 #include "glm/glm.hpp"
 #include <vector>
 
@@ -40,7 +41,7 @@ namespace engine
         unsigned getHeight() const;
         unsigned getNumComponents() const;
         /// @return glm::vec2{width, height}.
-        glm::vec2 getDimensions() const;
+        glm::uvec2 getDimensions() const;
         Format_t const *getData() const;
         Format_t *getData();
     };
@@ -101,7 +102,7 @@ inline unsigned engine::Bitmap<Format_t>::getNumComponents() const
     return m_numComponents; 
 }
 template <typename Format_t> 
-inline glm::vec2 engine::Bitmap<Format_t>::getDimensions() const 
+inline glm::uvec2 engine::Bitmap<Format_t>::getDimensions() const 
 { 
     ENGINE_ASSERT_MSG(m_data.size() == m_height * m_width * m_numComponents, "Bitmap not initialized!");
     return glm::vec2{getWidth(), getHeight()}; 

@@ -1,20 +1,30 @@
-#include <numeric>
 #include "detail.hpp"
+#include "engine/DSA/Data.hpp"
+#include "ogl.hpp"
 #include "stb_rect_pack.h"
+#include <glm/trigonometric.hpp>
 
 // FIXME: This file contains shittiest spaghetti code on planet earth that needs to be nuked.
 // Shut it up: 
-// #define RENDERER_TRACE(...)
+// #define RENDERER_TRACE(...) void(0)
 
 using namespace engine;
 
+constexpr std::array<glm::mat4, 6> CUBE_FACE_MATRICES = {
+    glm::mat4{ { 0, 0,-1, 0 }, { 0, 1, 0, 0 }, {-1, 0, 0, 0 }, { 0, 0, 0, 1 } }, // +X
+    glm::mat4{ { 0, 0, 1, 0 }, { 0, 1, 0, 0 }, { 1, 0, 0, 0 }, { 0, 0, 0, 1 } }, // -X
+    glm::mat4{ { 1, 0, 0, 0 }, { 0, 0,-1, 0 }, { 0, 1, 0, 0 }, { 0, 0, 0, 1 } }, // +Y
+    glm::mat4{ { 1, 0, 0, 0 }, { 0, 0, 1, 0 }, { 0,-1, 0, 0 }, { 0, 0, 0, 1 } }, // -Y
+    glm::mat4{ {-1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0,-1, 0 }, { 0, 0, 0, 1 } }, // +Z
+    glm::mat4{ { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } }, // -Z
+};
 static glm::vec3 getDir(glm::quat q)
 {
     return glm::rotate(q, {0, 0, -1});
 }
 static glm::vec3 getUp(glm::vec3 dir)
 {
-    return glm::abs(glm::dot(dir, {0,1,0})) >= 0.99 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0};
+    return glm::abs(glm::dot(dir, {0,1,0})) >= 0.999 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0};
 }
 
 bool renderer::LightManager::isShadowLightChanged(ecs::entity index, engine::ShadowLight const &light)
@@ -35,6 +45,8 @@ void renderer::LightManager::processPointLight(Entity e_light)
         .position = transform.position,
         .farPlane = 0.0f,
     };
+    if(mPointLights.contains(index))
+        newLight.location = mPointLights.get(index).location;
 
     if(e_light.has<engine::ShadowLight>())
     {
@@ -64,6 +76,8 @@ void renderer::LightManager::processDirLight(Entity e_light)
         .color = light.color,
         .direction = getDir(transform.orientation)
     };
+    if(mDirLights.contains(index))
+        newLight.location = mDirLights.get(index).location;
     
     if(e_light.has<engine::ShadowLight>())
     {
@@ -74,10 +88,11 @@ void renderer::LightManager::processDirLight(Entity e_light)
         
         // TODO: cascade SM
 
+        auto const &cameraTransform = mECamera.get<engine::Transform>();
         mShadowLights[index] = {
             .size = shadowLight.shadowMapSize,
-            .viewMat = glm::lookAt(glm::vec3{0} - (newLight.direction * 10.0f), glm::vec3{0}, getUp(newLight.direction)),
-            .projMat = glm::ortho<float>(-10, 10, -10, 10, shadowLight.nearPlane, shadowLight.farPlane),
+            .viewMat = glm::lookAt(glm::vec3{cameraTransform.position.x, 0, cameraTransform.position.z} - (newLight.direction * 20.0f), glm::vec3{cameraTransform.position.x, 0, cameraTransform.position.z}, getUp(newLight.direction)),
+            .projMat = glm::ortho<float>(-40, 40, -40, 40, shadowLight.nearPlane, shadowLight.farPlane),
         };
         newLight.viewProj = mShadowLights.get(index).projMat * mShadowLights.get(index).viewMat;
     }
@@ -94,9 +109,11 @@ void renderer::LightManager::processSpotLight(Entity e_light)
         .color = light.color,
         .position = transform.position,
         .direction = getDir(transform.orientation),
-        .innerConeAngle = light.innerConeAngle,
-        .outerConeAngle = light.outerConeAngle
+        .innerConeAngle = glm::cos(glm::radians(light.innerConeAngle)),
+        .outerConeAngle = glm::cos(glm::radians(light.outerConeAngle))
     };
+    if(mDirLights.contains(index))
+        newLight.location = mDirLights.get(index).location;
 
     if(e_light.has<engine::ShadowLight>())
     {
@@ -108,7 +125,7 @@ void renderer::LightManager::processSpotLight(Entity e_light)
         mShadowLights[index] = {
             .size = shadowLight.shadowMapSize,
             .viewMat = glm::lookAt(newLight.position, newLight.position + newLight.direction, getUp(newLight.direction)),
-            .projMat = glm::perspective(glm::radians(newLight.outerConeAngle), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
+            .projMat = glm::perspective(glm::radians(light.outerConeAngle), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         };
         newLight.viewProj = mShadowLights.get(index).projMat * mShadowLights.get(index).viewMat;
     }
@@ -193,23 +210,23 @@ void renderer::LightManager::makeAtlas()
         }
     }
 
-    ogl::attachment(mAtlas.fbo, mAtlas.texture, mAtlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT24);
+    ogl::attachment(mAtlas.fbo, mAtlas.texture, mAtlas.size, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT32);
     mAtlas.framesDrawn = 0;
     mAtlas.refreshed = true;
 
-    RENDERER_TRACE("Made {}x{} mAtlas", mAtlas.size.x, mAtlas.size.y);
+    ENGINE_CORE_TRACE("Made {}x{} mAtlas", mAtlas.size.x, mAtlas.size.y);
 
     for(auto const &light : mPointLights.data())
-        RENDERER_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+        ENGINE_CORE_TRACE("Point light.       Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
     for(auto const &light : mDirLights.data())
-        RENDERER_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+        ENGINE_CORE_TRACE("Directional light. Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
     for(auto const &light : mSpotLights.data())
-        RENDERER_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
-    RENDERER_TRACE("================");
-    RENDERER_TRACE("{} viewports: ", mAtlas.viewports.size());
+        ENGINE_CORE_TRACE("Spot light.        Position: [{}, {}], \tsize: {}", light.location.pos.x, light.location.pos.y, light.location.size);
+    ENGINE_CORE_TRACE("================");
+    ENGINE_CORE_TRACE("{} viewports: ", mAtlas.viewports.size());
     for(auto const &viewport : mAtlas.viewports)
-        RENDERER_TRACE("Position: [{}, {}], \tsize: [{}, {}]", viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
-    RENDERER_TRACE("================");
+        ENGINE_CORE_TRACE("Position: [{}, {}], \tsize: [{}, {}]", viewport.pos.x, viewport.pos.y, viewport.size.x, viewport.size.y);
+    ENGINE_CORE_TRACE("================");
 }
 /* void renderer::LightManager::sortViewports()
 {
@@ -254,36 +271,34 @@ void renderer::LightManager::makeDrawLights()
 {
     RENDERER_TRACE("Making {} draw lights", mShadowLights.size());
 
-    // No idea if this is correct...
-    // Edit: looks like it is correct...
-    constexpr std::array<glm::mat4, 6> CUBE_FACE_MATRICES = {
-        glm::mat4{ { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +X
-        glm::mat4{ { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -X
-        glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Y
-        glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // -Y
-        glm::mat4{ { 1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f, -1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }, // +Z
-        glm::mat4{ {-1.0f,  0.0f,  0.0f, 0.0f }, { 0.0f, -1.0f,  0.0f, 0.0f }, { 0.0f,  0.0f,  1.0f, 0.0f }, { 0.0f,  0.0f,  0.0f, 1.0f } }  // -Z
-    };
-
     mAtlas.drawLights.clear();
     for(auto [index, light] : mShadowLights)
     {
         if(isOmnidirectional(index))
         {
+            auto const &pointLight = mPointLights.get(index);
             for(unsigned i = 0; i < 6; ++i)
             {
                 mAtlas.drawLights.emplace_back(DrawLight{
                     .viewMat = CUBE_FACE_MATRICES[i] * light.viewMat,
-                    .projMat = light.projMat
+                    .projMat = light.projMat,
+                    .omnidirectional = true,
+                    .farPlane = pointLight.farPlane,
+                    .position = pointLight.position
                 });
             }
         } else {
             mAtlas.drawLights.emplace_back(DrawLight{
                 .viewMat = light.viewMat,
-                .projMat = light.projMat
+                .projMat = light.projMat,
+                .omnidirectional = false
             });
         }
     }
+}
+void renderer::LightManager::setCamera(engine::Entity e_cam)
+{
+    mECamera = e_cam;
 }
 void renderer::LightManager::setup()
 {
@@ -330,6 +345,7 @@ void renderer::LightManager::tryUpdateLight(Entity light)
 
 void renderer::LightManager::populateBuffers()
 {
+    RENDERER_TRACE("Populating lighting buffers. {} point lights, {} dir lights, {} spot lights, {} draw lights.", mPointLights.size(), mDirLights.size(), mSpotLights.size(), mAtlas.drawLights.size());
     glNamedBufferData(mPointLightsSSBO.id,       mPointLights.size()      * sizeof(renderer::PointLight), mPointLights.data().data(), GL_STATIC_DRAW);
     glNamedBufferData(mDirLightsSSBO.id,         mDirLights.size()        * sizeof(renderer::DirLight),   mDirLights.data().data(),   GL_STATIC_DRAW);
     glNamedBufferData(mSpotLightsSSBO.id,        mSpotLights.size()       * sizeof(renderer::SpotLight),  mSpotLights.data().data(),  GL_STATIC_DRAW);

@@ -56,6 +56,7 @@ void EngineRendererImpl::processTextures()
 
     for(ecs::entity e_cubemap : reg->view<Cubemap>(ecs::exclude_t<renderer::ProcessedTag>{}))
     {
+        RENDERER_TRACE("Processing cubemap e{}", e_cubemap);
         auto const &cubemap = reg->get<Cubemap>(e_cubemap);
 
         reg->emplace<ogl::Cubemap>(e_cubemap, ogl::makeCubemap(cubemap.faces));

@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/DSA/ECS.hpp"
 #include "glm/glm.hpp"
 #include "engine/DSA/Bitmap.hpp"
 #include "glm/gtc/quaternion.hpp"

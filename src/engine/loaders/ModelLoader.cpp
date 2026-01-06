@@ -2,6 +2,7 @@
 #include "engine/Resource/Loaders.hpp"
 #include "engine/Logging/Logging.hpp"
 #include <filesystem>
+#include <fmt/chrono.h>
 
 #include "meshoptimizer.h"
 #include "assimp/Importer.hpp"
@@ -286,9 +287,9 @@ struct engine::ModelLoaderImpl
     ModelLoaderOptions mOptions;
     TextureLoader mTextureLoader;
 
-    aiScene const *mScene;
-    Model *mModel;
-    Registry *mRegistry;
+    aiScene const *mScene = nullptr;
+    Model *mModel = nullptr;
+    Registry *mRegistry = nullptr;
 
     // === === === ===
     ModelLoaderImpl(Registry &reg);
@@ -382,6 +383,17 @@ ModelLoaderImpl::ModelLoaderImpl(Registry &reg)
     };
 }
 
+Material ModelLoader::getDefaultMaterial() const
+{
+    ENGINE_ASSERT_MSG(!this->empty(), "Invalid loader! (make sure to not use default constructor when making an actual loader)");
+    if(this->empty())
+    {
+        ENGINE_CORE_ERROR("Invalid model loader! (make sure to not use default constructor when making an actual loader)");
+        return {};
+    }
+
+    return unwrap().mDefaultMaterial;
+}
 ecs::entity ModelLoaderImpl::fromRawAssimpTexture(aiTexture const *texture)
 {
     ENGINE_ASSERT(texture->mHeight == 0);
@@ -679,6 +691,11 @@ ecs::entity ModelLoader::loadFromFile(std::string_view path, ModelLoaderOptions 
 ecs::entity ModelLoader::loadFromMemory(void const *data, size_t size, ModelLoaderOptions options)
 {
     ENGINE_ASSERT_MSG(!this->empty(), "Invalid loader! (make sure to not use default constructor when making an actual loader)");
+    if(this->empty())
+    {
+        ENGINE_CORE_ERROR("Invalid model loader! (make sure to not use default constructor when making an actual loader)");
+        return 0;
+    }
     MODEL_LOADER_TRACE("---");
     MODEL_LOADER_TRACE("Loading model from memory");
     Assimp::Importer importer;

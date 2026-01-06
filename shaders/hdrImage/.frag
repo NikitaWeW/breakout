@@ -16,6 +16,6 @@ void main() {
     o_color.rgb = mappedColor;
     o_color.rgb = pow(o_color.rgb, vec3(1/2.2)); // apply gamma correction
     o_color.a = 1;
-    o_color.rgb = vec3(linearizeDepth(hdrColor.r, 0.01, 100));
+    // o_color.rgb = vec3(linearizeDepth(hdrColor.r, 0.01, 100));
     // o_color.rgb = vec3(hdrColor.r);
 }

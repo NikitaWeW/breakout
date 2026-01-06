@@ -38,12 +38,11 @@ namespace engine
         glm::uvec2 size{0};
     };
     
+    /// @brief An instance of a model. 
+    /// An entity with an instance could contain its own material which will be used instead of the model material.
     struct Instance
     {
         ecs::entity e_model = 0;
-        /// Overrides the material contained in the Model of the material if not 0. contains engine::Material component.
-        // TODO: dont store materials in entities, store them directly
-        std::optional<Material> materialOverride = std::nullopt;
     };
 
     struct Version

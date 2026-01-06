@@ -2,6 +2,9 @@
 #include "engine/Logging/Logging.hpp"
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
+#include <string>
+#include <unordered_map>
 
 namespace ogl = engine::ogl;
 
@@ -60,38 +63,111 @@ static std::string_view getShaderTypeString(GLenum type) noexcept {
 }
 static std::string_view getFramebufferStatusString(GLenum status) {
     switch (status) {
-        case GL_FRAMEBUFFER_COMPLETE:                       return "GL_FRAMEBUFFER_COMPLETE";
-        case GL_FRAMEBUFFER_UNDEFINED:                      return "GL_FRAMEBUFFER_UNDEFINED";
-        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:          return "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
-        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:  return "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
-        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:         return "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";
-        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:         return "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";
-        case GL_FRAMEBUFFER_UNSUPPORTED:                    return "GL_FRAMEBUFFER_UNSUPPORTED";
-        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:         return "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
-        case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:       return "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
-        default:                                            return "Unknown Framebuffer Status";
+    case GL_FRAMEBUFFER_COMPLETE:                       return "GL_FRAMEBUFFER_COMPLETE";
+    case GL_FRAMEBUFFER_UNDEFINED:                      return "GL_FRAMEBUFFER_UNDEFINED";
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:          return "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:  return "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:         return "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";
+    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:         return "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";
+    case GL_FRAMEBUFFER_UNSUPPORTED:                    return "GL_FRAMEBUFFER_UNSUPPORTED";
+    case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:         return "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
+    case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:       return "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
+    default:                                            return "Unknown Framebuffer Status";
     }
 }
+
+/// @brief Process the include directives in the file.
+/// @return Processed string of the file. IMPORTANT: is not null-terminated.
+static std::string loadFileWithIncludes(std::string path, std::string_view includeIdentifier = "#include", std::string prevDir = "")
+{
+	auto terminatedInclude = std::string{includeIdentifier} + ' ';
+
+	std::ifstream file;
+
+    std::string fullPath = "";
+    if(std::filesystem::exists(prevDir + path)) // Relative
+        fullPath = prevDir + path;
+    else if(std::filesystem::exists(path)) // Absolute
+        fullPath = path;
+    else {
+		ENGINE_CORE_ERROR("Could not open the file \"{}\"!", path);
+		return "";
+	}
+
+    if(fullPath != "")
+    {
+        file = std::ifstream(fullPath);
+        prevDir = fullPath.substr(0, std::min(fullPath.find_last_of("/\\") + 1, fullPath.size()));
+    }
+
+
+    ENGINE_ASSERT(file.is_open());
+
+	std::string fullSourceCode = "", lineBuffer;
+	while(std::getline(file, lineBuffer))
+	{
+		if(lineBuffer.find(terminatedInclude) == 0)
+		{
+			// Remove the include identifier, this will cause the path to remain
+			lineBuffer.erase(0, terminatedInclude.size());
+
+			// Remove quotation marks from the include-string, in case there are any
+			auto lineBufferQuotationMarkPositions = std::remove(lineBuffer.begin(), lineBuffer.end(), '\"');
+			while(lineBuffer.cend() != lineBufferQuotationMarkPositions) {
+				lineBuffer.erase(lineBufferQuotationMarkPositions, lineBuffer.cend());
+				lineBufferQuotationMarkPositions = std::remove(lineBuffer.begin(), lineBuffer.end(), '\"');
+			}
+
+			fullSourceCode += loadFileWithIncludes(lineBuffer, includeIdentifier, prevDir);
+
+			continue;
+		} else {
+            fullSourceCode += lineBuffer + '\n';
+        }
+	}
+
+	file.close();
+
+	return fullSourceCode;
+}
+
+const std::unordered_map<std::string, GLenum> gExtensionToShaderType = {
+    {".vert", GL_VERTEX_SHADER},
+    {".vsh",  GL_VERTEX_SHADER},
+    {".vs",   GL_VERTEX_SHADER},
+    {".geom", GL_GEOMETRY_SHADER},
+    {".gsh",  GL_GEOMETRY_SHADER},
+    {".gs",   GL_GEOMETRY_SHADER},
+    {".frag", GL_FRAGMENT_SHADER},
+    {".fsh",  GL_FRAGMENT_SHADER},
+    {".fs",   GL_FRAGMENT_SHADER},
+    {".comp", GL_COMPUTE_SHADER},
+    {".csh",  GL_COMPUTE_SHADER},
+    {".cs",   GL_COMPUTE_SHADER},
+};
+
 static ogl::Program collectShaders(std::string_view dirpath)
 {
     ogl::Program program;
-    ENGINE_ASSERT_MSG(std::filesystem::exists(dirpath), "");
     program.dirpath = dirpath;
+    if(!std::filesystem::exists(program.dirpath))
+    {
+        ENGINE_CORE_ERROR("Failed to collect shaders from a non-existing directory \"{}\"", program.dirpath);
+        return program;
+    }
     for(auto const &directoryEntry : std::filesystem::recursive_directory_iterator{dirpath}) {
         if(!std::filesystem::is_regular_file(directoryEntry.path())) continue; 
         ogl::Program::Shader shader;
 
         std::string extension = directoryEntry.path().string().substr(directoryEntry.path().string().find_last_of('.'), directoryEntry.path().string().size());
-        if(extension == ".vert") shader.type = GL_VERTEX_SHADER;
-        else if(extension == ".geom") shader.type = GL_GEOMETRY_SHADER;
-        else if(extension == ".frag") shader.type = GL_FRAGMENT_SHADER;
-        else if(extension == ".comp") shader.type = GL_COMPUTE_SHADER;
-        else {
-            continue;
-        }
+        if(gExtensionToShaderType.find(extension) == gExtensionToShaderType.end()) continue;
+        shader.type = gExtensionToShaderType.at(extension);
 
-        std::ifstream filestream{directoryEntry.path()};
-        shader.source = std::string{std::istreambuf_iterator<char>{filestream}, std::istreambuf_iterator<char>{}};
+        
+        // std::ifstream filestream{directoryEntry.path()};
+        // shader.source = std::string{std::istreambuf_iterator<char>{filestream}, std::istreambuf_iterator<char>{}};
+        shader.source = loadFileWithIncludes(directoryEntry.path().string(), "#include");
+        shader.source.push_back('\0');
         program.shaders.emplace_back(std::move(shader));
     }
 
@@ -165,6 +241,8 @@ std::size_t ogl::getSizeOfGLType(GLenum type)
 ogl::Program ogl::compileShader(std::string_view dirpath)
 {
     Program program = collectShaders(dirpath);
+    if(program.shaders.empty())
+        return program; // error message already sent in collectShaders.
 
     for(Program::Shader &shader : program.shaders) {
         if(!compileProgramShader(shader)) {
@@ -181,13 +259,33 @@ ogl::Program ogl::compileShader(std::string_view dirpath)
     return program;
 }
 
+bool ogl::recompileShader(Program &program, std::string_view dirpath)
+{
+    Program newProgram = compileShader(dirpath);
+    if(newProgram.id)
+    {
+        if(program.id)
+        {
+            for(auto &shader : program.shaders)
+                glDeleteShader(shader.id);
+            program.shaders.clear();
+            glDeleteProgram(program.id);
+            program.id = 0;
+        }
+        program = newProgram;
+        return true;
+    }
+
+    return false;
+}
+
 int ogl::getUniform(Program const &program, std::string_view name)
 {
     if(program.locationCache.find(name) != program.locationCache.end()) return program.locationCache[name];
     int location = glGetUniformLocation(program.id, name.data());
     program.locationCache[name] = location;
     if(location == -1) {
-        ENGINE_CORE_WARN("uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
+        ENGINE_CORE_WARN("Uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
     }
     return location;
 }
@@ -198,7 +296,7 @@ int ogl::getUniformBlock(Program const &program, std::string_view name)
     int location = glGetUniformBlockIndex(program.id, name.data());
     program.locationCache[name] = location;
     if(location == -1) {
-        ENGINE_CORE_WARN("uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
+        ENGINE_CORE_WARN("Uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
     }
     return location;
 }
@@ -209,7 +307,7 @@ int ogl::getStorageBlock(Program const &program, std::string_view name)
     int location = glGetProgramResourceIndex(program.id, GL_SHADER_STORAGE_BLOCK, name.data());
     program.locationCache[name] = location;
     if(location == -1) {
-        ENGINE_CORE_WARN("uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
+        ENGINE_CORE_WARN("Uniform \"{}\" is not used or does not exist in shaders from \"{}\".", name, program.dirpath);
     }
     return location;
 }

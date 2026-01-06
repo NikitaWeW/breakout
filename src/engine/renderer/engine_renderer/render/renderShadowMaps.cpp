@@ -2,6 +2,8 @@
 #include "engine/Renderer/EngineRenderer.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
+// Shut it up: 
+// #define RENDERER_TRACE(...)
 using namespace engine;
 
 void EngineRendererImpl::drawSM(size_t first, size_t count)
@@ -74,7 +76,7 @@ void EngineRendererImpl::renderShadowMaps(unsigned toDraw)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+    glCullFace(GL_BACK);
 
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);

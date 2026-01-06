@@ -48,9 +48,9 @@ void Controller::update(engine::Registry &reg)
             velocity = {glm::normalize(velocity)};
         velocity *= controllable.speed * (glfwGetKey(window.glfwWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? controllable.boost : 1);
 
-        for(; !listener.keyEvents.empty(); listener.keyEvents.pop())
-        {
-            auto const &event = listener.keyEvents.front();
+            for(; !listener.keyEvents.empty(); listener.keyEvents.pop())
+            {
+                auto const &event = listener.keyEvents.front();
 
             if(event.key == GLFW_KEY_ESCAPE && event.action == GLFW_PRESS)
             {
