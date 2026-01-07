@@ -2,6 +2,7 @@
 #include "engine/DSA/ECS.hpp"
 #include "glm/glm.hpp"
 #include "engine/DSA/Bitmap.hpp"
+#include <array>
 #include "glm/gtc/quaternion.hpp"
 #include <vector>
 #include <string>
