@@ -39,10 +39,11 @@ namespace engine
     {
         glm::vec3 color = {1, 1, 1};
         glm::vec2 size = {1, 1};
+        // TODO: maybe SDF will describe it better?
         enum class Shape
         {
-            RECTANGULAR, CIRCULAR
-        } shape = Shape::RECTANGULAR;
+            RECTANGLE, CIRCLE, SPHERE
+        } shape = Shape::RECTANGLE;
     };
 
     /// @brief Tag to render Instance as transparent. 
@@ -80,11 +81,10 @@ namespace engine
         /// @param reg The registry to draw to.
         /// @param conf The config duh.
         EngineRenderer(Registry &reg, EngineRendererConfig conf);
+        ~EngineRenderer();
 
         void processData();
-        // FIXME: registry is unused for now.
-        // TODO: Remove the per-renderer registry from the constructor and make renderer setup automatically for each registry.
-        void draw(Registry &) override;
+        void draw() override;
 
         void recompileShaders();
         void toggleDebugView();

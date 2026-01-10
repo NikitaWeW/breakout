@@ -23,9 +23,10 @@ set(ASSIMP_BUILD_TESTS OFF)
 set(ASSIMP_INSTALL OFF)
 set(ASSIMP_WARNINGS_AS_ERRORS OFF)
 
-# WARNING: nicecs is still in parallel development (minor tweaks mostly), using commit hashes to avoid spamming releases. Change to release version when mature.
+# nicecs is still in parallel development (minor tweaks mostly), using commit hashes to avoid spamming releases. Change to release version when mature.
 CPMAddPackage("gh:nikitawew/nicecs#c2b2f0f")
-
+CPMAddPackage("gh:nlohmann/json@3.12.0")
+CPMAddPackage("gh:pboettch/json-schema-validator#2.4.0")
 CPMAddPackage("gh:glfw/glfw#3.4")
 CPMAddPackage("gh:gabime/spdlog@1.16.0")
 CPMAddPackage("gh:assimp/assimp@6.0.2")
@@ -35,7 +36,7 @@ file(GLOB_RECURSE DEPENDENCIES_SOURCES "dependencies/compile/*")
 add_library(dependencies ${DEPENDENCIES_SOURCES})
 target_include_directories(dependencies PRIVATE dependencies/include)
 target_include_directories(dependencies INTERFACE dependencies/include)
-target_link_libraries(dependencies INTERFACE glfw ecs spdlog assimp glm)
+target_link_libraries(dependencies INTERFACE glfw ecs spdlog assimp glm nlohmann_json::nlohmann_json nlohmann_json_schema_validator::validator)
 
 ######################################################################
 
@@ -58,9 +59,11 @@ install(TARGETS engine DESTINATION engine/lib)
 
 file(GLOB_RECURSE SOURCES "src/app/*.cpp")
 
+CPMAddPackage("gh:CLIUtils/CLI11@2.6.1")
+
 add_executable(app ${SOURCES})
 target_include_directories(app PRIVATE src src/app)
-target_link_libraries(app PRIVATE engine)
+target_link_libraries(app PRIVATE engine CLI11::CLI11)
 
 install(DIRECTORY DESTINATION app)
 install(DIRECTORY res DESTINATION app)

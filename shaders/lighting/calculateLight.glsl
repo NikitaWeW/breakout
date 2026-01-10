@@ -111,7 +111,9 @@ vec3 calculateShadow(DirLight light, vec3 normal, vec3 viewDir, vec3 fragPos, sa
     float shadow = 0.0;
     vec2 texelSize = vec2(1.0 / light.depthMapSize);
     // float bias = mix(1e-1, 1e-6, mix(0.5, 0.9, abs(dot(normal, light.direction))));
-    float bias = 20 * max(abs(dFdx(projectedCoords.z)), abs(dFdy(projectedCoords.z)));
+    // float bias = 0.001 * max(abs(dFdx(projectedCoords.z)), abs(dFdy(projectedCoords.z)));
+    // float bias = max(0.05 * (1.0 - dot(normal, light.direction)), 0.005);  
+    float bias = 0.0001;
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)

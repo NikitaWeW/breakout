@@ -8,10 +8,10 @@ using namespace engine;
 void EngineRendererImpl::processModels()
 {
     using namespace engine;
-    for(ecs::entity e_model : reg->view<Model>(ecs::exclude_t<renderer::ProcessedTag>{}))
+    for(ecs::entity e_model : mReg->view<Model>(ecs::exclude_t<renderer::ProcessedTag>{}))
     {
         RENDERER_TRACE("Processing model e{}", e_model);
-        auto const &model = reg->get<Model>(e_model);
+        auto const &model = mReg->get<Model>(e_model);
         renderer::Model newModel;
         newModel.skeleton = model.skeleton;
         newModel.animated = model.skeleton.boneMap.size() != 0;
@@ -22,7 +22,7 @@ void EngineRendererImpl::processModels()
             newMesh.mode = GL_TRIANGLES;
             newMesh.count = mesh.geometry.indices.size();
     
-            newMesh.material = renderer::convertMaterial(*reg, mesh.material);
+            newMesh.material = renderer::convertMaterial(*mReg, mesh.material);
     
             glCreateVertexArrays(1, &newMesh.vao.id);
             
@@ -39,28 +39,28 @@ void EngineRendererImpl::processModels()
             newModel.meshes.emplace_back(std::move(newMesh));
         }
 
-        reg->emplace<renderer::Model>(e_model, std::move(newModel));
-        reg->emplace<renderer::ProcessedTag>(e_model);
+        mReg->emplace<renderer::Model>(e_model, std::move(newModel));
+        mReg->emplace<renderer::ProcessedTag>(e_model);
     }
 }
 void EngineRendererImpl::processTextures()
 {
-    for(ecs::entity e_texture : reg->view<Texture>(ecs::exclude_t<renderer::ProcessedTag>{}))
+    for(ecs::entity e_texture : mReg->view<Texture>(ecs::exclude_t<renderer::ProcessedTag>{}))
     {
         RENDERER_TRACE("Processing texture e{}", e_texture);
-        auto const &texture = reg->get<Texture>(e_texture);
+        auto const &texture = mReg->get<Texture>(e_texture);
 
-        reg->emplace<ogl::Texture>(e_texture, ogl::makeTexture(texture.data, texture.srgb));
-        reg->emplace<renderer::ProcessedTag>(e_texture);
+        mReg->emplace<ogl::Texture>(e_texture, ogl::makeTexture(texture.data, texture.srgb));
+        mReg->emplace<renderer::ProcessedTag>(e_texture);
     }
 
-    for(ecs::entity e_cubemap : reg->view<Cubemap>(ecs::exclude_t<renderer::ProcessedTag>{}))
+    for(ecs::entity e_cubemap : mReg->view<Cubemap>(ecs::exclude_t<renderer::ProcessedTag>{}))
     {
         RENDERER_TRACE("Processing cubemap e{}", e_cubemap);
-        auto const &cubemap = reg->get<Cubemap>(e_cubemap);
+        auto const &cubemap = mReg->get<Cubemap>(e_cubemap);
 
-        reg->emplace<ogl::Cubemap>(e_cubemap, ogl::makeCubemap(cubemap.faces));
-        reg->emplace<renderer::ProcessedTag>(e_cubemap);
+        mReg->emplace<ogl::Cubemap>(e_cubemap, ogl::makeCubemap(cubemap.faces));
+        mReg->emplace<renderer::ProcessedTag>(e_cubemap);
     }
 }
 
@@ -70,8 +70,8 @@ void EngineRendererImpl::processData()
     processTextures();
     processModels();
 
-    for(auto e_light : reg->viewAny<engine::PointLight, engine::DirectionalLight, engine::SpotLight, engine::AreaLight>())
-        mLightManager.tryUpdateLight(Entity{*reg, e_light});
+    for(auto e_light : mReg->viewAny<engine::PointLight, engine::DirectionalLight, engine::SpotLight, engine::AreaLight>())
+        mLightManager.tryUpdateLight(Entity{*mReg, e_light});
 
     mLightManager.apply();
 }

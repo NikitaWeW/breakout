@@ -19,7 +19,10 @@ struct ModelLoaderOptions
     bool flipUVs = false;
     TextureLoaderOptions textureOptions;
 };
-struct CubemapLoaderOptions : public TextureLoaderOptions {};
+struct CubemapLoaderOptions 
+{
+    bool flip = true;
+};
 
 
 // TODO: Replace ecs::entity with engine::Entity

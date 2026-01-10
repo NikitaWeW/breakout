@@ -1,8 +1,15 @@
+#include "engine/DSA/Data.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "engine/Resource/Resources.hpp"
 #include "engine/Resource/Loaders.hpp"
 #include "engine/Logging/Logging.hpp"
+#include <assimp/light.h>
+#include <assimp/types.h>
 #include <filesystem>
 #include <fmt/chrono.h>
+#include <glm/ext/quaternion_geometric.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/trigonometric.hpp>
 
 #include "meshoptimizer.h"
 #include "assimp/Importer.hpp"
@@ -28,10 +35,17 @@ constexpr glm::mat4 toMat4(aiMatrix4x4 const &from)
     to[0][3] = from.d1; to[1][3] = from.d2; to[2][3] = from.d3; to[3][3] = from.d4;
     return to;
 }
-template<typename aiVector3X>
-constexpr glm::vec3 toVec3(aiVector3X const &aivector)
+constexpr glm::vec3 toVec3(aiVector3D const &aivector)
 {
     return glm::vec3{(float) aivector.x, (float) aivector.y, (float) aivector.z};
+}
+constexpr glm::vec3 toVec3(aiColor3D const &aivector)
+{
+    return glm::vec3{(float) aivector.r, (float) aivector.g, (float) aivector.b};
+}
+constexpr glm::vec2 toVec2(aiVector2D const &aivector)
+{
+    return glm::vec2((float) aivector.x, (float) aivector.y);
 }
 constexpr glm::quat toQuat(aiQuaternion const &aiquaternion)
 {
@@ -300,6 +314,7 @@ struct engine::ModelLoaderImpl
     ecs::entity load();
     void processNodeMeshes(aiNode const *node, glm::mat4 parentTransform = glm::mat4{1.0f});
     Animation processAnimation(aiAnimation const *animation);
+    ecs::entity processLight(aiLight const *light);
 };
 
 ModelLoaderImpl::ModelLoaderImpl(Registry &reg)
@@ -528,7 +543,7 @@ void ModelLoaderImpl::processNodeMeshes(aiNode const *node, glm::mat4 parentTran
     MODEL_LOADER_TRACE("Processing node \"{}\"", node->mName.C_Str());
     glm::mat4 nodeTransform = parentTransform * toMat4(node->mTransformation);
     for(unsigned i = 0; i < node->mNumMeshes; ++i) {
-        mModel->meshes.emplace_back(std::move(processMesh(mScene->mMeshes[node->mMeshes[i]], nodeTransform)));
+        mModel->meshes.emplace_back(processMesh(mScene->mMeshes[node->mMeshes[i]], nodeTransform));
     }
     for(unsigned i = 0; i < node->mNumChildren; ++i) {
         processNodeMeshes(node->mChildren[i], nodeTransform);
@@ -610,6 +625,57 @@ void calculateParent(Model::Skeleton &skeleton, aiNode const *node, int parent)
         calculateParent(skeleton, node->mChildren[i], parent);
     }
 }
+ecs::entity ModelLoaderImpl::processLight(aiLight const *light)
+{
+    switch(light->mType)
+    {
+    case aiLightSource_POINT:
+        return mRegistry->create(
+            engine::PointLight{
+                .color = toVec3(light->mColorDiffuse) * (1.0f / (light->mAttenuationQuadratic))
+            },
+            engine::Transform{
+                .position = toVec3(light->mPosition)
+            }
+        );
+    case aiLightSource_DIRECTIONAL:
+        return mRegistry->create(
+            engine::DirectionalLight{
+                .color = toVec3(light->mColorDiffuse) * (1.0f / (light->mAttenuationQuadratic))
+            },
+            engine::Transform{
+                .orientation = glm::quatLookAt(glm::normalize(toVec3(light->mDirection)), glm::normalize(toVec3(light->mUp)))
+                // .orientation = glm::quatLookAt(toVec3(light->mDirection), glm::abs(glm::dot(toVec3(light->mDirection), glm::vec3{0, 1, 0})) > 0.999 ? glm::vec3{1, 0, 0} : glm::vec3{0, 1, 0})
+            }
+        );
+    case aiLightSource_SPOT:
+        return mRegistry->create(
+            engine::SpotLight{
+                .color = toVec3(light->mColorDiffuse) * (1.0f / (light->mAttenuationQuadratic)),
+                .innerConeAngle = glm::degrees(light->mAngleInnerCone),
+                .outerConeAngle = glm::degrees(light->mAngleOuterCone)
+            },
+            engine::Transform{
+                .position = toVec3(light->mPosition),
+                .orientation = glm::quatLookAt(glm::normalize(toVec3(light->mDirection)), glm::normalize(toVec3(light->mUp)))
+            }
+        );
+    case aiLightSource_AREA:
+        return mRegistry->create(
+            engine::AreaLight{
+                .color = toVec3(light->mColorDiffuse) * (1.0f / (light->mAttenuationQuadratic)),
+                .size = toVec2(light->mSize)
+            },
+            engine::Transform{
+                .position = toVec3(light->mPosition),
+                .orientation = glm::quatLookAt(glm::normalize(toVec3(light->mDirection)), glm::normalize(toVec3(light->mUp)))
+            }
+        );
+    default:
+        ENGINE_CORE_WARN("Unknown assimp light type: {}", (int) light->mType);
+        return 0;
+    }
+}
 
 ecs::entity ModelLoaderImpl::load()
 {
@@ -628,12 +694,17 @@ ecs::entity ModelLoaderImpl::load()
 
     for(unsigned i = 0; i < mScene->mNumAnimations; ++i)
     {
-        mModel->animations.emplace_back(std::move(processAnimation(mScene->mAnimations[i])));
+        mModel->animations.emplace_back(processAnimation(mScene->mAnimations[i]));
+    }
+    for(unsigned i = 0; i < mScene->mNumLights; ++i)
+    {
+        mModel->lights.emplace_back(processLight(mScene->mLights[i]));
     }
 
     // TODO: morph targets
 
     return mRegistry->create(std::move(*mModel));
+    mModel = nullptr;
 }
 
 constexpr unsigned ASSIMP_FLAGS =

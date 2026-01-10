@@ -1,7 +1,8 @@
-#pragma once
+    #pragma once
 
 #include "engine/Header/Config.hpp"
 #include "nicecs/ecs.hpp"
+#include <cstdint>
 #include <shared_mutex>
 
 namespace engine
@@ -29,9 +30,9 @@ private:
     Registry *mReg = nullptr;
     ecs::entity mEntity = 0;
 public:
-    inline explicit Entity() = default;
-    inline explicit Entity(Registry &reg) : mReg(&reg), mEntity(mReg->create<>()) {}
-    inline explicit Entity(Registry &reg, ecs::entity e) : mReg(&reg), mEntity(e) {}
+    inline Entity() = default;
+    inline Entity(Registry &reg) : mReg(&reg), mEntity(mReg->create<>()) {}
+    inline Entity(Registry &reg, ecs::entity e) : mReg(&reg), mEntity(e) {}
     inline ecs::entity entity() const { return mEntity; }
     inline Registry const &reg() const 
     { 
@@ -68,6 +69,8 @@ public:
     /// @copydoc ecs::registry::valid
     /// Also checks if the registry is valid (not nullptr)
     inline bool valid() const { return mReg && reg().valid(entity()); }
+
+    inline bool operator==(Entity const &o) const { return mEntity == o.mEntity && mReg == o.mReg; }
 };
 
 /// @brief Transform a registry and a list of entities into the list of engine::Entity's
@@ -82,3 +85,14 @@ constexpr ContainerT<Entity> toEntities(Registry &reg, ContainerT<ecs::entity> c
 
 constexpr ecs::entity INVALID_ENTITY = 0u;
 } // namespace engine
+
+namespace std {
+    template<>
+    struct hash<engine::Entity> {
+        size_t operator()(engine::Entity const &e) const {
+            size_t seed = std::hash<std::uintptr_t>{}(reinterpret_cast<std::uintptr_t>(&e.reg()));
+            seed ^= std::hash<ecs::entity>{}(e.entity()) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            return seed;
+        }
+    };
+}

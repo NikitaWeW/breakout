@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "3D Scene Schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Scene name"
+    },
+    "models": {
+      "type": "array",
+      "description": "List of models in the scene",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File path to the model asset"
+          },
+          "material": {
+            "type": "object",
+            "properties": {
+              "textures": {
+                "type": "object",
+                "properties": {
+                  "albedo": { "type": "string" },
+                  "metallic": { "type": "string" },
+                  "roughness": { "type": "string" },
+                  "ambient": { "type": "string" },
+                  "normal": { "type": "string" },
+                  "displacement": { "type": "string" },
+                  "alpha": { "type": "string" }
+                }
+              },
+              "properties": {
+                "type": "object",
+                "properties": {
+                  "ambient": {
+                    "type": "array",
+                    "items": { "type": "number" },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "RGB 0-1"
+                  },
+                  "albedo": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": { "type": "number" },
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "description": "RGBA 0-1"
+                      },
+                      {
+                        "type": "string",
+                        "description": "HEX"
+                      }
+                    ]  
+                  },
+                  "specular": {
+                    "type": "array",
+                    "items": { "type": "number" },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "RGB 0-1"
+                  },
+                  "emission": {
+                    "type": "array",
+                    "items": { "type": "number" },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "RGB 0-1"
+                  },
+                  "shininess": { "type": "number" },
+                  "metallic": { "type": "number" },
+                  "ior": { "type": "number" }
+                }
+              }
+            },
+            "required": [ "textures", "properties" ]
+          },
+          "transform": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "XYZ translation"
+              },
+              "rotation": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "ZXY / pitch yaw roll euler (degrees)"
+              },
+              "scale": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "XYZ scale"
+              }
+            }
+          }
+        },
+        "required": ["path"]
+      }
+    },
+    "lights": {
+      "type": "array",
+      "description": "Lights in the scene",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["point", "directional", "spot", "area"]
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "RGB 0-1"
+              },
+              {
+                "type": "string",
+                "description": "HEX"
+              }
+            ]
+          },
+          "intensity": {
+            "type": "number"
+          },
+          "position": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "direction": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "shape": {
+            "type": "string",
+            "enum": ["rectangle", "circle"],
+            "description": "Shape of the area light"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Width and height for rectangle/disk"
+          },
+          "in out cones": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "0 - inner cone, 1 - outer cone (degrees)"
+          },
+          "shadow": {
+            "type": "object",
+            "properties": {
+              "znear": { "type": "number" },
+              "zfar": { "type": "number" },
+              "sm size": { "type": "number" }
+            },
+            "required": [ "znear", "zfar", "sm size"]
+          }
+        },
+        "required": ["type", "color", "intensity"]
+      }
+    }
+  },
+  "camera": {
+    "type": "object",
+    "properties": {
+      "position": {
+        "type": "array",
+        "items": { "type": "number" },
+        "minItems": 3,
+        "maxItems": 3
+      },
+      "lookat": {
+        "type": "array",
+        "items": { "type": "number" },
+        "minItems": 3,
+        "maxItems": 3
+      },
+      "speed": { "type": "number" },
+      "fov": { "type": "number" },
+      "boost": { "type": "number" },
+      "sensitivity": { "type": "number" },
+      "zfar": { "type": "number" },
+      "znear": { "type": "number" },
+      "required": [ "position", "lookat", "speed", "sensitivity" ]
+    }
+  },
+  "skybox": {
+    "type": "string"
+  },
+  "required": [ "name", "models", "camera" ]
+}

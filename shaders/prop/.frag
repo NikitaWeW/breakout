@@ -59,6 +59,7 @@ void main()
     vec2 texCoords = fs_in.texCoords;
     vec3 viewDir = normalize(-u_viewMat[3].xyz - fs_in.fragPos);
     vec3 normal = fs_in.TBN * normalize(texture(u_material.textures.normal, texCoords).rgb * 2.0 - 1.0);
+    normal = fs_in.TBN[2];
 
     vec4 color = texture(u_material.textures.albedo, texCoords) * u_material.properties.albedo;
 

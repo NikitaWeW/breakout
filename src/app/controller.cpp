@@ -3,16 +3,16 @@
 
 #define CAMERA_COMPONENTS engine::Camera, engine::Transform, Controller::ControllableCamera, engine::Velocity, engine::input::InputListener
 
-ecs::entity Controller::createCamera(engine::Registry &reg, glm::vec3 pos, glm::vec3 target)
+engine::Entity Controller::createCamera(engine::Registry &reg, glm::vec3 pos, glm::vec3 target)
 {
     auto e = reg.create<CAMERA_COMPONENTS>();
     reg.get<Controller::ControllableCamera>(e).window = reg.view<engine::Window>().at(0);
-    auto up = abs(glm::dot(glm::normalize(target - pos), glm::vec3{0,1,0})) > 0.99 ? glm::vec3{1,0,0} : glm::vec3{0,1,0};
+    auto up = glm::abs(glm::dot(glm::normalize(target - pos), glm::vec3{0,1,0})) > 0.99 ? glm::vec3{1,0,0} : glm::vec3{0,1,0};
     reg.get<engine::Transform>(e) = {
         .position = pos,
         .orientation = glm::quat_cast(glm::lookAt(pos, target, up))
     };
-    return e;
+    return {reg, e};
 }
 
 void Controller::update(engine::Registry &reg)
@@ -85,7 +85,7 @@ void Controller::update(engine::Registry &reg)
             if(controllable.locked)
             {
                 controllable.fov -= event.scroll * 4;
-                controllable.fov = glm::clamp<float>(controllable.fov, 0.2, 45);
+                controllable.fov = glm::clamp<float>(controllable.fov, 0.2, 90);
             }
         }
 

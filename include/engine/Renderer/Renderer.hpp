@@ -1,5 +1,4 @@
 #pragma once
-#include "engine/DSA/ECS.hpp"
 
 namespace engine
 {
@@ -10,6 +9,6 @@ namespace engine
         IRenderer() = default;
         virtual ~IRenderer() = default;
 
-        virtual void draw(Registry &) = 0;
+        virtual void draw() = 0;
     };
 } // namespace engine

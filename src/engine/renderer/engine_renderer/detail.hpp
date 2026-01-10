@@ -132,7 +132,6 @@ namespace engine::renderer
     };
 
     // TODO: Document it!
-    // FIXME: A bit nicer than before, though I need to find a cleaner solution.
     class LightManager
     {
     private:
@@ -237,15 +236,15 @@ struct engine::EngineRendererImpl
 {
     // TODO: change the type to mField
 
-    ogl::Framebuffer oitFBO;
-    ogl::Texture oitAccumTexture;
-    ogl::Texture oitRevealageTexture;
+    ogl::Framebuffer mOitFbo;
+    ogl::Texture mOitAccumTexture;
+    ogl::Texture mOitRevealageTexture;
 
-    ogl::Framebuffer mainFBO;
-    ogl::Texture mainFBOColor;
-    ogl::Renderbuffer mainFBORBO;
+    ogl::Framebuffer mMainFbo;
+    ogl::Texture mMainFboColor;
+    ogl::Renderbuffer mMainFboRbo;
 
-    glm::uvec2 prevCamSize{0};
+    glm::uvec2 mPrevCamSize{0};
 
     struct Shaders
     {
@@ -263,17 +262,17 @@ struct engine::EngineRendererImpl
             skyboxShader.id && 
             depthMapShader.id;
         }
-    } shaders;
+    } mShaders;
 
     // The model loader should handle the default textures. This one is for edge cases.
-    ogl::Texture defaultTexture;
+    ogl::Texture mDefaultTexture;
 
     renderer::LightManager mLightManager;
 
-    EngineRendererConfig config;
-    Registry *reg = nullptr;
+    EngineRendererConfig mConfig;
+    Registry *mReg = nullptr;
 
-    bool debugView = false;
+    bool mIsDebugView = false;
 
     void renderMainInstance(engine::ogl::Program const &shader, ecs::entity const &e_instance);
     void renderMain();
@@ -281,14 +280,13 @@ struct engine::EngineRendererImpl
     void drawSM(size_t first, size_t count);
     void renderShadowMaps(unsigned toDraw);
     
-    void setupPipeline();
-
+    void draw();
+    
     void processModels();
     void processTextures(); 
-
     void processData();
-    void draw();
-
+    
+    void setupPipeline();
     void compileShaders();
     void setup();
 };

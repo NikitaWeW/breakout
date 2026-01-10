@@ -91,7 +91,7 @@ void renderer::LightManager::processDirLight(Entity e_light)
         auto const &cameraTransform = mECamera.get<engine::Transform>();
         mShadowLights[index] = {
             .size = shadowLight.shadowMapSize,
-            .viewMat = glm::lookAt(glm::vec3{cameraTransform.position.x, 0, cameraTransform.position.z} - (newLight.direction * 20.0f), glm::vec3{cameraTransform.position.x, 0, cameraTransform.position.z}, getUp(newLight.direction)),
+            .viewMat = glm::lookAt(glm::vec3{cameraTransform.position.x, 0, cameraTransform.position.z} - (newLight.direction * 50.0f), glm::vec3{cameraTransform.position.x, 0, cameraTransform.position.z}, getUp(newLight.direction)),
             .projMat = glm::ortho<float>(-40, 40, -40, 40, shadowLight.nearPlane, shadowLight.farPlane),
         };
         newLight.viewProj = mShadowLights.get(index).projMat * mShadowLights.get(index).viewMat;

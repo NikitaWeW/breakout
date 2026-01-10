@@ -21,27 +21,27 @@ void EngineRendererImpl::drawSM(size_t first, size_t count)
     glDisable(GL_SCISSOR_TEST);
 
     // TODO: transparent object shadows
-    for(ecs::entity e_instance : reg->view<Instance>(ecs::exclude_t</**Transparent, **/NoShadow>{}))
+    for(ecs::entity e_instance : mReg->view<Instance>(ecs::exclude_t</**Transparent, **/NoShadow>{}))
     {
-        auto const &instance = reg->get<engine::Instance>(e_instance);
-        ENGINE_ASSERT_MSG(reg->has<renderer::ProcessedTag>(instance.e_model), "Forgot to call engine::EngineRenderer::processData()?");
-        renderer::Model const &model = reg->get<renderer::Model>(instance.e_model);
-        bool animated = model.animated && reg->has<CurrentAnimation>(e_instance);
+        auto const &instance = mReg->get<engine::Instance>(e_instance);
+        ENGINE_ASSERT_MSG(mReg->has<renderer::ProcessedTag>(instance.e_model), "Forgot to call engine::EngineRenderer::processData()?");
+        renderer::Model const &model = mReg->get<renderer::Model>(instance.e_model);
+        bool animated = model.animated && mReg->has<CurrentAnimation>(e_instance);
 
         for(auto const &mesh : model.meshes)
         {
-            glm::mat4 modelMat = reg->has<engine::Transform>(e_instance) ? reg->get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
+            glm::mat4 modelMat = mReg->has<engine::Transform>(e_instance) ? mReg->get<engine::Transform>(e_instance).getMat() : glm::mat4{1.0f};
 
-            glUniformMatrix4fv(ogl::getUniform(shaders.depthMapShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
+            glUniformMatrix4fv(ogl::getUniform(mShaders.depthMapShader, "u_modelMat"),  1, false, glm::value_ptr(modelMat));
             if(animated)
             {
-                auto const &boneMatrices = reg->get<CurrentAnimation>(e_instance).boneMatrices;
+                auto const &boneMatrices = mReg->get<CurrentAnimation>(e_instance).boneMatrices;
                 ENGINE_ASSERT(boneMatrices.size() == model.skeleton.boneMap.size());
-                glUniformMatrix4fv(ogl::getUniform(shaders.depthMapShader, "u_boneMatrices"), boneMatrices.size(), false, glm::value_ptr(boneMatrices.front())); // TODO: switch to ssbo or ubo.
+                glUniformMatrix4fv(ogl::getUniform(mShaders.depthMapShader, "u_boneMatrices"), boneMatrices.size(), false, glm::value_ptr(boneMatrices.front())); // TODO: switch to ssbo or ubo.
             }
-            glUniform1i(ogl::getUniform(shaders.depthMapShader, "u_animated"), animated);
+            glUniform1i(ogl::getUniform(mShaders.depthMapShader, "u_animated"), animated);
 
-            glUniform1ui(ogl::getUniform(shaders.depthMapShader, "u_first"), first);
+            glUniform1ui(ogl::getUniform(mShaders.depthMapShader, "u_first"), first);
 
             glBindVertexArray(mesh.vao.id);
             glDrawElementsInstanced(mesh.mode, mesh.count, GL_UNSIGNED_INT, nullptr, count);
@@ -76,13 +76,13 @@ void EngineRendererImpl::renderShadowMaps(unsigned toDraw)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    glCullFace(GL_FRONT);
 
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, atlas.drawLightsSSBO.id);
-    glUseProgram(shaders.depthMapShader.id);
+    glUseProgram(mShaders.depthMapShader.id);
 
     // Annoyingly this approach is limited by GL_MAX_VIEWPORTS, so the rendering is done in batches.
     unsigned maxDraw = getMaxViewports();

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <memory>
 
 namespace engine
@@ -6,6 +7,7 @@ namespace engine
     /// @brief PIMPL / Opaque pointer.
     /// @tparam TObject The type of the implementation class. Usually written as YourClass : public Handle<struct YourClassImpl>
     /// @tparam TPointer The smart pointer type to use to store the implementation pointer.
+    /// FIXME: Using shared pointer is probably a wrong choice here.
     template <typename TObject, template<typename> typename TPointer = std::shared_ptr>
     class Handle
     {

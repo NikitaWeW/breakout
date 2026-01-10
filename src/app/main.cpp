@@ -1,10 +1,15 @@
+#include <GLFW/glfw3.h>
 #include <iostream>
 #include <chrono>
+#include <memory>
 #include <thread>
-#include "argparse.h"
+#include "CLI/CLI.hpp"
 
 #include "engine/DSA/Data.hpp"
+#include "engine/Header/Config.hpp"
 #include "engine/Input/Input.hpp"
+#include "engine/Logging/Logging.hpp"
+#include "engine/Renderer/EngineRenderer.hpp"
 #include "scene.hpp"
 #include "controller.hpp"
 #include "cooload.hpp"
@@ -18,25 +23,17 @@
 
 int main(int argc, char const **argv) {
     // TODO: make loading screen work nicer with logging
-    bool loadingScreen = false;
     bool vsync = true;
+    bool loadingScreen = false;
+    std::string scenePath = "";
 
-    argparse::ArgumentParser parser("app", "");
-    parser.add_argument()
-        .names({ "-l", "--loading-screen" })
-        .description("toggle fancy loading screen with a spinning cube")
-        .required(false);
-
-    auto err = parser.parse(argc, argv);
-    if(err) 
     {
-        std::cout << err << std::endl;
-        parser.print_help();
-        return -1;
+        CLI::App cli("An engine example");
+        cli.add_flag("-l,--loading-screen", loadingScreen, "Enable loading screen");
+        cli.add_option("--path", scenePath, "The path to the scene json file")->required();
+    
+        CLI11_PARSE(cli, argc, argv);
     }
-
-    if(parser.exists("loading-screen"))
-        loadingScreen = parser.get<bool>("l");
 
     constexpr unsigned toLoad = 3 + 1;
     float progress = 0; // will be easier once i'll implement some kind of asset manager.
@@ -75,25 +72,29 @@ int main(int argc, char const **argv) {
     auto e_listener = reg.create<engine::input::InputListener>();
     auto &listener = reg.get<engine::input::InputListener>(e_listener);
 
-    createScene(reg);
+    SceneLoader loader{reg};
+    ENGINE_INFO("Loading \"{}\" scene...", scenePath);
+    auto scene = loader.load(scenePath);
+
+    if(!scene.valid)
+    {
+        ENGINE_ERROR("Failed to load the scene \"{}\"", scenePath);
+        progress = 1;
+        loadingScreenThread.join();
+        return -1;
+    }
 
     INC_PROGRESS();
     
     engine::input::setup(reg);
 
+    ENGINE_ASSERT(!reg.view<Controller::ControllableCamera>().empty());
     ecs::entity e_camera = reg.view<Controller::ControllableCamera>().at(0);
-    {
-        auto &camera = reg.get<Controller::ControllableCamera>(e_camera);
-        camera.speed = 4;
-        camera.sensitivity = 0.125;
-    }
-
-    engine::EngineRenderer mainRenderer{reg, {
+    auto mainRenderer = std::make_unique<engine::EngineRenderer>(reg, engine::EngineRendererConfig{
         .e_camera = e_camera,
         .MAX_SHADOW_MAP_FRAMES = 3
-    }};
-
-    engine::IRenderer *renderer = &mainRenderer;
+    });
+    engine::IRenderer *renderer = mainRenderer.get();
 
     engine::Animator animator;
     Controller controller;
@@ -118,9 +119,30 @@ int main(int argc, char const **argv) {
         {
             auto const &event = listener.keyEvents.front();
             if(event.key == GLFW_KEY_R && event.action == GLFW_PRESS)
-                mainRenderer.recompileShaders();
+            {
+                ENGINE_CORE_INFO("Recompiling shaders!");
+                mainRenderer->recompileShaders();
+
+                if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+                {
+                    ENGINE_CORE_INFO("Reloading scene!");
+                    for(auto e : scene.entities)
+                        e.reg().destroy(e.entity());
+                    scene.entities.clear();
+                    scene = loader.load(scene.path);
+
+                    ENGINE_ASSERT(!reg.view<Controller::ControllableCamera>().empty());
+                    e_camera = reg.view<Controller::ControllableCamera>().at(0);
+                    mainRenderer.reset();
+                    mainRenderer = std::make_unique<engine::EngineRenderer>(reg, engine::EngineRendererConfig{
+                        .e_camera = e_camera,
+                        .MAX_SHADOW_MAP_FRAMES = 3
+                    });
+                    renderer = mainRenderer.get();
+                }
+            }
             if(event.key == GLFW_KEY_F && event.action == GLFW_PRESS)
-                mainRenderer.toggleDebugView();
+                mainRenderer->toggleDebugView();
             if(event.key == GLFW_KEY_V && event.action == GLFW_PRESS)
             {
                 vsync = !vsync;
@@ -139,7 +161,7 @@ int main(int argc, char const **argv) {
         controller.update(reg);
         animator.update(reg, deltatime);
         physics->update(reg, deltatime);
-        renderer->draw(reg);
+        renderer->draw();
 
         glfwSwapBuffers(window);
 

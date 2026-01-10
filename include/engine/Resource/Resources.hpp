@@ -4,6 +4,7 @@
 #include "engine/DSA/Bitmap.hpp"
 #include <array>
 #include "glm/gtc/quaternion.hpp"
+#include <nicecs/ecs.hpp>
 #include <vector>
 #include <string>
 
@@ -96,6 +97,8 @@ struct Model
     std::vector<Mesh> meshes;
     std::vector<Animation> animations;
     std::string path;
+
+    std::vector<ecs::entity> lights;
 
     struct Skeleton
     {
