@@ -77,6 +77,7 @@ void EngineRendererImpl::renderShadowMaps(unsigned toDraw)
     glDepthFunc(GL_LESS);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
+    glCullFace(GL_FRONT);
 
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);

@@ -183,9 +183,7 @@ ModelResult SceneLoaderImpl::processModel(json const &jModel)
             }
         });
         if(eModel.get<Material>().properties.albedo.a < 1.0f)
-        {
             eModel.emplace<Transparent>();
-        }
     }
 
     return { eModel, {*mReg, model} };
@@ -306,28 +304,6 @@ void SceneLoaderImpl::processScene(Scene &scene, Registry &reg)
             scene.entities.emplace_back(eLight);
         }
     }
-
-    auto const &jCamera = root["camera"];
-    auto position = toVec3(jCamera["position"]);
-    Entity eCamera = Controller::createCamera(*mReg);
-    auto dir = glm::normalize(toVec3(jCamera["lookat"]) - position);
-    eCamera.get<Transform>() = {
-        .position = position,
-        .orientation = glm::quatLookAt(dir, glm::abs(glm::dot(dir, glm::vec3(0,1,0))) > 0.999 ? glm::vec3(1,0,0) : glm::vec3(0,1,0))
-    };
-    Controller::ControllableCamera &camera = eCamera.get<Controller::ControllableCamera>();
-    camera.speed = jCamera["speed"].get<float>();
-    camera.sensitivity = jCamera["sensitivity"].get<float>();
-
-    if(jCamera.contains("fov"))
-        camera.fov = jCamera["fov"].get<float>();
-    if(jCamera.contains("boost"))
-        camera.boost = jCamera["boost"].get<float>();
-    if(jCamera.contains("znear"))
-        camera.znear = jCamera["znear"].get<float>();
-    if(jCamera.contains("zfar"))
-        camera.zfar = jCamera["zfar"].get<float>();
-    scene.entities.emplace_back(eCamera);
 
     if(root.contains("skybox"))
     {

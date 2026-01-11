@@ -85,11 +85,35 @@
   "lights": [
     {
       "type": "directional",
-      "direction": [ 1, -2, 1 ],
+      "direction": [ 2, -2, 0.5 ],
       "color": "#ffee50",
       "intensity": 1,
       "shadow": {
         "sm size": 2048,
+        "znear": 0.1,
+        "zfar": 100
+      }
+    },
+    {
+      "type": "spot",
+      "position": [1.85, 4.87, -8.16],
+      "direction": [ -0.94, -0.34, 0.01 ],
+      "color": "#5496ba",
+      "intensity": 1,
+      "shadow": {
+        "sm size": 2048,
+        "znear": 0.1,
+        "zfar": 50
+      },
+      "in out cones": [ 35, 45 ]
+    },
+    {
+      "type": "point",
+      "position": [3.5, 1.5, 1],
+      "color": "#5ab54c",
+      "intensity": 1,
+      "shadow": {
+        "sm size": 1024,
         "znear": 0.1,
         "zfar": 100
       }

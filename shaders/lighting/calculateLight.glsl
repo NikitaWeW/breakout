@@ -77,9 +77,9 @@ vec3 calculateShadow(PointLight light, vec3 normal, vec3 viewDir, vec3 fragPos, 
     // return vec3(currentDepth);
 
     float shadow = 0.0;
-    // float bias = mix(0.1, 1e-3, mix(0.5, 1, abs(dot(normal, normalize(-lightToFrag)))));
-    float bias = mix(10, 20, 0.5 - abs(dot(viewDir, normal))) * max(abs(dFdx(currentDepth)), abs(dFdy(currentDepth)));
-    // float bias = 0.05;
+    // float bias = 1e-2 * (1.0 - dot(normal, normalize(-lightToFrag)));
+    // float bias = mix(10, 20, 0.5 - abs(dot(viewDir, normal))) * max(abs(dFdx(currentDepth)), abs(dFdy(currentDepth)));
+    float bias = 1e-2;
     float diskRadius = (1.0 + currentDepth) * 0.005;
 
     for(int i = 0; i < gridSamplingDisk.length(); ++i)
@@ -112,8 +112,8 @@ vec3 calculateShadow(DirLight light, vec3 normal, vec3 viewDir, vec3 fragPos, sa
     vec2 texelSize = vec2(1.0 / light.depthMapSize);
     // float bias = mix(1e-1, 1e-6, mix(0.5, 0.9, abs(dot(normal, light.direction))));
     // float bias = 0.001 * max(abs(dFdx(projectedCoords.z)), abs(dFdy(projectedCoords.z)));
-    // float bias = max(0.05 * (1.0 - dot(normal, light.direction)), 0.005);  
-    float bias = 0.0001;
+    float bias = 0.001 * (1.0 - dot(normal, light.direction));
+    // float bias = 0.0001;
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)
@@ -144,8 +144,10 @@ vec3 calculateShadow(SpotLight light, vec3 normal, vec3 viewDir, vec3 fragPos, s
     float currentDepth = projectedCoords.z;
 // return vec3(currentDepth);
     float shadow = 0.0;
-    vec2 texelSize = vec2(1.0 / light.depthMapSize);
-    float bias = mix(0, 30, 1 - abs(dot(viewDir, normal))) * max(abs(dFdx(projectedCoords.z)), abs(dFdy(projectedCoords.z)));
+    vec2 texelSize = vec2(1.0 / light.depthMapSize) * 2;
+    // float bias = mix(0, 30, 1 - abs(dot(viewDir, normal))) * max(abs(dFdx(projectedCoords.z)), abs(dFdy(projectedCoords.z)));
+    float bias = 1e-4 * (1.0 - dot(normal, light.direction));
+    // float bias = 0;
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)
@@ -201,10 +203,10 @@ vec3 calculateLight(SpotLight light, vec3 normal, vec3 viewDir, vec2 texCoords, 
 
     float theta = dot(lightDir, normalize(-light.direction));
     // return vec3(theta);
-    vec3 ambient = light.color * ambientCoefficient * attenuation * max(theta - 0.5, 0.0);
+    vec3 ambient = light.color * ambientCoefficient * attenuation;
     if(theta > light.outerConeAngle) {
         float epsilon = light.innerConeAngle - light.outerConeAngle;
-        float intensity = clamp((theta - light.outerConeAngle) / max(epsilon, 1e-6), 0.0, 1.0);
+        float intensity = (theta - light.outerConeAngle) / max(epsilon, 1e-6);
 
         vec3 diffuse = 
             light.color * 
@@ -214,10 +216,10 @@ vec3 calculateLight(SpotLight light, vec3 normal, vec3 viewDir, vec2 texCoords, 
         vec3 specular = vec3(0); // dunno it just doesn't work and gives nans
         vec3 shadow = calculateShadow(light, normal, viewDir, fragPos, atlas);
 // return shadow;
-
+        // return vec3(1);
         return ambient + (1 - shadow) * (diffuse + specular);
     } else {
-// return vec3(0);
+        // return vec3(0);
         return ambient;
     }
 }

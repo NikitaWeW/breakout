@@ -125,7 +125,7 @@ void renderer::LightManager::processSpotLight(Entity e_light)
         mShadowLights[index] = {
             .size = shadowLight.shadowMapSize,
             .viewMat = glm::lookAt(newLight.position, newLight.position + newLight.direction, getUp(newLight.direction)),
-            .projMat = glm::perspective(glm::radians(light.outerConeAngle), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
+            .projMat = glm::perspective(glm::radians(light.outerConeAngle * 2), 1.0f, shadowLight.nearPlane, shadowLight.farPlane),
         };
         newLight.viewProj = mShadowLights.get(index).projMat * mShadowLights.get(index).viewMat;
     }

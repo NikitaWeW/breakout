@@ -189,30 +189,6 @@
       }
     }
   },
-  "camera": {
-    "type": "object",
-    "properties": {
-      "position": {
-        "type": "array",
-        "items": { "type": "number" },
-        "minItems": 3,
-        "maxItems": 3
-      },
-      "lookat": {
-        "type": "array",
-        "items": { "type": "number" },
-        "minItems": 3,
-        "maxItems": 3
-      },
-      "speed": { "type": "number" },
-      "fov": { "type": "number" },
-      "boost": { "type": "number" },
-      "sensitivity": { "type": "number" },
-      "zfar": { "type": "number" },
-      "znear": { "type": "number" },
-      "required": [ "position", "lookat", "speed", "sensitivity" ]
-    }
-  },
   "skybox": {
     "type": "string"
   },

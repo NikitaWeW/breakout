@@ -276,6 +276,7 @@ bool ogl::recompileShader(Program &program, std::string_view dirpath)
         return true;
     }
 
+    ENGINE_WARN("Failed to compile shaders from \"{}\", rolling back!", dirpath);
     return false;
 }
 

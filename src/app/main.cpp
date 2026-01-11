@@ -87,14 +87,28 @@ int main(int argc, char const **argv) {
     INC_PROGRESS();
     
     engine::input::setup(reg);
+    engine::IRenderer *renderer = nullptr;
 
-    ENGINE_ASSERT(!reg.view<Controller::ControllableCamera>().empty());
-    ecs::entity e_camera = reg.view<Controller::ControllableCamera>().at(0);
+    engine::Entity camera = Controller::createCamera(reg);
+    {
+        glm::vec3 pos(0, 3, 3);
+        glm::vec3 lookat(0, 0, 0);
+        auto dir = glm::normalize(lookat - pos);
+        dir.y = -dir.y; // WTH
+        camera.get<engine::Transform>() = {
+            .position = pos,
+            .orientation = glm::quatLookAt(dir, glm::vec3(0,1,0))
+        };
+        auto &controllable = camera.get<Controller::ControllableCamera>();
+        controllable.sensitivity = 0.25;
+        controllable.speed = 4;
+        controllable.fov = 90;
+    }
     auto mainRenderer = std::make_unique<engine::EngineRenderer>(reg, engine::EngineRendererConfig{
-        .e_camera = e_camera,
+        .e_camera = camera.entity(),
         .MAX_SHADOW_MAP_FRAMES = 3
     });
-    engine::IRenderer *renderer = mainRenderer.get();
+    renderer = mainRenderer.get();
 
     engine::Animator animator;
     Controller controller;
@@ -123,22 +137,13 @@ int main(int argc, char const **argv) {
                 ENGINE_CORE_INFO("Recompiling shaders!");
                 mainRenderer->recompileShaders();
 
-                if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+                // if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
                 {
                     ENGINE_CORE_INFO("Reloading scene!");
                     for(auto e : scene.entities)
                         e.reg().destroy(e.entity());
                     scene.entities.clear();
                     scene = loader.load(scene.path);
-
-                    ENGINE_ASSERT(!reg.view<Controller::ControllableCamera>().empty());
-                    e_camera = reg.view<Controller::ControllableCamera>().at(0);
-                    mainRenderer.reset();
-                    mainRenderer = std::make_unique<engine::EngineRenderer>(reg, engine::EngineRendererConfig{
-                        .e_camera = e_camera,
-                        .MAX_SHADOW_MAP_FRAMES = 3
-                    });
-                    renderer = mainRenderer.get();
                 }
             }
             if(event.key == GLFW_KEY_F && event.action == GLFW_PRESS)
@@ -151,8 +156,8 @@ int main(int argc, char const **argv) {
             }
             if(event.key == GLFW_KEY_C && event.action == GLFW_PRESS)
             {
-                auto &transform = reg.get<engine::Transform>(e_camera);
-                ENGINE_INFO("Camera: e{}, pos: {}, \tdir: {}", e_camera, fmt::streamed(transform.position), fmt::streamed(glm::vec3(0, 0, -1) * transform.orientation));
+                auto &transform = camera.get<engine::Transform>();
+                ENGINE_INFO("Camera: e{}, pos: {}, \tdir: {}", camera.entity(), fmt::streamed(transform.position), fmt::streamed(glm::vec3(0, 0, -1) * transform.orientation));
             }
         }
 
