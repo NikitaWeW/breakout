@@ -308,7 +308,7 @@ void SceneLoaderImpl::processScene(Scene &scene, Registry &reg)
     if(root.contains("skybox"))
     {
         scene.entities.emplace_back(*mReg, mReg->create(Skybox{
-            .e_cubemap = mCubemapLoader.loadFromFile(root["skybox"].get<std::string>(), {.flip = false})
+            .e_cubemap = mCubemapLoader.loadFromFile(root["skybox"].get<std::string>(), {{.flip = false}})
         }));
     }
 

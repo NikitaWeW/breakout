@@ -84,6 +84,7 @@ namespace engine
         ~EngineRenderer();
 
         void processData();
+        void setup() override;
         void draw() override;
 
         void recompileShaders();

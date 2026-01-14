@@ -9,3 +9,4 @@ callgrind.out.*
 _gperf*
 profile*.gif
 .cache
+cache

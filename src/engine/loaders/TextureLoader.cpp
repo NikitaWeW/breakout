@@ -75,7 +75,7 @@ ecs::entity CubemapLoader::loadFromFile(std::string_view path, CubemapLoaderOpti
         if(unwrap().mReg->get<Cubemap>(e_cubemap).path == path)
             return e_cubemap;
 
-    auto e_texture = unwrap().mTextureLoader.loadFromFile(path, {.flip = options.flip});
+    auto e_texture = unwrap().mTextureLoader.loadFromFile(path, options.textureOptions);
     if(!e_texture)
         return INVALID_ENTITY;
 
@@ -90,7 +90,7 @@ ecs::entity CubemapLoader::loadFromFile(std::string_view path, CubemapLoaderOpti
 ecs::entity CubemapLoader::loadFromMemory(void const *data, size_t size, CubemapLoaderOptions options)
 {
     ENGINE_ASSERT_MSG(!this->empty(), "Invalid loader! (make sure to not use default constructor when making an actual loader)");
-    auto e_texture = unwrap().mTextureLoader.loadFromMemory(data, size, {.flip = options.flip});
+    auto e_texture = unwrap().mTextureLoader.loadFromMemory(data, size, options.textureOptions);
     if(!e_texture)
         return INVALID_ENTITY;
 

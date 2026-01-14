@@ -197,7 +197,10 @@ void EngineRendererImpl::setup()
     setupPipeline();
 }
 
-
+// FIXME: 
+void EngineRenderer::setup() 
+{
+}
 EngineRenderer::EngineRenderer(Registry &reg, EngineRendererConfig conf) : Handle(new EngineRendererImpl{})
 {
     unwrap().mConfig = conf;
